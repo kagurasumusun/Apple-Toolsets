@@ -120,6 +120,7 @@ The explicit `depth` / `dimension2` handling for `.imagestack` vision/xros paths
 - `template-assetgeneration-summary.json`
 - `template-assetgeneration-types.json`
 - `solidimagestack-oracle.json`
+- `complicationset-endtoend-verify.json`
 - `interesting-car-scan-current.json`
 - `interesting-car-scan-legacy.json`
 - `interesting-car-scan-legacy-320.json`
@@ -292,6 +293,15 @@ Those TLVs are now parser-decoded in the clean-room implementation:
 The same oracle also exposes additional texture-oriented payloads around layouts `1007` and `1008`. The clean-room parser now decodes the observed `RTXT` wrapper plus TLV 1014 auxiliary flag blocks as well.
 
 This is the first direct public-source oracle for a solid image stack aggregate path, and it is no longer opaque to the parser.
+
+#### `complicationset-endtoend-verify.json`
+A synthetic public `.complicationset` source fixture compiled with Apple actool on Xcode 26.5 demonstrates that the documented watch complication set path is not an opaque private aggregate. When `--complication Complication` is supplied, Apple emits:
+
+- one packed page (`1004`) named `ZZZZPackedAsset-2.1.0-gamut0`
+- three linked image renditions (`1003`)
+- explicit `KLNI` links using token pairs `(1,9)`, `(2,181)`, `(12,2)`, `(15,5)`
+
+The clean-room compiler now reproduces this structure closely for named complication sets.
 
 #### `interesting-car-scan-current.json` / `interesting-car-scan-legacy.json` / `interesting-car-scan-legacy-320.json`
 Installed CAR scans for candidate aggregate fixtures show:

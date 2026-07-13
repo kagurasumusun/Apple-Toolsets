@@ -305,6 +305,62 @@ def packed_atlas_renditions(
     return records
 
 
+def packed_watch_complication_renditions(
+    images: list[tuple[str, bytes]],
+    *,
+    scale: int = 2,
+    atlas_name: str = "Complication",
+) -> list[AssetRendition]:
+    """Approximate the public .complicationset packed-page output observed from Apple.
+
+    The current public oracle shows one explicit packed page named
+    ``ZZZZPackedAsset-2.1.0-gamut0`` and explicit `KLNI` links carrying
+    tokens `(1,9)`, `(2,181)`, `(12,scale)`, `(15,5)`.
+    """
+    from .carwriter import _decode_png_8bit
+    if not images:
+        raise ValueError("watch complication atlas needs at least one image")
+    decoded = []
+    for name, data in images:
+        w, h, ct, pix, _ = _decode_png_8bit(data)
+        if ct == 6:
+            rgba = pix
+        elif ct == 4:
+            rgba = b"".join(bytes((g, g, g, a)) for g, a in zip(pix[::2], pix[1::2]))
+        elif ct == 2:
+            rgba = b"".join(bytes((r, g, b, 255)) for r, g, b in zip(pix[::3], pix[1::3], pix[2::3]))
+        else:
+            raise ValueError("watch complication atlas input must be direct-color PNG")
+        decoded.append((name, w, h, rgba))
+    # Column-major 2-row packing matches the current public oracle for three roles.
+    positions = []
+    row_height = max(h for _, _, h, _ in decoded)
+    col_width = max(w for _, w, _, _ in decoded)
+    for index, (name, w, h, rgba) in enumerate(decoded):
+        col = index // 2
+        row = index % 2
+        x = 2 + col * (col_width + 2)
+        y = 2 + row * (row_height + 2)
+        positions.append((name, x, y, w, h, rgba))
+    aw = max(x + w for _, x, _, w, _, _ in positions) + 2
+    ah = max(y + h for _, _, y, _, h, _ in positions) + 2
+    canvas = bytearray(aw * ah * 4)
+    for _, px, py, w, h, rgba in positions:
+        for row in range(h):
+            canvas[((py + row) * aw + px) * 4:((py + row) * aw + px + w) * 4] = rgba[row * w * 4:(row + 1) * w * 4]
+    page_name = f"ZZZZPackedAsset-{scale}.1.0-gamut0"
+    page_png = _png_rgba(aw, ah, bytes(canvas))
+    page_csi = bytearray(_csi_png_deepmap(page_png, page_name, scale=scale))
+    struct.pack_into("<H", page_csi, 36, 1004)
+    struct.pack_into("<I", page_csi, 8, 0)
+    records = [AssetRendition(page_name, bytes(page_csi), 181, scale=scale, idiom=5, element=9, identifier_override=0)]
+    for name, px, py, w, h, _ in positions:
+        tokens = (AtlasKeyToken(1, 9), AtlasKeyToken(2, 181), AtlasKeyToken(12, scale), AtlasKeyToken(15, 5))
+        link = AtlasLink(px, py, w, h, tokens, variant="explicit", header_u16=12, header_u32=20)
+        records.append(AssetRendition(name, _linked_csi("image.png", link, scale, source_size=(w, h)), 181, scale=scale, idiom=5))
+    return records
+
+
 def build_packed_atlas_car(
     images: dict[str, bytes],
     *,

@@ -9,7 +9,7 @@ from .carwriter import (
     app_icon_renditions, build_assets_car, color_rendition, data_rendition,
     heif_rendition, jpeg_rendition, layered_image_renditions, png_rendition, resize_png, svg_renditions, symbol_rendition, png_dimensions,
 )
-from .atlas import packed_atlas_renditions
+from .atlas import packed_atlas_renditions, packed_watch_complication_renditions
 from .model import Catalog, Diagnostic, load_catalog
 from .appicons import app_icon_entry_rank, app_icon_sidecar_specs
 
@@ -22,6 +22,7 @@ class CompileOptions:
     app_icon: str | None = None
     accent_color: str | None = None
     launch_image: str | None = None
+    complication: str | None = None
     partial_info_plist: Path | None = None
     warnings: bool = True
     errors: bool = True
@@ -205,6 +206,33 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     except ValueError as exc:
                         diagnostics.append(Diagnostic("error", f"invalid sprite atlas: {exc}", asset.directory))
                 continue
+            if asset.kind == "complication-set":
+                if options.complication and options.complication != asset.name:
+                    continue
+                complication_images: list[tuple[str, bytes]] = []
+                for ref in asset.entries:
+                    dirname = ref.get("filename")
+                    role = str(ref.get("role", ""))
+                    if not isinstance(dirname, str) or not role:
+                        continue
+                    image_asset = next((candidate for candidate in assets if candidate.kind == "image" and candidate.directory == asset.directory / dirname), None)
+                    if image_asset is None:
+                        continue
+                    selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str) and (image_asset.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "2x"), None)
+                    if selected is None:
+                        selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str) and (image_asset.directory / str(entry["filename"])).is_file()), None)
+                    if selected is None:
+                        continue
+                    source = image_asset.directory / str(selected["filename"])
+                    if source.suffix.lower() != ".png":
+                        continue
+                    complication_images.append((f"{asset.name}/{role.capitalize()}", source.read_bytes()))
+                if complication_images:
+                    try:
+                        renditions.extend(packed_watch_complication_renditions(complication_images, scale=2, atlas_name=asset.name))
+                    except ValueError as exc:
+                        diagnostics.append(Diagnostic("error", f"invalid complication set: {exc}", asset.directory))
+                continue
             if asset.kind == "image-stack":
                 layer_bytes: list[bytes] = []
                 layer_depths: list[int] = []
@@ -318,7 +346,7 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 scale_text = str(entry.get("scale", "1x"))
                 if asset.directory in atlas_member_dirs:
                     continue
-                if asset.directory.parent.suffix in (".imagestacklayer", ".solidimagestacklayer"):
+                if asset.directory.parent.suffix in (".imagestacklayer", ".solidimagestacklayer", ".complicationset"):
                     continue
                 if asset.kind in ("image", "symbol") and scale_text not in ("1x", "2x", "3x"):
                     continue
