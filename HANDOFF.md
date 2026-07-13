@@ -32,7 +32,7 @@ cd /home/user/actool-linux
 PYTHONPATH=src python -m unittest discover -s tests
 ```
 
-Latest result: 64 tests, OK.
+Latest full optional-dependency result: 81 tests, OK, no skips. lzfse 0.4.2 and cairosvg 2.9.0 were installed. Minimal environments retain explicit skips.
 
 Capability report:
 
@@ -42,14 +42,14 @@ PYTHONPATH=src python -m actool_linux.cli --capabilities
 
 ## Current remote Mac
 
-Upterm session: `jNGXJkmYQMCMVK0wv6sZ`
+Upterm session: `b8btbueUHxFMnZpY5cHt`
 
 SSH:
 
 ```bash
 chmod 600 /home/user/.ssh/arena_upterm_ed25519
 ssh -i /home/user/.ssh/arena_upterm_ed25519 \
-  jNGXJkmYQMCMVK0wv6sZ@uptermd.upterm.dev
+  b8btbueUHxFMnZpY5cHt@uptermd.upterm.dev
 ```
 
 Use `/home/user/run_upterm_command.py SESSION COMMAND WAIT_SECONDS` for short commands. Use `run_upterm_interrupt.py` only for a genuinely stuck foreground process.
@@ -59,7 +59,7 @@ SCP transfers work even though SCP may return status `-1` after transferring. Ve
 ```bash
 scp -i /home/user/.ssh/arena_upterm_ed25519 \
   /home/user/actool-linux-source.zip \
-  jNGXJkmYQMCMVK0wv6sZ@uptermd.upterm.dev:/Users/runner/actool-linux-source.zip
+  b8btbueUHxFMnZpY5cHt@uptermd.upterm.dev:/Users/runner/actool-linux-source.zip
 ```
 
 Remote host observed:
@@ -74,7 +74,7 @@ assetutil DumpToolVersion 974.1
 The repository at `/Users/runner/work/mac/mac` on this new runner is only the upstream workflow repository (`a069646`) and does not contain actool-linux. The uploaded source was extracted at:
 
 ```text
-/Users/runner/actool-linux-current/actool-linux
+/Users/runner/actool-current/actool-linux
 ```
 
 Bare remote Python lacks optional `lzfse` and `cairosvg`; CBCK/SVG fallback tests fail there for dependency reasons. Use local Linux results or transfer already-generated CARs for Apple `assetutil` checks.
@@ -202,7 +202,7 @@ Compatibility sidecar manifests:
 - visionOS depth value in `kCRThemeDimension2Name`.
 - Watch family IDs in subtype and role IDs in dimension2.
 - Xcode 26.5 verified basic tv/vision layer 1/2 and watch subtype 1/2 recognition.
-- Latest explicit depth and semantic family/role mapping is locally tested; do not call it proprietary compositor/registry-equivalent without a new Apple oracle.
+- Latest explicit depth and semantic family/role keys are Apple `assetutil` verified: vision layer/dimension2 1/10 and 2/20; watch subtype/dimension2 4/2 and 7/3. Do not call this proprietary compositor/registry-equivalent without a private-runtime oracle.
 
 ### Thinning — implemented, policy partial
 
@@ -249,7 +249,7 @@ previousState, previousValue, deploymentTarget, glyphWeight, glyphSize
 - Exact tvOS Image Stack compositor aggregate record.
 - Apple-internal watch family/role registry mapping.
 - Apple-internal vision depth/parallax compositor metadata.
-- Full CLI option cross-product and byte-identical diagnostics.
+- Full CLI option cross-product and byte-identical diagnostics corpus. Sixteen focused Xcode 26.5 stdout plist contracts are byte-identical, and version plists are byte-identical for ten distinct Xcode releases from 16.0 through 26.5. See ENGINEERING_LOG.md and xcode-actool-version-matrix.json.
 - Complete CBCK adoption thresholds across every Xcode.
 - Legacy palette-img writer (fixture-gated).
 - Exact Xcode atlas pack/page heuristic.
@@ -257,9 +257,9 @@ previousState, previousValue, deploymentTarget, glyphWeight, glyphSize
 
 ## Recommended short next steps
 
-1. Run focused `assetutil -I` on CARs containing explicit vision depth and named watch family/role keys; compare raw rendition keys, not semantic labels assetutil does not expose.
+1. Probe warning/error ordering and stderr-producing cases beyond the current 16 byte-identical Xcode 26.5 contracts.
 2. Add a parser for tvOS Image Stack aggregate records from a valid Xcode oracle. The previous attempted catalog emitted no Assets.car because the nested schema was incomplete.
-3. Expand `tools/actool_contract.py` with malformed JSON, duplicate slots, wrong dimensions, and unsupported option combinations, recording raw stdout/stderr SHA-256.
+3. Expand the diagnostic matrix across older Xcodes and additional option cross-products; retain both raw and path-normalized hashes.
 4. Build a CBCK threshold probe that uses `actool` only and dimensions around `0x155555 / rowBytes`; this is short and avoids Simulator boot.
 5. For runtime work, test one representative runtime per platform first. Do not run all 12 serial boots until cleanup behavior is stable.
 6. Regenerate local ZIP, test with `unzip -t`, compute SHA-256, and present it.
@@ -274,3 +274,23 @@ permissions:
 ```
 
 The new runner's `/Users/runner/work/mac/mac` contains only the upstream workflow repository. The source ZIP is the authoritative transfer artifact for this session.
+
+## Latest 12-runtime attempt
+
+`runtime-consumer-matrix.json` is a complete first-attempt raw matrix. Four rows reached build/install/launch/screenshot (iOS 26.2/26.5 and tvOS 26.2/26.5), two launch commands timed out, watch installation exposed a missing `WKWatchOnly` key, and vision compilation exposed forbidden `UIScreen` use. Both source defects are fixed in `tools/runtime_consumer_matrix.py`; corrected watch/vision results remain unverified because the Upterm endpoint closed during the focused rerun. The tool now also gates UIKit success on the explicit `ACTOOL_RUNTIME_PASS` log marker. Do not relabel the four screenshot rows as strict materialization passes retroactively.
+
+## Multi-entry catalog compiler
+
+The former `entries[0]`/single-entry restriction is removed. The compiler processes every assigned slot and supports same-facet scale, idiom, appearance and locale variants. It skips legal placeholders, missing files and unsupported selectors, and deterministically retains the first duplicate slot. Local CAR parsing verifies 1x Any, 2x Any and 2x Dark keys. The writer primitives were previously Apple `assetutil` verified, but the latest integrated CAR could not be uploaded because the Upterm endpoint closed; preserve that verification boundary. `tools/option_cross_product.py` is ready to run against all installed Xcodes when a Mac endpoint is available.
+
+## Latest local continuation
+
+Default output is now XML like the recorded Xcode invocations; all 12 schema-2 probes remain byte-identical without an explicit output-format option. Diagnostic probing is schema 3 (18 cases), CBCK threshold probing spans all installed Xcodes and five platform families, and atlas writing supports bounded multi-page output. New schema-3 and multi-page Apple checks are pending because session `b8btbueUHxFMnZpY5cHt` now rejects its SSH identity.
+
+## Restored Apple oracle milestone
+
+Current session: `VtnenbVcaWmY2Jd5MyHJ`. Schema-3 diagnostics are now 18/18 byte-identical with Xcode 26.5 (22 focused exact contracts including prior preflights). Xcode 26.4.1 and 26.6 version plists are implemented and byte-identical. Integrated multi-entry and bounded two-page atlas CARs were accepted by Apple `assetutil`. The focused Xcode 26.5 iPhoneOS nine-row CBCK boundary probe selected deepmap2 for every ordinary image, rejecting a generic size-threshold hypothesis.
+
+## All-12 runtime milestone
+
+`runtime-consumer-matrix-verified.json` is authoritative: all iOS/tvOS/watchOS/visionOS 26.2, 26.4/26.4.1 and 26.5 rows pass build/install/launch/materialization/screenshot/cleanup. UIKit rows contain `ACTOOL_RUNTIME_PASS 64 64`; watch/vision screenshots contain the expected cyan CAR asset and are retained under `runtime-screenshots-verified/`. Modern watch packaging requires `WKApplication`, not obsolete `WKWatchKitApp`.

@@ -268,3 +268,222 @@ Xcode 26.5 oracle showed legacy launch-image catalogs do not produce Assets.car 
 - Full boot pass was deferred after Simulator shutdown exceeded 30 seconds, per user request to postpone slow work. The inventory result is verified; display-consumer claims were not upgraded.
 - Added CLI parsing and writer integration for target-device, device model/OS filters, product type, development region, PNG compression, and on-demand-resource switches. Single target-device selection is connected to deterministic thinning and records arguments in EXTENDED_METADATA.
 - Suite: 64 tests OK.
+
+## 2026-07-13 — Explicit depth/family focused Apple verification
+
+On fresh macOS 26.4 / Xcode 26.5 (17F42), the latest source ZIP was transferred by SCP and seven dependency-free focused tests passed. Independently generated CARs were accepted by `assetutil -I`:
+
+```text
+Depth: vision, Layer 1, Dimension2 10
+Depth: vision, Layer 2, Dimension2 20
+Comp: watch, Subtype 4 (graphicCircular), Dimension2 2 (foreground)
+Comp: watch, Subtype 7 (graphicRectangular), Dimension2 3 (mask)
+```
+
+This verifies serialization and Apple CoreUI key recognition. It does not prove that private compositor semantics use the same family/role/depth registry.
+
+## 2026-07-13 — Optional-dependency-stable test suite
+
+Tests that require `lzfse` or `cairosvg` now use explicit unittest skips when those optional packages are absent. Minimal environments therefore test the dependency-free CAR core instead of reporting false regressions. Current minimal result: 64 tests OK, 6 skipped. Full optional-dependency environment previously ran all 64 without skips.
+
+## 2026-07-13 — Byte-identical no-input diagnostic
+
+Added `--output-format xml1` and Apple-style result plist serialization. Xcode 26.5 oracle and actool-linux now emit byte-identical output for compile-with-no-input when platform and deployment target are supplied.
+
+```text
+SHA-256 both: d9b8569f9181e8b46f658048b5df5043d977568dcf0aec455004a283c9091f8f
+cmp exit: 0
+Description: Not enough arguments provided; where is the input document to operate on?
+```
+
+This is one exact contract; the full diagnostics corpus remains incomplete.
+
+## 2026-07-13 — Four byte-identical Xcode 26.5 CLI contracts
+
+Added Apple XML result-plist output, version output, failure-reason fields, and missing-input preflight notices. Four complete stdout plist files now compare byte-for-byte with Xcode 26.5:
+
+```text
+no input:        d9b8569f9181e8b46f658048b5df5043d977568dcf0aec455004a283c9091f8f
+--version:       e325b8dd7f9a54f2fa97fb4653de29e921b55bc76fc68702d5c39373925c4493
+missing catalog: 1a4abd16bb6775a1bb2eaf67de208780882a35d1baba04887ac842edda64fbc8
+missing platform:7b3457836d8b694d40e4eceb3fcdbf3e78eb140164e000bf2ead61f43588681c
+```
+
+Each `cmp` returned 0. The full malformed-catalog/option cross-product remains incomplete.
+
+## 2026-07-13 — Diagnostic corpus expansion and all observed version plists
+
+Installed optional `lzfse>=0.4` and `cairosvg>=2.7`; full suite runs without skips. Added an Xcode 26.5 oracle probe for malformed JSON, missing images, duplicate slots, unsupported idioms, AppIcon preflight/dimensions/empty roles, unknown options, stderr, exit codes, and output ordering.
+
+The following additional stdout plists are byte-identical to Xcode 26.5 (`cmp=0`):
+
+```text
+unknown option:           e9a0dc0fd720cbfad80c970ac78d4266a9519a930a700c348d027bb654a7a098
+malformed Contents.json:  406a10175a028f6bd776b0063033f74c85ec4f01d7f2733992b8941f56ad6f7a
+missing image:            7795bc89043b7ec4f7a0c6503155701dcd88bfa65cda377ec85dd512dd6961b6
+unsupported idiom:        7795bc89043b7ec4f7a0c6503155701dcd88bfa65cda377ec85dd512dd6961b6
+AppIcon partial required: d5e45974c720842cca3c60e4ed33dfc4a09d7db1896c88dbdbf2e6fcbd2d0540
+```
+
+Combined with prior work, nine focused Xcode 26.5 contracts are byte-identical. Duplicate slots now compile deterministically; malformed/ignored content follows Apple's notice/empty-results ordering. AppIcon actual-size validation emits Apple's generic no-applicable-content error once partial-info output is supplied.
+
+Generated `xcode-actool-version-matrix.json` from 20 installed aliases. `--version --output-format xml1 --compatibility-xcode-version VERSION` is byte-identical for all ten distinct observed releases: 16.0-16.4, 26.0.1, 26.1.1, 26.2, 26.3, and 26.5. Current suite: 74 tests OK, no skips.
+
+## 2026-07-13 — Path-normalized diagnostics and catalog slot integration
+
+Expanded `tools/diagnostic_probe_matrix.py` to preserve raw stdout/stderr bytes and SHA-256 while also producing a deterministic `<ROOT>`-normalized plist. The Xcode 26.5 probe now covers duplicate slots, invalid scale/size fields, two-error ordering, fixed-path AppIcon dimensions/empty roles, and a requested-but-absent AppIcon.
+
+Observed and implemented:
+
+- Invalid image scale `4x` is silently dropped; result is an empty compilation-results list.
+- An arbitrary `size` field on an ordinary image set is ignored.
+- Malformed sets are ordered lexically (`A.imageset`, then `Z.imageset`).
+- Empty AppIcon roles exit 0 and list only the partial plist.
+- A missing requested AppIcon is a deferred error: unrelated `Assets.car` and the partial plist are still produced, in that order.
+- Exact Xcode message contains two spaces before the quoted missing icon name.
+- Ordinary PNG catalog compilation now propagates the declared 1x/2x/3x scale and idiom into CAR keys; JPEG/HEIF propagate scale.
+
+Seven additional fixed-path result plists compare byte-for-byte, bringing the focused Xcode 26.5 total to 16. New raw SHA-256 values:
+
+```text
+duplicate slot:       219bf71fe262b330738a69ec66302b66ccb9e466bce1a844f18ef021e3d259f6
+invalid scale:        7795bc89043b7ec4f7a0c6503155701dcd88bfa65cda377ec85dd512dd6961b6
+invalid size:         cb954cacdbf5e36738a228307864479afd85e0d560dda617fc82704616847cda
+malformed ordering:   05986c89e366cb33ee64cb7d218c390cedce1af154741dd9a937bd46c788eafa
+AppIcon dimensions:   a7acfc2e788be1bae946077d67e5a5132cb836cb0b8c3b0adb39e7fce6cbf4cf
+empty AppIcon roles:  90cd927f7a1e86461d64a7edd58024a4c34e4fc42f6a0fa7ef47f5f3fd928457
+missing AppIcon name: ac2c0d038c2ac19f019e1532b4559056cc4c85a036d9bfe19f15b179b1162e70
+```
+
+Every probe row again had zero-byte stderr. Local suite: 76 tests, OK, no skips. A Linux CLI-generated `iphone`/`2x` CAR was transferred to macOS 26.4 and accepted by Xcode 26.5 iPhoneOS `assetutil`, which reported `Name=Scaled`, `Idiom=phone`, `Scale=2`, and `Compression=deepmap2`. This is assetutil reader validation, not Simulator materialization.
+
+## 2026-07-13 — Full 12-runtime consumer attempt
+
+The user explicitly requested the complete unfinished matrix, overriding the earlier slow-work deferral. Added `tools/runtime_consumer_matrix.py`, which:
+
+- builds direct iOS/tvOS UIKit and watchOS/visionOS SwiftUI Simulator consumers;
+- runs four platform groups concurrently;
+- creates, boots, installs, launches, screenshots, shuts down and deletes one device for every runtime;
+- atomically persists every intermediate row;
+- records every command, exit code, stdout, stderr and elapsed time;
+- now requires an explicit `ACTOOL_RUNTIME_PASS` UIImage lookup marker for UIKit rows (the first run predates this stricter marker gate).
+
+First complete 12-row attempt against macOS 26.4 / Xcode 26.5:
+
+```text
+iOS 26.2       build/install/launch/screenshot pass
+iOS 26.4       launch command timeout
+iOS 26.5       build/install/launch/screenshot pass
+tvOS 26.2      build/install/launch/screenshot pass
+tvOS 26.4      launch command timeout
+tvOS 26.5      build/install/launch/screenshot pass
+watchOS 26.2   install rejected: missing WKWatchOnly
+watchOS 26.4   install rejected: missing WKWatchOnly
+watchOS 26.5   install rejected: missing WKWatchOnly
+visionOS 26.2  compile rejected: UIScreen unavailable
+visionOS 26.4  compile rejected: UIScreen unavailable
+visionOS 26.5  compile rejected: UIScreen unavailable
+```
+
+The exact raw matrix is `runtime-consumer-matrix.json`. The two source defects were fixed immediately: watch apps now declare `WKWatchOnly=true`; visionOS now uses a SwiftUI lifecycle rather than unavailable `UIScreen`. A focused watchOS+visionOS rerun was started, but the Upterm endpoint closed before its JSON could be retrieved. Therefore those corrected rows are **not claimed as passed**. The four first-run pass rows prove build/install/launch/screenshot completion, but because that run did not yet query unified logs, they are not upgraded to strict named-image materialization passes.
+
+This attempt also showed that parallel CoreSimulator startup remains slow: successful rows took 365–417 seconds, while launch timeouts took about 346 seconds. No shared shell termination command was used.
+
+## 2026-07-13 — Removed catalog single-entry restriction
+
+### Implementation
+
+Replaced the development-only `asset.entries[0]` path with ordered processing of every assigned Contents.json entry. Genuine placeholder entries without filenames, missing files, unsupported idioms and unsupported scales are skipped using the already-observed Xcode contracts. Duplicate selectors retain the first assigned entry in Contents.json order.
+
+The integrated compiler now emits same-facet variants for:
+
+- 1x/2x/3x scale;
+- universal/iPhone/iPad/tv/watch/mac/vision/car/marketing idioms;
+- Any, Dark and High Contrast appearances;
+- optional locale tags;
+- PNG, JPEG and HEIF image entries;
+- multi-entry colors;
+- datasets, symbols, SVGs and launch-image sidecars.
+
+JPEG/HEIF/color rendition APIs were extended to carry CoreUI idiom/appearance selectors. Empty catalogs and empty placeholder sets now succeed without creating a fake CAR, matching actool's empty compilation behavior. AppIcon compilation searches all assigned entries and picks the largest dimension-applicable source; if assigned entries exist but none are applicable, the exact generic Xcode error is retained. Empty AppIcon role sets remain successful.
+
+### Verification
+
+- Added a catalog integration test containing 1x Any, 2x Any and 2x Dark renditions plus unassigned and unsupported slots.
+- Parsed the generated CAR and verified three same-facet keys `(scale,appearance) = (1,0),(2,0),(2,1)`.
+- Full suite: 77 tests, OK.
+- Added `tools/option_cross_product.py`, a bounded parallel all-installed-Xcode × nine Apple platform × diagnostic/option matrix preserving raw stdout/stderr bytes, hashes, normalized plists, exit codes and timeouts.
+
+The remote Upterm endpoint remained closed (`scp: Connection closed`) when the new integrated multi-entry CAR was sent for `assetutil`; therefore this exact compiler integration is locally CAR-parser verified. The underlying same-facet scale/appearance CAR writer had already passed Apple Xcode 26.5 `assetutil`, but no new remote acceptance claim is added for this milestone.
+
+### Post-refactor diagnostic regression
+
+`tools/diagnostic_probe_matrix.py` now accepts an `ACTOOL_COMMAND` environment override, allowing the same fixtures and fixed paths to be replayed against actool-linux. Replayed all 12 schema-2 rows after the multi-entry rewrite with `--output-format xml1`: 12/12 stdout files remained byte-identical to Xcode 26.5 and every exit code matched. Together with the four preflight/version contracts, the focused exact count remains 16.
+
+## 2026-07-13 — Default XML contract, schema-3 diagnostics, CBCK probe, multi-page atlas
+
+- Changed omitted `--output-format` behavior to XML result plist, matching every Xcode 26.5 diagnostic probe invocation (the Apple probe did not pass the option).
+- Replayed the 12 recorded schema-2 Xcode rows without adding `--output-format`: 12/12 stdout byte hashes and exit codes matched.
+- Expanded the diagnostic probe to schema 3 with root-array, non-array `images`, non-object entry, missing-info warning, missing AppIcon+launch ordering, and unknown-option-after-compile cases. These new rows are implemented as probes but remain Apple-oracle pending.
+- Added `tools/cbck_threshold_probe.py`: all installed Xcodes × macOS/iOS/tvOS/watchOS/visionOS × nine image dimensions around 0x155555 raw-byte/row boundaries, with bounded parallel execution and `assetutil` compression capture.
+- Generalized packed atlases from a single unbounded-height page to deterministic `max_width` × `max_height` pages. Each layout-1004 page has a distinct dimension1/page name and each layout-1003 INLK record points to its page through attribute 8. Existing single-page Apple-verified serialization remains unchanged; multi-page structure is locally parsed and tested but awaits a new Apple endpoint.
+- Full suite: 79 tests, OK.
+
+Remote validation could not resume: the previous Upterm identity now returns `Permission denied (publickey)`. No Apple claim was inferred from local output.
+
+## 2026-07-13 — Restored Mac oracle: schema-3 exactness, Xcode 26.6, multi-entry/multi-page acceptance
+
+New Upterm session `VtnenbVcaWmY2Jd5MyHJ` restored macOS 26.4 / Xcode 26.5 access.
+
+### Diagnostics
+
+Ran all 18 schema-3 cases with Apple actool. All had zero-byte stderr. Implemented the newly observed contracts:
+
+- top-level JSON array is exit 0 notice: `The Contents.json describing "Schema.imageset" must start with a top level dictionary.`
+- non-array `images` and non-object image entries are silently ignored;
+- missing `info` dictionary emits no warning;
+- missing AppIcon + launch image produces two ordered errors and output order partial plist then Assets.car;
+- unknown option after `--compile` produces ordered Unknown-argument then no-input errors.
+
+After implementation, the same fixed-root fixtures produced 18/18 byte-identical stdout plists and matching exit codes. Including the four earlier preflight/version contracts, focused Xcode 26.5 exact contracts now total 22.
+
+### Version generations
+
+Captured 15 installed Xcode bundles/aliases. Newly observed mappings:
+
+```text
+Xcode 26.4.1  bundle-version 24765  SHA-256 83b8e8f8fea390ed324fc2506e85c9ce13cf775f89f89b86fb96d7ee89f03a5e
+Xcode 26.6    bundle-version 24765  SHA-256 9d24f7debd9ebf90bdf0c5e83eb6914ba8e39b80f5a7024adca165b990811458
+```
+
+Both are implemented and covered by byte-hash unit tests. Evidence: `xcode-version-extended.json`.
+
+### Apple CAR acceptance
+
+- The integrated multi-entry compiler CAR passed iPhoneOS `assetutil`: one `Logo` facet with universal 1x Any, phone 2x Any, and phone 2x Dark; all three report deepmap2.
+- The new bounded two-page atlas passed macOS `assetutil`: `One` and `Two` are Image records; `ZZZZPackedAsset-1.0.1-gamut0` and `.2-` are two distinct `PackedImage` records with Dimension1 1 and 2.
+
+### CBCK adoption probe
+
+Xcode 26.5 iPhoneOS ordinary-image boundary matrix passed 9/9 builds. Every size from 511x511 through 2048x172, including 1024x340/341/342 around `0x155555 / rowBytes`, selected deepmap2/ARGB rather than CBCK. This rejects the hypothesis that ordinary-image CBCK adoption occurs at that raw-row boundary; AppIcon CBCK remains a role-specific path in current evidence. Evidence: `cbck-threshold-26.5-ios.json`.
+
+Full local suite: 81 tests, OK.
+
+## 2026-07-13 — All 12 Simulator runtimes pass materialization
+
+Fixed the modern watchOS app package identity: directly executable SwiftUI watch apps use `WKApplication=true`; `WKWatchKitApp=true` was correctly rejected as obsolete WatchKit 1.0. Added exact runtime-name filtering for bounded retries.
+
+Final independently generated `RuntimeImage` 64x64 CAR matrix:
+
+```text
+iOS      26.2 / 26.4.1 / 26.5  PASS
+tvOS     26.2 / 26.4   / 26.5  PASS
+watchOS  26.2 / 26.4   / 26.5  PASS
+visionOS 26.2 / 26.4.1 / 26.5  PASS
+```
+
+Every row completed build, device creation, boot, install, launch, screenshot, shutdown, and delete. iOS/tvOS strict materialization is confirmed by unified-log markers `ACTOOL_RUNTIME_PASS 64 64`. watchOS/visionOS SwiftUI materialization is confirmed by screenshots containing the expected cyan asset: exactly 25,600 matching pixels on each watch screenshot and 11,990 on each vision screenshot. Representative screenshots visibly show the CAR image.
+
+A transient tvOS 26.2 install timeout was retried in isolation and passed in 41.74 seconds. Evidence is merged in `runtime-consumer-matrix-verified.json`; six watch/vision screenshots are in `runtime-screenshots-verified/`.
+
+This completes the installed 12-runtime consumer/materialization matrix. It does not by itself complete SpringBoard/Home/Dock icon-compositor comparisons.

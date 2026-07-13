@@ -51,3 +51,42 @@ No claim of 100% compatibility should be made until those matrix entries pass re
 ## Git
 
 Commits were created on `main`. Push was attempted but GitHub returned HTTP 403 because the available `github-actions[bot]` credential has no write permission to `kagurasumusun/mac`.
+
+## 2026-07-13 current milestone addendum
+
+The earlier checklist above is historical; current authoritative status is `PROJECT_STATE.json`, `HANDOFF.md`, and `ENGINEERING_LOG.md`.
+
+- Full Linux suite: 76 tests, OK, no skips.
+- Xcode 26.5 focused byte-identical stdout plist contracts: 16.
+- Diagnostic oracle schema 2 records raw bytes/hashes plus path-normalized plists; all current rows have empty stderr.
+- Newly exact cases include duplicate slot, invalid scale, ignored ordinary-image size, lexical malformed ordering, fixed-path AppIcon dimension/empty-role cases, and requested-but-missing AppIcon.
+- Linux CLI scale/idiom propagation was Apple `assetutil` verified on macOS 26.4 / Xcode 26.5: phone, scale 2, deepmap2.
+- This does not upgrade the unfinished Simulator/runtime/screenshot or compositor-specific claims.
+
+## Multi-entry compiler addendum
+
+- Single-entry catalog restriction removed.
+- Legal empty catalogs/placeholders no longer produce an implementation error or fake CAR.
+- Local integration CAR verified with three same-facet scale/appearance renditions.
+- Full suite: 77 tests, OK.
+- Existing Apple evidence covers the underlying same-facet scale/appearance writer. The latest end-to-end compiler fixture was not newly Apple-validated because the remote endpoint closed.
+
+## Latest local continuation
+
+- 79 tests, OK.
+- Default XML output: recorded Xcode 26.5 schema-2 diagnostics remain 12/12 byte-identical without an explicit output-format option.
+- Multi-page atlas: locally writer/parser verified; prior single-page format is Apple verified, new page splitting awaits Apple validation.
+- Schema-3 diagnostics and all-Xcode CBCK threshold tools are ready; no results are claimed while the remote identity is rejected.
+
+## Restored Apple oracle milestone
+
+- Xcode 26.5 schema-3 diagnostics: 18/18 byte-identical stdout and exit codes; all stderr empty.
+- Xcode 26.4.1 and 26.6 version result plists: byte-identical.
+- Integrated multi-entry CAR: Apple iPhoneOS assetutil accepted three scale/idiom/appearance variants.
+- Bounded two-page atlas: Apple macOS assetutil accepted two linked Images and two PackedImage pages.
+- Xcode 26.5 iPhoneOS ordinary-image CBCK boundary probe: 9/9 pass, all deepmap2/ARGB.
+- Full local suite: 81 tests, OK.
+
+## All-12 Simulator runtime verification
+
+All 12 installed non-macOS runtimes pass build, install, launch, named-CAR materialization and screenshot. iOS/tvOS use explicit UIImage lookup logs; watchOS/visionOS use retained screenshot color evidence. See `runtime-consumer-matrix-verified.json`.

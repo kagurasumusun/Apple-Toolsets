@@ -1,4 +1,5 @@
 import json
+import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
@@ -25,13 +26,31 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual([(a.name, a.kind) for a in catalog.assets], [("Logo", "image")])
             self.assertTrue(any("missing" in d.message for d in catalog.diagnostics))
 
-    def test_does_not_emit_fake_car(self):
+    def test_empty_catalog_is_valid_and_does_not_emit_fake_car(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "Assets.xcassets"
             root.mkdir()
             result = compile_catalogs([root], CompileOptions(Path(tmp) / "out"))
-            self.assertFalse(result.ok)
+            self.assertTrue(result.ok)
             self.assertFalse((Path(tmp) / "out" / "Assets.car").exists())
+
+    def test_compiles_all_assigned_multiscale_appearance_entries(self):
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "Assets.xcassets"; item = root / "Logo.imageset"; item.mkdir(parents=True)
+            for name in ("one.png", "two.png", "dark.png"): (item / name).write_bytes(png)
+            (item / "Contents.json").write_text(json.dumps({"images": [
+                {"filename":"one.png","idiom":"universal","scale":"1x"},
+                {"filename":"two.png","idiom":"universal","scale":"2x"},
+                {"filename":"dark.png","idiom":"universal","scale":"2x","appearances":[{"appearance":"luminosity","value":"dark"}]},
+                {"idiom":"universal","scale":"3x"},
+                {"filename":"one.png","idiom":"unsupported","scale":"1x"},
+            ], "info":{"author":"xcode","version":1}}))
+            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="iphoneos",minimum_deployment_target="15.0"))
+            self.assertTrue(result.ok)
+            car=CARFile(BOMStore.from_path(output/"Assets.car"))
+            self.assertEqual(len(car.renditions),3)
+            self.assertEqual(sorted((r.key["kCRThemeScaleName"],r.key["kCRThemeAppearanceName"]) for r in car.renditions),[(1,0),(2,0),(2,1)])
 
     def test_compiles_multiple_assets_to_one_car(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -88,15 +107,17 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(car.facets[0].name, "Photo")
             self.assertEqual(car.renditions[0].csi.pixel_format, "JPEG")
 
+    @unittest.skipUnless(importlib.util.find_spec("lzfse") is not None, "optional lzfse dependency is unavailable")
     def test_compiles_app_icon_car_sidecars_and_partial_plist(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "Assets.xcassets"
             item = root / "AppIcon.appiconset"
             item.mkdir(parents=True)
             png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGPgFtc0MLFiCA30rsqLAQAQXQMfVfFocgAAAABJRU5ErkJggg==")
-            (item / "icon.png").write_bytes(png)
+            small = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+            (item / "icon.png").write_bytes(png); (item / "small.png").write_bytes(small)
             (item / "Contents.json").write_text(json.dumps({
-                "images": [{"filename": "icon.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}],
+                "images": [{"filename":"small.png","idiom":"iphone","size":"1x1"},{"filename": "icon.png", "idiom": "universal", "platform": "ios", "size": "2x2"}],
                 "info": {"author": "xcode", "version": 1},
             }))
             output = Path(tmp) / "out"; partial = Path(tmp) / "partial.plist"
@@ -107,6 +128,7 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(result.ok, [d.render() for d in result.diagnostics])
             car = CARFile(BOMStore.from_path(output / "Assets.car"))
             self.assertEqual(len(car.renditions), 4)
+            self.assertEqual(max(r.csi.width for r in car.renditions), 2)
             self.assertTrue((output / "AppIcon60x60@2x.png").is_file())
             self.assertTrue((output / "AppIcon76x76@2x~ipad.png").is_file())
             info = plistlib.loads(partial.read_bytes())

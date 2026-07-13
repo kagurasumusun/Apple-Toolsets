@@ -1,5 +1,9 @@
 import base64
+import importlib.util
 import unittest
+
+HAS_LZFSE = importlib.util.find_spec("lzfse") is not None
+HAS_CAIROSVG = importlib.util.find_spec("cairosvg") is not None
 
 from actool_linux.bom import BOMStore
 from actool_linux.car import CARFile
@@ -125,6 +129,7 @@ class CARWriterTests(unittest.TestCase):
                 expected += bytes(((b*a+127)//255, (g*a+127)//255, (r*a+127)//255, a))
         self.assertEqual(dmp[44:], expected)
 
+    @unittest.skipUnless(HAS_LZFSE, "optional lzfse dependency is unavailable")
     def test_builds_cbck_app_icon_records(self):
         import lzfse
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGPgFtc0MLFiCA30rsqLAQAQXQMfVfFocgAAAABJRU5ErkJggg==")
@@ -194,6 +199,7 @@ class CARWriterTests(unittest.TestCase):
         self.assertEqual([r.key["kCRThemeScaleName"] for r in car.renditions], [1, 2])
         self.assertEqual([r.csi.scale for r in car.renditions], [1.0, 2.0])
 
+    @unittest.skipUnless(HAS_CAIROSVG, "optional cairosvg dependency is unavailable")
     def test_builds_svg_with_automatic_deepmap_fallbacks(self):
         svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="20"><rect width="10" height="20" fill="#369"/></svg>'
         car = CARFile(BOMStore(build_svg_car("Vector", svg)))
@@ -248,6 +254,7 @@ class CARWriterTests(unittest.TestCase):
         self.assertEqual([(r.key["kCRThemeGlyphWeightName"],r.key["kCRThemeGlyphSizeName"]) for r in car.renditions], [(4,2),(7,3)])
         self.assertTrue(all(r.csi.layout == 1017 for r in car.renditions))
 
+    @unittest.skipUnless(HAS_LZFSE, "optional lzfse dependency is unavailable")
     def test_platform_specific_app_icon_idioms(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGPgFtc0MLFiCA30rsqLAQAQXQMfVfFocgAAAABJRU5ErkJggg==")
         from actool_linux.carwriter import build_app_icon_car

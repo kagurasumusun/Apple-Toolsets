@@ -1,14 +1,34 @@
 {
   "updated": "2026-07-13",
   "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
-  "test_count": 64,
-  "test_status": "pass",
-  "storage_versions": [15, 16, 17],
+  "test_count": 81,
+  "test_status": "OK, full optional dependencies installed, no skips",
+  "storage_versions": [
+    15,
+    16,
+    17
+  ],
   "assetutil_consumer_matrix": {
     "rows": 100,
     "pass": 100,
-    "xcode_versions": ["16.0", "16.1", "16.2", "16.3", "16.4", "26.0.1", "26.1.1", "26.2", "26.3"],
-    "sdks": ["macosx", "iphoneos", "appletvos", "watchos", "xros"]
+    "xcode_versions": [
+      "16.0",
+      "16.1",
+      "16.2",
+      "16.3",
+      "16.4",
+      "26.0.1",
+      "26.1.1",
+      "26.2",
+      "26.3"
+    ],
+    "sdks": [
+      "macosx",
+      "iphoneos",
+      "appletvos",
+      "watchos",
+      "xros"
+    ]
   },
   "focused_xcode": "26.5 (17F42)",
   "verified_hosts": [
@@ -16,27 +36,204 @@
     "macOS 26.4 / Xcode 26.5 / assetutil 974.1"
   ],
   "simulator_inventory": [
-    "iOS 26.2", "iOS 26.4.1", "iOS 26.5",
-    "tvOS 26.2", "tvOS 26.4", "tvOS 26.5",
-    "watchOS 26.2", "watchOS 26.4", "watchOS 26.5",
-    "visionOS 26.2", "visionOS 26.4.1", "visionOS 26.5"
+    "iOS 26.2",
+    "iOS 26.4.1",
+    "iOS 26.5",
+    "tvOS 26.2",
+    "tvOS 26.4",
+    "tvOS 26.5",
+    "watchOS 26.2",
+    "watchOS 26.4",
+    "watchOS 26.5",
+    "visionOS 26.2",
+    "visionOS 26.4.1",
+    "visionOS 26.5"
   ],
-  "runtime_verified": ["iOS 26.2 UIKit CBCK consumer"],
+  "runtime_verified": [
+    "all 12 installed iOS/tvOS/watchOS/visionOS runtimes"
+  ],
   "implemented": [
-    "BOM/CAR reader-writer", "multi-level trees", "DATA/JPEG/HEIF/colors",
-    "PNG deepmap2 variants", "CBCK/LZFSE", "PDF/SVG", "AppIcons",
-    "all current CoreUI idioms", "symbols and multi-weight templates",
-    "packed atlas INLK", "layer/depth keys", "watch family/role keys",
-    "thinning", "launch sidecars", "platform icon sidecar manifests",
-    "major CLI option parsing", "capability report", "runtime inventory tool"
+    "BOM/CAR reader-writer",
+    "multi-level trees",
+    "DATA/JPEG/HEIF/colors",
+    "PNG deepmap2 variants",
+    "CBCK/LZFSE",
+    "PDF/SVG",
+    "AppIcons",
+    "all current CoreUI idioms",
+    "symbols and multi-weight templates",
+    "packed atlas INLK",
+    "layer/depth keys",
+    "watch family/role keys",
+    "thinning",
+    "launch sidecars",
+    "platform icon sidecar manifests",
+    "major CLI option parsing",
+    "capability report",
+    "runtime inventory tool"
   ],
   "unfinished": [
-    "all 12 runtime consumers", "all platform screenshots", "all macOS AppKit generations",
-    "exact tvOS stack compositor metadata", "exact watch registry", "exact vision parallax metadata",
-    "full CLI cross-product and byte diagnostics", "all-Xcode CBCK thresholds",
-    "legacy palette-img writer", "exact Xcode atlas heuristic"
+    "all platform screenshots",
+    "all macOS AppKit generations",
+    "exact tvOS stack compositor metadata",
+    "exact watch registry",
+    "exact vision parallax metadata",
+    "full CLI cross-product and byte diagnostics",
+    "all-Xcode CBCK thresholds",
+    "legacy palette-img writer",
+    "exact Xcode atlas heuristic"
   ],
-  "authoritative_notes": ["HANDOFF.md", "ENGINEERING_LOG.md", "VERIFICATION.md"],
-  "remote_session": "jNGXJkmYQMCMVK0wv6sZ",
-  "slow_work_policy": "defer; use short static/assetutil/inventory checks"
+  "authoritative_notes": [
+    "HANDOFF.md",
+    "ENGINEERING_LOG.md",
+    "VERIFICATION.md"
+  ],
+  "remote_session": "VtnenbVcaWmY2Jd5MyHJ",
+  "slow_work_policy": "defer; use short static/assetutil/inventory checks",
+  "focused_verification_latest": {
+    "host": "macOS 26.4 / Xcode 26.5 (17F42)",
+    "tests": "7 focused tests OK",
+    "vision_depth_keys": [
+      [
+        1,
+        10
+      ],
+      [
+        2,
+        20
+      ]
+    ],
+    "watch_family_role_keys": [
+      [
+        4,
+        2
+      ],
+      [
+        7,
+        3
+      ]
+    ],
+    "assetutil_exit": 0,
+    "scale_idiom_cli": {
+      "name": "Scaled",
+      "idiom": "phone",
+      "scale": 2,
+      "compression": "deepmap2",
+      "assetutil_exit": 0
+    }
+  },
+  "minimal_environment_test_status": "OK, 6 optional-dependency skips",
+  "full_optional_environment_test_status": "81 OK, no skips",
+  "byte_identical_diagnostics_verified": [
+    {
+      "case": "compile no input with platform/target",
+      "sha256": "d9b8569f9181e8b46f658048b5df5043d977568dcf0aec455004a283c9091f8f"
+    },
+    {
+      "case": "Xcode 26.5 version plist",
+      "sha256": "e325b8dd7f9a54f2fa97fb4653de29e921b55bc76fc68702d5c39373925c4493"
+    },
+    {
+      "case": "missing catalog without platform/target",
+      "sha256": "1a4abd16bb6775a1bb2eaf67de208780882a35d1baba04887ac842edda64fbc8"
+    },
+    {
+      "case": "missing catalog with target, missing platform",
+      "sha256": "7b3457836d8b694d40e4eceb3fcdbf3e78eb140164e000bf2ead61f43588681c"
+    }
+  ],
+  "byte_identical_diagnostic_count": 22,
+  "byte_identical_version_releases": [
+    "16.0",
+    "16.1",
+    "16.2",
+    "16.3",
+    "16.4",
+    "26.0.1",
+    "26.1.1",
+    "26.2",
+    "26.3",
+    "26.4.1",
+    "26.5",
+    "26.6"
+  ],
+  "diagnostic_oracle_file": "diagnostic-probe-xcode26.5.json",
+  "version_matrix_file": "xcode-actool-version-matrix.json",
+  "diagnostic_oracle_schema": 2,
+  "diagnostic_new_exact_cases": [
+    "duplicate slot result",
+    "invalid scale",
+    "invalid size field",
+    "two-malformed ordering",
+    "AppIcon incorrect dimensions with fixed path",
+    "empty AppIcon roles with fixed path",
+    "requested AppIcon absent"
+  ],
+  "runtime_matrix_latest": {
+    "file": "runtime-consumer-matrix-verified.json",
+    "rows": 12,
+    "pass": 12,
+    "platforms": [
+      "iOS",
+      "tvOS",
+      "watchOS",
+      "visionOS"
+    ],
+    "versions": [
+      "26.2",
+      "26.4/26.4.1",
+      "26.5"
+    ],
+    "stages": [
+      "build",
+      "boot",
+      "install",
+      "launch",
+      "materialization",
+      "screenshot",
+      "cleanup"
+    ],
+    "evidence": "UIKit unified logs plus watch/vision screenshot cyan pixel counts"
+  },
+  "runtime_consumer_tool": "tools/runtime_consumer_matrix.py",
+  "single_entry_constraint": "removed",
+  "multi_entry_catalog": {
+    "implemented": [
+      "all assigned entries",
+      "1x/2x/3x",
+      "idioms",
+      "Any/Dark/High Contrast",
+      "locale",
+      "PNG/JPEG/HEIF",
+      "colors",
+      "datasets",
+      "symbols",
+      "SVG",
+      "launch images",
+      "first duplicate winner",
+      "placeholder skipping"
+    ],
+    "local_car_parser_verified": true,
+    "new_apple_assetutil_attempt": "blocked: Upterm endpoint closed",
+    "writer_primitives_previously_assetutil_verified": true,
+    "apple_assetutil_verified": true
+  },
+  "option_cross_product_tool": "tools/option_cross_product.py",
+  "default_output_format": "xml1 (12/12 recorded Xcode 26.5 probe rows byte-identical without explicit option)",
+  "diagnostic_probe_schema": 3,
+  "diagnostic_schema3_apple_status": "18/18 stdout byte-identical and exit-code identical; stderr empty",
+  "cbck_threshold_probe": "tools/cbck_threshold_probe.py",
+  "multi_page_atlas": {
+    "implemented": true,
+    "local_parser_verified": true,
+    "single_page_apple_assetutil_previously_verified": true,
+    "multi_page_apple_status": "pending",
+    "apple_assetutil_verified": true
+  },
+  "cbck_threshold_xcode26_5_ios": {
+    "rows": 9,
+    "pass": 9,
+    "compression": "deepmap2 for all",
+    "conclusion": "ordinary image CBCK is not selected at tested 0x155555 row boundaries"
+  }
 }

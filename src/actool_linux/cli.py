@@ -31,15 +31,28 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--compress-pngs", choices=("yes","no"), default="yes")
     p.add_argument("--enable-on-demand-resources", choices=("yes","no"), default="no")
     p.add_argument("--print-contents", action="store_true")
+    # Apple's current actool emits an XML result plist when the option is
+    # omitted. Human-readable output is only selected explicitly.
+    p.add_argument("--output-format", choices=("human-readable-text","xml1"), default="xml1")
     p.add_argument("--version", action="store_true")
+    p.add_argument("--compatibility-xcode-version", choices=("16.0","16.1","16.2","16.3","16.4","26.0.1","26.1.1","26.2","26.3","26.4.1","26.5","26.6"), default="26.5")
     p.add_argument("--capabilities", action="store_true")
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
-    ns = parser().parse_args(argv)
+    args = sys.argv[1:] if argv is None else argv
+    ns, unknown = parser().parse_known_args(args)
+    if unknown:
+        from .diagnostics import unknown_argument_plist
+        sys.stdout.buffer.write(unknown_argument_plist(unknown[0], include_missing_input="--compile" in args))
+        return 1
     if ns.version:
-        print(VERSION)
+        if ns.output_format == "xml1":
+            from .diagnostics import version_plist
+            sys.stdout.buffer.write(version_plist(short_version=ns.compatibility_xcode_version))
+        else:
+            print(VERSION)
         return 0
     if ns.capabilities:
         from .capabilities import capability_report
@@ -67,17 +80,20 @@ def main(argv: list[str] | None = None) -> int:
         compress_pngs=ns.compress_pngs == "yes",
         enable_on_demand_resources=ns.enable_on_demand_resources == "yes",
     ))
+    visible = []
     for diagnostic in result.diagnostics:
         enabled = {
-            "warning": ns.warnings == "yes",
-            "error": ns.errors == "yes",
-            "notice": ns.notices == "yes",
+            "warning": ns.warnings == "yes", "error": ns.errors == "yes", "notice": ns.notices == "yes",
         }.get(diagnostic.severity, True)
-        if enabled:
-            print(diagnostic.render(), file=sys.stderr)
-    if ns.print_contents:
-        for output in result.outputs:
-            print(output)
+        if enabled: visible.append(diagnostic)
+    if ns.output_format == "xml1":
+        from .diagnostics import result_plist
+        include_results = bool(ns.inputs) and all(path.exists() for path in ns.inputs) and not (ns.app_icon and ns.output_partial_info_plist is None)
+        sys.stdout.buffer.write(result_plist(visible, result.outputs, include_compilation_results=include_results))
+    else:
+        for diagnostic in visible: print(diagnostic.render(), file=sys.stderr)
+        if ns.print_contents:
+            for output in result.outputs: print(output)
     return 0 if result.ok else 1
 
 

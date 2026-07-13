@@ -1,13 +1,17 @@
 import struct
 import unittest
 
-import lzfse
+try:
+    import lzfse
+except ImportError:
+    lzfse = None
 
 from actool_linux.bom import BOMError
 from actool_linux.cbck import parse_cbck
 
 
 class CBCKTests(unittest.TestCase):
+    @unittest.skipIf(lzfse is None, "optional lzfse dependency is unavailable")
     def test_parses_and_decompresses_chunks(self):
         sources = [b"abcd" * 10, b"efgh" * 3]
         chunks = []
@@ -23,6 +27,7 @@ class CBCKTests(unittest.TestCase):
         with self.assertRaisesRegex(BOMError, "truncated"):
             parse_cbck(raw)
 
+    @unittest.skipIf(lzfse is None, "optional lzfse dependency is unavailable")
     def test_rejects_trailing_bytes(self):
         compressed = lzfse.compress(b"pixel")
         raw = b"MLEC" + struct.pack("<3I", 3, 4, 1) + b"KCBC" + struct.pack("<4I", 0, 0, 1, len(compressed)) + compressed + b"x"

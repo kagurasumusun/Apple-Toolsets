@@ -408,6 +408,11 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
 
 
 
+def png_dimensions(data: bytes) -> tuple[int, int]:
+    width, height, _color_type, _pixels, _indexed = _decode_png_8bit(data)
+    return width, height
+
+
 def _png_premultiplied_bgra(data: bytes) -> tuple[int, int, bytes, bool]:
     width, height, color_type, pixels, _indexed = _decode_png_8bit(data)
     output = bytearray(); opaque = True
@@ -875,18 +880,33 @@ def build_app_icon_car(name: str, png: bytes, filename: str = "icon.png", *, pla
     return build_assets_car(app_icon_renditions(name, png, filename, platform=platform), platform=platform, target=target)
 
 
-def data_rendition(name: str, data: bytes, uti: str = "public.data") -> AssetRendition:
-    return AssetRendition(name, _csi_data(bytes(data), uti), 0xB5)
+def data_rendition(name: str, data: bytes, uti: str = "public.data", *, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
+    idiom_id, appearance_id = _selector_ids(idiom, appearance)
+    return AssetRendition(name, _csi_data(bytes(data), uti), 0xB5, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
-def jpeg_rendition(name: str, data: bytes, filename: str = "image.jpg", *, scale: int = 1) -> AssetRendition:
+def _selector_ids(idiom: str | int = 0, appearance: str | int = 0) -> tuple[int, int]:
+    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4, "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
+    appearances = {"any": 0, "light": 0, "dark": 1, "high-contrast": 2, "high": 2}
+    try: idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
+    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported idiom: {idiom}") from exc
+    try: appearance_id = appearances[appearance] if isinstance(appearance, str) else int(appearance)
+    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported appearance: {appearance}") from exc
+    if idiom_id not in range(9): raise ValueError("invalid idiom")
+    if appearance_id not in (0, 1, 2): raise ValueError("invalid appearance")
+    return idiom_id, appearance_id
+
+
+def jpeg_rendition(name: str, data: bytes, filename: str = "image.jpg", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
     if scale not in (1, 2, 3): raise ValueError("image scale must be 1, 2, or 3")
-    return AssetRendition(name, _csi_jpeg(bytes(data), filename, scale), 0xB5, scale=scale)
+    idiom_id, appearance_id = _selector_ids(idiom, appearance)
+    return AssetRendition(name, _csi_jpeg(bytes(data), filename, scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
-def heif_rendition(name: str, data: bytes, filename: str = "image.heic", *, scale: int = 1) -> AssetRendition:
+def heif_rendition(name: str, data: bytes, filename: str = "image.heic", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
     if scale not in (1, 2, 3): raise ValueError("image scale must be 1, 2, or 3")
-    return AssetRendition(name, _csi_heif(bytes(data), filename, scale), 0xB5, scale=scale)
+    idiom_id, appearance_id = _selector_ids(idiom, appearance)
+    return AssetRendition(name, _csi_heif(bytes(data), filename, scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
 def png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
@@ -971,7 +991,7 @@ def build_pdf_car(name: str, data: bytes, filename: str = "image.pdf", *, platfo
     return build_assets_car([pdf_rendition(name, data, filename)], platform=platform, target=target)
 
 
-def color_rendition(name: str, red: float, green: float, blue: float, alpha: float = 1.0, *, color_space: str = "srgb") -> AssetRendition:
+def color_rendition(name: str, red: float, green: float, blue: float, alpha: float = 1.0, *, color_space: str = "srgb", idiom: str | int = 0, appearance: str | int = 0) -> AssetRendition:
     components = (float(red), float(green), float(blue), float(alpha))
     if any(not 0.0 <= value <= 1.0 for value in components):
         raise ValueError("color components must be between 0 and 1")
@@ -980,7 +1000,8 @@ def color_rendition(name: str, red: float, green: float, blue: float, alpha: flo
         color_space_id = color_space_ids[color_space]
     except KeyError as exc:
         raise ValueError(f"unsupported color space: {color_space}") from exc
-    return AssetRendition(name, _csi_color(name, components, color_space_id), 0xD9)
+    idiom_id, appearance_id = _selector_ids(idiom, appearance)
+    return AssetRendition(name, _csi_color(name, components, color_space_id), 0xD9, idiom=idiom_id, appearance=appearance_id)
 
 
 def build_color_car(name: str, red: float, green: float, blue: float, alpha: float = 1.0, *, color_space: str = "srgb", platform: str = "macosx", target: str = "13.0") -> bytes:

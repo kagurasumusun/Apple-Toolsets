@@ -22,5 +22,14 @@ class AtlasTests(unittest.TestCase):
         refs=[r for r in car.renditions if r.csi.layout==1003]
         self.assertTrue(all(len(r.csi.rendition_data)==0 for r in refs))
         self.assertTrue(all(parse_atlas_link(next(t.value for t in r.csi.tlvs if t.tag==1010)).width>0 for r in refs))
+    def test_splits_into_bounded_pages(self):
+        car=CARFile(BOMStore(build_packed_atlas_car({"One":P1,"Two":P2},max_width=2,max_height=2)))
+        self.assertEqual(sorted(r.csi.layout for r in car.renditions),[1003,1003,1004,1004])
+        refs=[r for r in car.renditions if r.csi.layout==1003]
+        pages=[]
+        for r in refs:
+            link=parse_atlas_link(next(t.value for t in r.csi.tlvs if t.tag==1010))
+            pages.append(next(t.value for t in link.tokens if t.attribute==8))
+        self.assertEqual(sorted(pages),[1,2])
 
 if __name__=='__main__': unittest.main()

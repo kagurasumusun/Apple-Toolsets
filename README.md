@@ -8,7 +8,7 @@ Active research implementation with bounds-checked BOM/CAR/CSI parsing and deter
 
 ### Verified so far
 
-- Linux and macOS unit suite: 34 tests.
+- Linux full optional-dependency unit suite: 77 tests.
 - Xcode 16.4 / CoreUI 918.5 parsing agrees with `assetutil` for header, platform, key format, facets, and rendition name/dimensions/scale.
 - A 300-facet / 301-rendition CAR is parsed and compared with the Apple oracle.
 - The Linux BOM writer can repack all blocks of a CAR into a newly generated container; Apple's `assetutil` accepts it.
@@ -18,7 +18,7 @@ Active research implementation with bounds-checked BOM/CAR/CSI parsing and deter
 - Multiple data/JPEG/color assets can be emitted into one CAR, including variable-length facet names. A mixed CAR was accepted by `assetutil`, and one app process loaded all three through `NSDataAsset`, `NSImage`, and `NSColor`.
 - A 100-row installed-Xcode/SDK consumer matrix opened the Linux-generated mixed CAR successfully in every row. Covered Xcode 16.0–16.4 and 26.0.1–26.3 app bundles/aliases, five SDK families, and CoreUI 918/971/972 readers.
 
-These results cover the BOM container, CAR metadata, B+ tree leaves, rendition keys, CSI header/TLV, RAWD data/JPEG/HEIF payloads, COLR sRGB/Display-P3 named colors, and verified arbitrary-size 8/16-bit GA, opaque RGB/ARGB, RGBA/ARGB, and indexed-palette-to-ARGB `MLEC/dmp2` PNG subsets with PNG filter decoding, alpha premultiplication, and BGRA storage. A preserved-PDF writer with GA8 deepmap 1×/2×/optional-3× fallbacks is readable by both `assetutil` and AppKit; `actool-pdf-car` accepts pre-rasterized fallback PNGs. Current Xcode 16/26 indexed-palette outputs are covered through ARGB deepmap2. The optional Linux LZFSE `bvx2` backend is verified by Apple `assetutil` and AppKit on macOS 26.4 / Xcode 26.5. Legacy palette-img, icons, complete vectors, thinning, and all option semantics are not complete.
+These results cover the BOM container, CAR metadata, arbitrary-depth B+ trees, rendition keys, CSI header/TLV, RAWD data/JPEG/HEIF payloads, COLR sRGB/Display-P3 named colors, and verified arbitrary-size 8/16-bit GA, opaque RGB/ARGB, RGBA/ARGB, and indexed-palette-to-ARGB `MLEC/dmp2` PNG paths. The compiler processes every assigned Contents.json entry, including same-facet scale/idiom/appearance variants, while legally unassigned slots are ignored. PDF/SVG vectors, modern CBCK AppIcons, symbols, packed atlases, thinning, layers, and watch family/role keys are implemented with the verification boundaries documented in `ENGINEERING_LOG.md`. Legacy palette-img, exact Xcode atlas heuristics, private compositor semantics, and the complete option cross-product remain incomplete.
 
 ## Principles
 

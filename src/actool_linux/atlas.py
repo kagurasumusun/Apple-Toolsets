@@ -72,8 +72,8 @@ def _png_rgba(width: int, height: int, pixels: bytes) -> bytes:
     return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,6,0,0,0))+chunk(b"IDAT",zlib.compress(rows,9))+chunk(b"IEND",b"")
 
 
-def build_packed_atlas_car(images: dict[str, bytes], *, scale: int = 1, max_width: int = 1024, platform: str = "macosx", target: str = "13.0") -> bytes:
-    """Pack PNGs into one page and emit layout-1003 links + layout-1004 page."""
+def build_packed_atlas_car(images: dict[str, bytes], *, scale: int = 1, max_width: int = 1024, max_height: int = 1024, platform: str = "macosx", target: str = "13.0") -> bytes:
+    """Shelf-pack PNGs into bounded pages and emit layout-1003/1004 records."""
     from .carwriter import _decode_png_8bit
     if not images: raise ValueError("atlas needs at least one image")
     decoded=[]
@@ -83,23 +83,28 @@ def build_packed_atlas_car(images: dict[str, bytes], *, scale: int = 1, max_widt
         elif ct==4: rgba=b"".join(bytes((g,g,g,a)) for g,a in zip(pix[::2],pix[1::2]))
         elif ct==2: rgba=b"".join(bytes((r,g,b,255)) for r,g,b in zip(pix[::3],pix[1::3],pix[2::3]))
         else: raise ValueError("indexed atlas input is not enabled")
-        if w>max_width: raise ValueError("atlas item exceeds max width")
+        if w>max_width or h>max_height: raise ValueError("atlas item exceeds page bounds")
         decoded.append((name,w,h,rgba))
-    x=y=row_h=0; placements=[]
+    # Each placement carries a 1-based page dimension used by INLK tokens.
+    x=y=row_h=0; page=1; placements=[]
     for name,w,h,pix in decoded:
         if x and x+w>max_width: x=0; y+=row_h; row_h=0
-        placements.append((name,x,y,w,h,pix)); x+=w; row_h=max(row_h,h)
-    aw=max(x if y==0 else max_width,1); ah=y+row_h
-    canvas=bytearray(aw*ah*4)
-    for _,px,py,w,h,pix in placements:
-        for row in range(h): canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4]=pix[row*w*4:(row+1)*w*4]
-    page_png=_png_rgba(aw,ah,bytes(canvas)); page_csi=bytearray(_csi_png_deepmap(page_png,"ZZZZPackedAsset-1.0.1-gamut0",scale=scale))
-    struct.pack_into("<H",page_csi,36,1004); struct.pack_into("<I",page_csi,8,0)
+        if y+h>max_height:
+            page+=1; x=y=row_h=0
+        placements.append((page,name,x,y,w,h,pix)); x+=w; row_h=max(row_h,h)
     records=[]
-    page_dimension=1
-    for name,px,py,w,h,_ in placements:
+    for page_dimension in range(1,page+1):
+        page_items=[p for p in placements if p[0]==page_dimension]
+        aw=max(px+w for _,_,px,_,w,_,_ in page_items); ah=max(py+h for _,_,_,py,_,h,_ in page_items)
+        canvas=bytearray(aw*ah*4)
+        for _,_,px,py,w,h,pix in page_items:
+            for row in range(h): canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4]=pix[row*w*4:(row+1)*w*4]
+        page_name=f"ZZZZPackedAsset-1.0.{page_dimension}-gamut0"
+        page_png=_png_rgba(aw,ah,bytes(canvas)); page_csi=bytearray(_csi_png_deepmap(page_png,page_name,scale=scale))
+        struct.pack_into("<H",page_csi,36,1004); struct.pack_into("<I",page_csi,8,0)
+        records.append(AssetRendition(page_name,bytes(page_csi),181,scale=scale,element=9,identifier_override=0,dimension1=page_dimension,atlas_linked=True))
+    for page_dimension,name,px,py,w,h,_ in placements:
         tokens=(AtlasKeyToken(24,0),AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(8,page_dimension),AtlasKeyToken(12,scale),AtlasKeyToken(25,0))
         link=AtlasLink(px,py,w,h,tokens)
         records.append(AssetRendition(name,_linked_csi(name+".png",link,scale),181,scale=scale,atlas_linked=True))
-    records.append(AssetRendition("ZZZZPackedAsset-1.0.1-gamut0",bytes(page_csi),181,scale=scale,element=9,identifier_override=0,dimension1=page_dimension,atlas_linked=True))
     return build_assets_car(records,platform=platform,target=target)
