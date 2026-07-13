@@ -1,0 +1,26 @@
+import base64
+import unittest
+from actool_linux.atlas import AtlasKeyToken, AtlasLink, build_atlas_link, parse_atlas_link, build_packed_atlas_car
+from actool_linux.bom import BOMStore
+from actool_linux.car import CARFile
+
+P1=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+P2=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
+
+class AtlasTests(unittest.TestCase):
+    def test_oracle_link_roundtrip(self):
+        raw=bytes.fromhex("4b4c4e4900000000a2000000020000000d0000000f000000000018000000010009000200b50008005c020c0001001900050000000000")
+        link=parse_atlas_link(raw)
+        self.assertEqual((link.x,link.y,link.width,link.height),(162,2,13,15))
+        self.assertEqual(link.tokens,(AtlasKeyToken(24,0),AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(8,604),AtlasKeyToken(12,1),AtlasKeyToken(25,5)))
+        self.assertEqual(build_atlas_link(link),raw)
+    def test_builds_linked_atlas_car(self):
+        car=CARFile(BOMStore(build_packed_atlas_car({"One":P1,"Two":P2})))
+        self.assertEqual(len(car.renditions),3)
+        layouts=sorted(r.csi.layout for r in car.renditions)
+        self.assertEqual(layouts,[1003,1003,1004])
+        refs=[r for r in car.renditions if r.csi.layout==1003]
+        self.assertTrue(all(len(r.csi.rendition_data)==0 for r in refs))
+        self.assertTrue(all(parse_atlas_link(next(t.value for t in r.csi.tlvs if t.tag==1010)).width>0 for r in refs))
+
+if __name__=='__main__': unittest.main()
