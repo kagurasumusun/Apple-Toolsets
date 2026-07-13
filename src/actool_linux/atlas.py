@@ -125,27 +125,18 @@ def _png_rgba(width: int, height: int, pixels: bytes) -> bytes:
     return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,6,0,0,0))+chunk(b"IDAT",zlib.compress(rows,9))+chunk(b"IEND",b"")
 
 
-def build_packed_atlas_car(
+def packed_atlas_renditions(
     images: dict[str, bytes],
     *,
     scale: int = 1,
     max_width: int = 1024,
     max_height: int = 1024,
     sort_by: str = "name",
-    platform: str = "macosx",
-    target: str = "13.0",
     deployment_token: int = 5,
     style: str = "generic",
     atlas_name: str = "Atlas",
-) -> bytes:
-    """Shelf-pack PNGs into bounded pages using configurable heuristics.
-
-    ``style='generic'`` keeps the existing deterministic linked-image writer.
-    ``style='explicit'`` approximates the public Apple SpriteKit template atlas
-    path by emitting a layout-1005 metadata rendition, an explicitly named
-    packed page, and explicit-variant `KLNI` links keyed back to the atlas
-    identifier.
-    """
+) -> list[AssetRendition]:
+    """Return atlas renditions without wrapping them in a CAR."""
     from .carwriter import _decode_png_8bit
     if not images: raise ValueError("atlas needs at least one image")
     if style not in ("generic", "explicit"):
@@ -186,8 +177,6 @@ def build_packed_atlas_car(
     if style == "explicit":
         if page != 1:
             raise ValueError("explicit atlas style currently supports one page")
-        # Approximate the public SpriteKit template atlas observed from Apple:
-        # 2px left/top inset, 2px horizontal gap, 1px right inset, 2px bottom inset.
         placements=[]
         x=2; top=2
         for name,w,h,pix in decoded:
@@ -211,7 +200,7 @@ def build_packed_atlas_car(
             tokens=(AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(12,scale),AtlasKeyToken(17,parent_identifier))
             link=AtlasLink(px,py,w,h,tokens,variant="explicit",header_u16=12,header_u32=20)
             records.append(AssetRendition(name,_linked_csi(name+".png",link,scale),181,scale=scale))
-        return build_assets_car(records,platform=platform,target=target)
+        return records
 
     records=[]
     for page_dimension in range(1,page+1):
@@ -228,4 +217,34 @@ def build_packed_atlas_car(
         tokens=(AtlasKeyToken(24,0),AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(8,page_dimension),AtlasKeyToken(12,scale),AtlasKeyToken(25,deployment_token))
         link=AtlasLink(px,py,w,h,tokens)
         records.append(AssetRendition(name,_linked_csi(name+".png",link,scale),181,scale=scale,atlas_linked=True,deployment_target=deployment_token))
-    return build_assets_car(records,platform=platform,target=target)
+    return records
+
+
+def build_packed_atlas_car(
+    images: dict[str, bytes],
+    *,
+    scale: int = 1,
+    max_width: int = 1024,
+    max_height: int = 1024,
+    sort_by: str = "name",
+    platform: str = "macosx",
+    target: str = "13.0",
+    deployment_token: int = 5,
+    style: str = "generic",
+    atlas_name: str = "Atlas",
+) -> bytes:
+    """Shelf-pack PNGs into bounded pages using configurable heuristics."""
+    return build_assets_car(
+        packed_atlas_renditions(
+            images,
+            scale=scale,
+            max_width=max_width,
+            max_height=max_height,
+            sort_by=sort_by,
+            deployment_token=deployment_token,
+            style=style,
+            atlas_name=atlas_name,
+        ),
+        platform=platform,
+        target=target,
+    )

@@ -192,6 +192,29 @@ class CatalogTests(unittest.TestCase):
             self.assertFalse(any(output.glob("AppIcon*.png")))
             self.assertEqual(plistlib.loads(partial.read_bytes()), {})
 
+    def test_compiles_spriteatlas_catalog(self):
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "Assets.xcassets"
+            atlas = root / "Particle Sprite Atlas.spriteatlas"
+            bokeh = atlas / "bokeh.imageset"
+            spark = atlas / "spark.imageset"
+            bokeh.mkdir(parents=True)
+            spark.mkdir()
+            (atlas / "Contents.json").write_text(json.dumps({"info":{"author":"xcode","version":1}}))
+            for directory, stem in ((bokeh, "bokeh"), (spark, "spark")):
+                (directory / f"{stem}.png").write_bytes(png)
+                (directory / "Contents.json").write_text(json.dumps({
+                    "images": [{"filename": f"{stem}.png", "idiom": "universal", "scale": "1x"}],
+                    "info": {"author": "xcode", "version": 1},
+                }))
+            output = Path(tmp) / "out"
+            result = compile_catalogs([root], CompileOptions(output, platform="macosx", minimum_deployment_target="13.0"))
+            self.assertTrue(result.ok, [d.render() for d in result.diagnostics])
+            car = CARFile(BOMStore.from_path(output / "Assets.car"))
+            self.assertEqual(sorted(r.csi.layout for r in car.renditions), [1003, 1003, 1004, 1005])
+            self.assertEqual(sorted(f.name for f in car.facets), ["Particle Sprite Atlas", "bokeh", "spark"])
+
     def test_compiles_tv_image_stack_catalog(self):
         png=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
         with tempfile.TemporaryDirectory() as tmp:

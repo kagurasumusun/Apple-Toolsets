@@ -9,6 +9,7 @@ from .carwriter import (
     app_icon_renditions, build_assets_car, color_rendition, data_rendition,
     heif_rendition, jpeg_rendition, layered_image_renditions, png_rendition, resize_png, svg_renditions, symbol_rendition, png_dimensions,
 )
+from .atlas import packed_atlas_renditions
 from .model import Catalog, Diagnostic, load_catalog
 from .appicons import app_icon_entry_rank, app_icon_sidecar_specs
 
@@ -177,7 +178,33 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 elif kind == "contrast" and value == "high": result = "high-contrast"
             return result
 
+        atlas_member_dirs = {asset.directory for asset in assets if asset.directory.parent.suffix == ".spriteatlas"}
+
         for asset in assets:
+            if asset.kind == "sprite-atlas":
+                members = [candidate for candidate in assets if candidate.kind == "image" and candidate.directory.parent == asset.directory]
+                images: dict[str, bytes] = {}
+                for member in members:
+                    selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str) and (member.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "1x"), None)
+                    if selected is None:
+                        selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str) and (member.directory / str(entry["filename"])).is_file()), None)
+                    if selected is None:
+                        continue
+                    source = member.directory / str(selected["filename"])
+                    if source.suffix.lower() != ".png":
+                        continue
+                    images[member.name] = source.read_bytes()
+                if images:
+                    try:
+                        renditions.extend(packed_atlas_renditions(
+                            images,
+                            scale=1,
+                            style="explicit",
+                            atlas_name=asset.name,
+                        ))
+                    except ValueError as exc:
+                        diagnostics.append(Diagnostic("error", f"invalid sprite atlas: {exc}", asset.directory))
+                continue
             if asset.kind == "image-stack":
                 layer_bytes: list[bytes] = []
                 layer_depths: list[int] = []
@@ -280,6 +307,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 if idiom not in known_idioms:
                     continue
                 scale_text = str(entry.get("scale", "1x"))
+                if asset.directory in atlas_member_dirs:
+                    continue
                 if asset.kind in ("image", "symbol") and scale_text not in ("1x", "2x", "3x"):
                     continue
                 scale_value = int(scale_text[0]) if scale_text in ("1x", "2x", "3x") else 1

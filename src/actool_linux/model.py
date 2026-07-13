@@ -45,6 +45,7 @@ KNOWN_SUFFIXES = {
     ".dataset": "data",
     ".imagestack": "image-stack",
     ".imagestacklayer": "image-stack-layer",
+    ".spriteatlas": "sprite-atlas",
     ".stickerpack": "sticker-pack",
 }
 
