@@ -99,6 +99,8 @@ The explicit `depth` / `dimension2` handling for `.imagestack` vision/xros paths
 - `palette-string-audit-legacy.json`
 - `paletteimg-verify-remote.json`
 - `paletteimg-consumer-legacy-matrix.json`
+- `render-layout-fixture-scan-current.json`
+- `render-layout-fixture-scan-legacy.json`
 
 ### What these verify
 
@@ -208,6 +210,15 @@ An independently generated explicit `palette-img` CAR is accepted by `assetutil`
 - `16.2`, `16.2.0`
 
 Each row reported `Compression = palette-img` and `Encoding = ARGB` for the generated 4×4 test CAR. This upgrades the legacy state from purely fixture-gated to an explicit writer/parser with consumer verification. What remains unproven is Apple actool’s historical automatic selection heuristic.
+
+#### `render-layout-fixture-scan-current.json` / `render-layout-fixture-scan-legacy.json`
+A lightweight parser-based installed-CAR scan was run on both hosts to look specifically for candidate aggregate fixtures.
+
+- current host sample: 20 CARs
+- legacy host sample: 30 CARs
+- no sampled CAR contained CSI layout `1002` (LayerStack aggregate)
+- observed layouts were dominated by ordinary image (`12`), atlas link/page (`1003` / `1004`), color (`1009`), and vector (`9`)
+- the modern host also showed additional newer layouts (`1019`, `1020`, `1021`) that remain to be classified
 
 ## Test status
 

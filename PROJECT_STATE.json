@@ -413,5 +413,20 @@
       "legacy_consumer_matrix": "paletteimg-consumer-legacy-matrix.json"
     },
     "remaining": "automatic Apple actool palette-img selection remains unobserved in tested 15/16 generations"
+  },
+  "render_layout_fixture_scan": {
+    "current_host_sampled": 20,
+    "legacy_host_sampled": 30,
+    "layout_1002_hits_current": 0,
+    "layout_1002_hits_legacy": 0,
+    "modern_unknown_layouts": [
+      "1019",
+      "1020",
+      "1021"
+    ],
+    "evidence": [
+      "render-layout-fixture-scan-current.json",
+      "render-layout-fixture-scan-legacy.json"
+    ]
   }
 }
