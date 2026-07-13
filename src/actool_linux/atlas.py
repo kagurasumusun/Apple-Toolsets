@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import struct, zlib
 
-from .carwriter import AssetRendition, _csi_png_deepmap, _fixed, build_assets_car
+from .carwriter import AssetRendition, _csi_png_deepmap, _fixed, _identifier, build_assets_car
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,7 @@ def build_atlas_link(link: AtlasLink) -> bytes:
 
 def _linked_csi(filename: str, link: AtlasLink, scale: int) -> bytes:
     h = bytearray(184); h[:4] = b"ISTC"
-    struct.pack_into("<5I", h, 4, 1, 4, link.width, link.height, scale * 100)
+    struct.pack_into("<5I", h, 4, 1, 4 if link.variant == "explicit" else 16, link.width, link.height, scale * 100)
     h[24:28] = b" 8AG"  # little-endian GA8
     struct.pack_into("<I2H", h, 32, 0, 1003, 0); h[40:168] = _fixed(filename, 128)
     tlvs = b"".join((
@@ -95,6 +95,28 @@ def _linked_csi(filename: str, link: AtlasLink, scale: int) -> bytes:
         struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"), struct.pack("<2II",1006,4,1)))
     struct.pack_into("<4I",h,168,len(tlvs),1,0,0)
     return bytes(h)+tlvs
+
+
+def _atlas_name_list_tlv(names: list[str]) -> bytes:
+    payload = bytearray(struct.pack("<2I", len(names), 0))
+    for name in names:
+        raw = name.encode("utf-8")
+        payload += struct.pack("<I", len(raw)) + raw
+    return struct.pack("<2I", 1013, len(payload)) + bytes(payload)
+
+
+def _atlas_metadata_csi(names: list[str], *, scale: int = 1) -> bytes:
+    h = bytearray(184); h[:4] = b"ISTC"
+    struct.pack_into("<5I", h, 4, 1, 0, 0, 0, scale * 100)
+    struct.pack_into("<I2H", h, 32, 0, 1005, 0)
+    h[40:168] = _fixed("CoreStructuredImage", 128)
+    tlvs = b"".join((
+        struct.pack("<2I8s", 1004, 8, b"\0" * 8),
+        struct.pack("<2II", 1006, 4, 1),
+        _atlas_name_list_tlv(names),
+    ))
+    struct.pack_into("<4I", h, 168, len(tlvs), 1, 0, 0)
+    return bytes(h) + tlvs
 
 
 def _png_rgba(width: int, height: int, pixels: bytes) -> bytes:
@@ -113,14 +135,21 @@ def build_packed_atlas_car(
     platform: str = "macosx",
     target: str = "13.0",
     deployment_token: int = 5,
+    style: str = "generic",
+    atlas_name: str = "Atlas",
 ) -> bytes:
-    """Shelf-pack PNGs into bounded pages using configurable sorting heuristics and emit layout-1003/1004 records.
+    """Shelf-pack PNGs into bounded pages using configurable heuristics.
 
-    Installed Apple atlas fixtures consistently carry INLK token attribute 25
-    with value 5; that observable default is used here.
-    """ 
+    ``style='generic'`` keeps the existing deterministic linked-image writer.
+    ``style='explicit'`` approximates the public Apple SpriteKit template atlas
+    path by emitting a layout-1005 metadata rendition, an explicitly named
+    packed page, and explicit-variant `KLNI` links keyed back to the atlas
+    identifier.
+    """
     from .carwriter import _decode_png_8bit
     if not images: raise ValueError("atlas needs at least one image")
+    if style not in ("generic", "explicit"):
+        raise ValueError("unsupported atlas style")
     if not 0 <= deployment_token <= 65535:
         raise ValueError("invalid atlas deployment token")
     decoded=[]
@@ -153,6 +182,37 @@ def build_packed_atlas_car(
         if y+h>max_height:
             page+=1; x=y=row_h=0
         placements.append((page,name,x,y,w,h,pix)); x+=w; row_h=max(row_h,h)
+
+    if style == "explicit":
+        if page != 1:
+            raise ValueError("explicit atlas style currently supports one page")
+        # Approximate the public SpriteKit template atlas observed from Apple:
+        # 2px left/top inset, 2px horizontal gap, 1px right inset, 2px bottom inset.
+        placements=[]
+        x=2; top=2
+        for name,w,h,pix in decoded:
+            placements.append((1,name,x,top,w,h,pix))
+            x += w + 2
+        aw = max(px+w for _,_,px,_,w,_,_ in placements) + 1
+        ah = max(py+h for _,_,_,py,_,h,_ in placements) + 2
+        canvas=bytearray(aw*ah*4)
+        for _,_,px,py,w,h,pix in placements:
+            for row in range(h): canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4]=pix[row*w*4:(row+1)*w*4]
+        page_name="ZZZZExplicitlyPackedAsset-1.0.0-gamut0"
+        page_png=_png_rgba(aw,ah,bytes(canvas)); page_csi=bytearray(_csi_png_deepmap(page_png,page_name,scale=scale))
+        struct.pack_into("<H",page_csi,36,1004); struct.pack_into("<I",page_csi,8,0)
+        names=[name for _,name,_,_,_,_,_ in placements]
+        parent_identifier = _identifier(atlas_name)
+        records=[
+            AssetRendition(atlas_name, _atlas_metadata_csi(names, scale=scale), 127, 181, scale=scale, element=9, identifier_override=parent_identifier),
+            AssetRendition(atlas_name, bytes(page_csi), 181, scale=scale, element=9, identifier_override=parent_identifier),
+        ]
+        for _page_dimension,name,px,py,w,h,_ in placements:
+            tokens=(AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(12,scale),AtlasKeyToken(17,parent_identifier))
+            link=AtlasLink(px,py,w,h,tokens,variant="explicit",header_u16=12,header_u32=20)
+            records.append(AssetRendition(name,_linked_csi(name+".png",link,scale),181,scale=scale))
+        return build_assets_car(records,platform=platform,target=target)
+
     records=[]
     for page_dimension in range(1,page+1):
         page_items=[p for p in placements if p[0]==page_dimension]

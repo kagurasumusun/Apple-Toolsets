@@ -1,8 +1,8 @@
 {
   "updated": "2026-07-13",
   "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
-  "test_count": 100,
-  "test_status": "OK, local suite 100/100 pass with 9 optional skips; focused remote Apple-host slices pass",
+  "test_count": 102,
+  "test_status": "OK, local suite 102/102 pass with 9 optional skips; focused remote slices pass",
   "storage_versions": [
     15,
     16,
@@ -504,6 +504,7 @@
     "xcode_16_4_sampled": 60,
     "packed_hits_each": 11,
     "source_fixture_example": "SpriteKit Particle File.xctemplate/Smoke/Assets.xcassets",
+    "explicit_writer_style": true,
     "evidence": [
       "xcode-source-oracle-263.json",
       "xcode-source-oracle-164.json",

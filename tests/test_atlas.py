@@ -55,5 +55,17 @@ class AtlasTests(unittest.TestCase):
             build_packed_atlas_car({"A": P1}, sort_by="invalid")
         with self.assertRaisesRegex(ValueError, "invalid atlas deployment token"):
             build_packed_atlas_car({"A": P1}, deployment_token=70000)
+        with self.assertRaisesRegex(ValueError, "unsupported atlas style"):
+            build_packed_atlas_car({"A": P1}, style="bad")
+
+    def test_builds_explicit_public_oracle_style(self):
+        car = CARFile(BOMStore(build_packed_atlas_car({"bokeh": P2, "spark": P2}, style="explicit", atlas_name="Particle Sprite Atlas")))
+        self.assertEqual(sorted(r.csi.layout for r in car.renditions), [1003, 1003, 1004, 1005])
+        packed = [r for r in car.renditions if r.csi.layout == 1004][0]
+        self.assertEqual(packed.csi.name, "ZZZZExplicitlyPackedAsset-1.0.0-gamut0")
+        meta = [r for r in car.renditions if r.csi.layout == 1005][0]
+        self.assertEqual(meta.csi.name, "CoreStructuredImage")
+        links = [parse_atlas_link(next(t.value for t in r.csi.tlvs if t.tag == 1010)) for r in car.renditions if r.csi.layout == 1003]
+        self.assertTrue(all(link.variant == "explicit" for link in links))
 
 if __name__=='__main__': unittest.main()
