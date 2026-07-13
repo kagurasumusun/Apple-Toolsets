@@ -7,6 +7,60 @@ import sys
 
 from .bom import BOMError, BOMStore
 from .car import CARFile
+from .atlas import parse_atlas_link, parse_atlas_name_list, parse_atlas_trim
+from .paletteimg import decode_quantized_image_payload, parse_theme_pixel_rendition
+
+
+def _decoded_tlvs(rendition) -> list[dict[str, object]]:
+    rows = []
+    for tlv in rendition.csi.tlvs:
+        item: dict[str, object] = {"tag": tlv.tag, "length": len(tlv.value)}
+        try:
+            if tlv.tag == 1010:
+                link = parse_atlas_link(tlv.value)
+                item["atlas_link"] = {
+                    "x": link.x,
+                    "y": link.y,
+                    "width": link.width,
+                    "height": link.height,
+                    "variant": link.variant,
+                    "header_u16": link.header_u16,
+                    "header_u32": link.header_u32,
+                    "tokens": [{"attribute": t.attribute, "value": t.value} for t in link.tokens],
+                }
+            elif tlv.tag == 1011:
+                trim = parse_atlas_trim(tlv.value)
+                item["atlas_trim"] = trim.__dict__
+            elif tlv.tag == 1013:
+                item["atlas_name_list"] = list(parse_atlas_name_list(tlv.value).names)
+        except Exception as exc:
+            item["decode_error"] = str(exc)
+        rows.append(item)
+    return rows
+
+
+def _decoded_payload(rendition) -> dict[str, object] | None:
+    try:
+        wrapper = parse_theme_pixel_rendition(rendition.csi.rendition_data)
+    except Exception:
+        return None
+    result = {
+        "wrapper_version": wrapper.version,
+        "compression_type": wrapper.compression_type,
+        "raw_payload_length": len(wrapper.raw_data),
+    }
+    if wrapper.compression_type == 8:
+        try:
+            decoded = decode_quantized_image_payload(wrapper.raw_data, width=rendition.csi.width, height=rendition.csi.height, pixel_format=rendition.csi.pixel_format)
+            result["quantized"] = {
+                "version": decoded.version,
+                "palette_count": len(decoded.palette),
+                "bits_per_index": decoded.bits_per_index,
+                "decoded_indices": len(decoded.indices),
+            }
+        except Exception as exc:
+            result["quantized_error"] = str(exc)
+    return result
 
 
 def inspect(path: Path) -> dict[str, object]:
@@ -55,11 +109,9 @@ def inspect(path: Path) -> dict[str, object]:
                 "layout": rendition.csi.layout,
                 "flags": rendition.csi.flags,
                 "key": rendition.key,
-                "tlvs": [
-                    {"tag": tlv.tag, "length": len(tlv.value)}
-                    for tlv in rendition.csi.tlvs
-                ],
+                "tlvs": _decoded_tlvs(rendition),
                 "payload_length": len(rendition.csi.rendition_data),
+                "decoded_payload": _decoded_payload(rendition),
             }
             for rendition in car.renditions
         ],

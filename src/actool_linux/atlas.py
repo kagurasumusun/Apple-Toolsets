@@ -23,6 +23,21 @@ class AtlasLink:
     header_u32: int = 0
 
 
+@dataclass(frozen=True)
+class AtlasNameList:
+    names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AtlasTrim:
+    original_width: int
+    original_height: int
+    origin_x: int
+    origin_y: int
+    trimmed_width: int
+    trimmed_height: int
+
+
 def parse_atlas_link(raw: bytes) -> AtlasLink:
     """Parse CoreUI TLV 1010 (INLK), supporting both observed public variants."""
     if len(raw) < 26 or raw[:4] != b"KLNI":
@@ -103,6 +118,26 @@ def _linked_csi(filename: str, link: AtlasLink, scale: int, *, trim_tlv: bytes |
     return bytes(h)+tlvs
 
 
+def parse_atlas_name_list(raw: bytes) -> AtlasNameList:
+    if len(raw) < 8:
+        raise ValueError("atlas name-list payload is truncated")
+    count, _reserved = struct.unpack_from("<2I", raw, 0)
+    cursor = 8
+    names: list[str] = []
+    for _ in range(count):
+        if cursor + 4 > len(raw):
+            raise ValueError("atlas name-list entry header is truncated")
+        length = struct.unpack_from("<I", raw, cursor)[0]
+        cursor += 4
+        if cursor + length > len(raw):
+            raise ValueError("atlas name-list entry payload is truncated")
+        names.append(raw[cursor:cursor + length].decode("utf-8", "replace"))
+        cursor += length
+    if cursor != len(raw):
+        raise ValueError("atlas name-list payload has trailing bytes")
+    return AtlasNameList(tuple(names))
+
+
 def _atlas_name_list_tlv(names: list[str]) -> bytes:
     payload = bytearray(struct.pack("<2I", len(names), 0))
     for name in names:
@@ -154,6 +189,15 @@ def _crop_rgba(width: int, height: int, rgba: bytes, bbox: tuple[int, int, int, 
         dst = row * out_w * 4
         out[dst:dst + out_w*4] = rgba[src:src + out_w*4]
     return out_w, out_h, bytes(out)
+
+
+def parse_atlas_trim(raw: bytes) -> AtlasTrim:
+    if len(raw) != 32:
+        raise ValueError("atlas trim payload length is invalid")
+    tag, reserved, original_width, original_height, origin_x, origin_y, trimmed_width, trimmed_height = struct.unpack("<8I", raw)
+    if tag != 1011 or reserved != 0:
+        raise ValueError("atlas trim payload header is invalid")
+    return AtlasTrim(original_width, original_height, origin_x, origin_y, trimmed_width, trimmed_height)
 
 
 def _explicit_trim_tlv(original_width: int, original_height: int, bbox: tuple[int, int, int, int]) -> bytes:

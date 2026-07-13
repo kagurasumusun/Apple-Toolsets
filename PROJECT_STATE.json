@@ -1,8 +1,8 @@
 {
   "updated": "2026-07-13",
   "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
-  "test_count": 103,
-  "test_status": "OK, local suite 103/103 pass with 9 optional skips; focused remote slices pass",
+  "test_count": 105,
+  "test_status": "OK, local suite 105/105 pass with 10 optional skips; focused remote slices pass",
   "storage_versions": [
     15,
     16,
@@ -510,6 +510,7 @@
       "xcode-source-oracle-164.json",
       "atlas-source-oracle-compare.json"
     ],
-    "spriteatlas_compiler_integration": true
+    "spriteatlas_compiler_integration": true,
+    "trim_tlv_match_for_public_spark": true
   }
 }
