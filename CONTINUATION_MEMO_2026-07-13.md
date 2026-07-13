@@ -288,6 +288,7 @@ A focused compare on `SpriteKit Particle File.xctemplate/Smoke/Assets.xcassets` 
 
 The parser now supports this explicit packed-asset link encoding in addition to the previously observed generic token-list form.
 A new `explicit` atlas writer style was also added, which emits a layout-1005 metadata rendition plus explicit-link `KLNI` records keyed back to the atlas identifier. This is materially closer to Apple for the public SpriteKit fixture, but page geometry and some auxiliary TLVs still differ.
+The catalog compiler now also recognizes public `.spriteatlas` source directories and routes nested 1x PNG members through this explicit atlas path.
 
 ## Test status
 
