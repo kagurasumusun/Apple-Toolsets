@@ -9,6 +9,7 @@ from .bom import BOMError, BOMStore
 from .car import CARFile
 from .atlas import parse_atlas_link, parse_atlas_name_list, parse_atlas_trim
 from .paletteimg import decode_quantized_image_payload, parse_theme_pixel_rendition
+from .solidstack import parse_solidimagestack_layer_list, parse_solidimagestack_layer_flags, parse_solidimagestack_layer_reserved
 
 
 def _decoded_tlvs(rendition) -> list[dict[str, object]]:
@@ -33,6 +34,34 @@ def _decoded_tlvs(rendition) -> list[dict[str, object]]:
                 item["atlas_trim"] = trim.__dict__
             elif tlv.tag == 1013:
                 item["atlas_name_list"] = list(parse_atlas_name_list(tlv.value).names)
+            elif tlv.tag == 1012:
+                layers = parse_solidimagestack_layer_list(tlv.value)
+                item["solid_image_stack_layers"] = [
+                    {
+                        "origin_x": layer.origin_x,
+                        "origin_y": layer.origin_y,
+                        "reserved0": layer.reserved0,
+                        "width": layer.width,
+                        "height": layer.height,
+                        "reserved1": layer.reserved1,
+                        "opacity": layer.opacity,
+                        "referenced_key": list(layer.referenced_key.attribute_value_pairs),
+                    }
+                    for layer in layers.layers
+                ]
+            elif tlv.tag == 1020:
+                flags = parse_solidimagestack_layer_flags(tlv.value)
+                item["solid_image_stack_flags"] = [
+                    {
+                        "enabled": flag.enabled,
+                        "reserved0_hex": flag.reserved0.hex(),
+                        "reserved1_hex": flag.reserved1.hex(),
+                    }
+                    for flag in flags.flags
+                ]
+            elif tlv.tag == 1021:
+                reserved = parse_solidimagestack_layer_reserved(tlv.value)
+                item["solid_image_stack_reserved"] = [entry.raw.hex() for entry in reserved.entries]
         except Exception as exc:
             item["decode_error"] = str(exc)
         rows.append(item)

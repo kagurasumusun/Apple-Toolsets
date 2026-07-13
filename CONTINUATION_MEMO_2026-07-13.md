@@ -283,7 +283,13 @@ A synthetic public-source `AppIcon.solidimagestack` catalog compiled with Apple 
 - packed pages named `ZZZZPackedAsset-2.0.0-gamut0` and `ZZZZPackedAsset-2.1.0-gamut0`
 - aggregate-associated TLVs `1012`, `1020`, and `1021` on the layout-1018 rendition
 
-This is the first direct public-source oracle for a solid image stack aggregate path.
+Those TLVs are now parser-decoded in the clean-room implementation:
+
+- `1012`: layer reference list with geometry, opacity, and referenced rendition key tuples
+- `1020`: per-layer 13-byte flag blocks
+- `1021`: per-layer 20-byte reserved blocks
+
+This is the first direct public-source oracle for a solid image stack aggregate path, and it is no longer opaque to the parser.
 
 #### `interesting-car-scan-current.json` / `interesting-car-scan-legacy.json` / `interesting-car-scan-legacy-320.json`
 Installed CAR scans for candidate aggregate fixtures show:
