@@ -278,5 +278,13 @@
     "application_cars": 300,
     "palette_img_hits": 0,
     "status": "writer remains fixture-gated"
+  },
+  "compositor_oracle_probe": {
+    "tool": "tools/compositor_oracle_probe.py",
+    "tv_actool_exit": 0,
+    "tv_car": false,
+    "vision_actool_exit": 0,
+    "vision_car": false,
+    "conclusion": "hidden schema/role requirements unresolved; do not claim private aggregate equality"
   }
 }

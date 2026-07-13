@@ -523,3 +523,7 @@ Ran nine ordinary-image raw-boundary cases for seven Xcode releases (63 rows). X
 ## 2026-07-13 — Legacy palette fixture scan
 
 Added `tools/palette_fixture_scan.py`, a bounded parallel Apple `assetutil` scanner for installed CARs whose observable Compression is `palette-img`. Scanned 300 `/System/Library` CARs and 300 `/Applications` CARs (including Xcode resources): 600 clean, zero palette-img hits. This strengthens the prior 24 generated-catalog result: current installed assets and current/available Xcodes retain decoder strings but provide no encoder fixture. A legacy writer remains fixture-gated rather than guessed. Evidence: `palette-fixture-scan.json` and `palette-fixture-apps.json`.
+
+## 2026-07-13 — Compositor oracle boundary probe
+
+Added `tools/compositor_oracle_probe.py` and attempted controlled Xcode 26.5 tvOS brand-assets/Top-Shelf and visionOS stack builds using documented directory shapes and role strings. Apple actool exited 0 but emitted no CAR (tv emitted only the requested partial plist; vision emitted an empty compilation-results list). No diagnostics were produced. Search of installed Xcode resources found no source `.brandassets`/`.imagestack` templates to resolve the hidden schema. Therefore no private aggregate record was available to compare, and no fabricated “exact” record was added. This is an explicit rejected oracle, preserved in `compositor-oracle.json`.

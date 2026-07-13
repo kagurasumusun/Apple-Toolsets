@@ -306,3 +306,7 @@ Current session: `VtnenbVcaWmY2Jd5MyHJ`. Schema-3 diagnostics are now 18/18 byte
 ## Legacy palette scan
 
 600 installed CARs (300 System Library, 300 Applications/Xcode resources) were inspected with Apple assetutil; none reported `palette-img`. Do not invent the writer grammar without a fixture. Evidence files: `palette-fixture-scan.json`, `palette-fixture-apps.json`.
+
+## Private compositor oracle attempt
+
+A controlled tvOS brand/Top-Shelf and visionOS stack oracle produced no CAR and no diagnostics under Xcode 26.5. Installed Xcode resources contain no source templates. Preserve `compositor-oracle.json` as a rejected hypothesis; do not claim private aggregate equality or invent records.
