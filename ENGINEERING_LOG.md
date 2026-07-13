@@ -519,3 +519,7 @@ This implements ordinary stack/layer catalog traversal. Top Shelf/brand aggregat
 ### CBCK across Xcode generations
 
 Ran nine ordinary-image raw-boundary cases for seven Xcode releases (63 rows). Xcode 26.2, 26.3, 26.4.1, 26.5 and 26.6 passed all 45 compatible builds and selected deepmap2/ARGB in every row. Xcode 26.0.1 and 26.1.1 rejected all 18 before compilation because this host has no runtime matching their iPhone SDK build (`23A339` versus installed 23C/23E/23F runtimes). These are environment-gated, not codec decisions. No tested ordinary image selected CBCK. Evidence: `cbck-threshold-all-unique.json`.
+
+## 2026-07-13 — Legacy palette fixture scan
+
+Added `tools/palette_fixture_scan.py`, a bounded parallel Apple `assetutil` scanner for installed CARs whose observable Compression is `palette-img`. Scanned 300 `/System/Library` CARs and 300 `/Applications` CARs (including Xcode resources): 600 clean, zero palette-img hits. This strengthens the prior 24 generated-catalog result: current installed assets and current/available Xcodes retain decoder strings but provide no encoder fixture. A legacy writer remains fixture-gated rather than guessed. Evidence: `palette-fixture-scan.json` and `palette-fixture-apps.json`.

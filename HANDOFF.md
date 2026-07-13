@@ -302,3 +302,7 @@ Current session: `VtnenbVcaWmY2Jd5MyHJ`. Schema-3 diagnostics are now 18/18 byte
 ## Seven-Xcode and image-stack milestone
 
 `option-cross-all-unique.json` covers 658 cases across Xcode 26.0.1-26.6; all contracts are accounted for after one isolated timeout retry. `.imagestack`/`.imagestacklayer` traversal is compiler-integrated and Apple tvOS assetutil verified (`image-stack-info.json`). The 63-row CBCK boundary matrix has 45 compatible deepmap2 passes; 18 Xcode 26.0/26.1 rows are runtime-build gated.
+
+## Legacy palette scan
+
+600 installed CARs (300 System Library, 300 Applications/Xcode resources) were inspected with Apple assetutil; none reported `palette-img`. Do not invent the writer grammar without a fixture. Evidence files: `palette-fixture-scan.json`, `palette-fixture-apps.json`.

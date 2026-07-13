@@ -272,5 +272,11 @@
       "26.0.1",
       "26.1.1"
     ]
+  },
+  "palette_fixture_scan": {
+    "system_cars": 300,
+    "application_cars": 300,
+    "palette_img_hits": 0,
+    "status": "writer remains fixture-gated"
   }
 }
