@@ -25,6 +25,13 @@ class CompileOptions:
     warnings: bool = True
     errors: bool = True
     notices: bool = True
+    target_devices: tuple[str, ...] = ()
+    filter_for_device_model: str | None = None
+    filter_for_device_os_version: str | None = None
+    product_type: str | None = None
+    development_region: str | None = None
+    compress_pngs: bool = True
+    enable_on_demand_resources: bool = False
 
 
 @dataclass
@@ -161,11 +168,21 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     ))
 
             if renditions and not any(item.severity == "error" for item in diagnostics):
+                thinning_arguments = ""
+                if len(options.target_devices) == 1:
+                    from .thinning import ThinningOptions, thin_renditions
+                    device_idioms = {"iphone":"iphone","ipad":"ipad","tv":"tv","watch":"watch","mac":"mac","vision":"vision"}
+                    thinning = ThinningOptions(idiom=device_idioms[options.target_devices[0]])
+                    renditions = thin_renditions(renditions, thinning)
+                    thinning_arguments = thinning.metadata_arguments()
+                if options.filter_for_device_model: thinning_arguments += (" " if thinning_arguments else "") + "model " + options.filter_for_device_model
+                if options.filter_for_device_os_version: thinning_arguments += (" " if thinning_arguments else "") + "os-version " + options.filter_for_device_os_version
                 car_path = options.output / "Assets.car"
                 car_path.write_bytes(build_assets_car(
                     renditions,
                     platform=options.platform or "macosx",
                     target=options.minimum_deployment_target or "13.0",
+                    thinning_arguments=thinning_arguments,
                 ))
                 outputs.append(car_path)
         else:

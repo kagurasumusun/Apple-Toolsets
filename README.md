@@ -99,3 +99,7 @@ SF Symbols template groups named `Weight-S`, `Weight-M`, or `Weight-L` are expan
 ### Layered icons, complications, and sidecars
 
 `build_layered_icon_car` emits ordered layer-key images for tvOS or visionOS, and `build_watch_complication_car` emits watch-idiom subtype variants. Xcode 26.5 `assetutil` recognizes the layer and subtype keys. The compiler now emits complete compatibility PNG manifests for iOS/iPad, watchOS, and macOS; layered tvOS/visionOS icons are not incorrectly flattened.
+
+### Runtime matrix and CLI contracts
+
+`tools/simulator_runtime_matrix.py` inventories all installed iOS/tvOS/watchOS/visionOS runtimes and has an opt-in boot mode with bounded boot/cleanup timeouts and incremental JSON output. The CLI accepts target-device and device model/OS filters, product type, development region, PNG-compression, and on-demand-resource switches; a single target device drives rendition thinning and metadata recording.

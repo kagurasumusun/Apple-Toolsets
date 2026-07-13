@@ -23,6 +23,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--warnings", choices=("yes", "no"), default="yes")
     p.add_argument("--errors", choices=("yes", "no"), default="yes")
     p.add_argument("--notices", choices=("yes", "no"), default="yes")
+    p.add_argument("--target-device", action="append", choices=("iphone","ipad","tv","watch","mac","vision"), default=[])
+    p.add_argument("--filter-for-device-model")
+    p.add_argument("--filter-for-device-os-version")
+    p.add_argument("--product-type")
+    p.add_argument("--development-region")
+    p.add_argument("--compress-pngs", choices=("yes","no"), default="yes")
+    p.add_argument("--enable-on-demand-resources", choices=("yes","no"), default="no")
     p.add_argument("--print-contents", action="store_true")
     p.add_argument("--version", action="store_true")
     p.add_argument("--capabilities", action="store_true")
@@ -52,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
         warnings=ns.warnings == "yes",
         errors=ns.errors == "yes",
         notices=ns.notices == "yes",
+        target_devices=tuple(ns.target_device),
+        filter_for_device_model=ns.filter_for_device_model,
+        filter_for_device_os_version=ns.filter_for_device_os_version,
+        product_type=ns.product_type,
+        development_region=ns.development_region,
+        compress_pngs=ns.compress_pngs == "yes",
+        enable_on_demand_resources=ns.enable_on_demand_resources == "yes",
     ))
     for diagnostic in result.diagnostics:
         enabled = {

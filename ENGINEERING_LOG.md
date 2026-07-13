@@ -260,3 +260,11 @@ Xcode 26.5 oracle showed legacy launch-image catalogs do not produce Assets.car 
 - Added watch complication subtype renditions; assetutil reports watch idiom with Subtype 1/2.
 - Added compatibility sidecar manifests: 13 iOS/iPad PNGs, 9 watchOS PNGs, and 10 macOS PNGs. tvOS/visionOS remain layered in CAR and are intentionally not flattened.
 - Local suite: 62 tests OK.
+
+## 2026-07-13 — Fast-path runtime inventory and CLI contracts
+
+- Added `tools/simulator_runtime_matrix.py`: inventories every runtime and optionally creates/boots/cleans one compatible device per runtime, persisting partial JSON after every attempt.
+- Current Xcode 26.5 host inventory: 12 available runtimes — iOS 26.2/26.4.1/26.5, tvOS 26.2/26.4/26.5, watchOS 26.2/26.4/26.5, visionOS 26.2/26.4.1/26.5.
+- Full boot pass was deferred after Simulator shutdown exceeded 30 seconds, per user request to postpone slow work. The inventory result is verified; display-consumer claims were not upgraded.
+- Added CLI parsing and writer integration for target-device, device model/OS filters, product type, development region, PNG compression, and on-demand-resource switches. Single target-device selection is connected to deterministic thinning and records arguments in EXTENDED_METADATA.
+- Suite: 64 tests OK.
