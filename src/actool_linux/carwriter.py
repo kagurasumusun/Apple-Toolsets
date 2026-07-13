@@ -8,6 +8,16 @@ import zlib
 
 from .bomwriter import BOMWriter
 from .paletteimg import build_palette_img_wrapper
+from .solidstack import (
+    SolidImageStackLayerFlag,
+    SolidImageStackLayerReference,
+    SolidImageStackLayerReserved,
+    SolidImageStackReferencedKey,
+    build_solidimagestack_layer_flags,
+    build_solidimagestack_layer_list,
+    build_solidimagestack_layer_reserved,
+)
+from .texture import TextureAuxiliaryFlag, TextureReference, build_texture_auxiliary_flag, build_texture_reference_payload
 
 
 KEY_ATTRIBUTES = (7, 13, 1, 2, 3, 17, 11, 12)
@@ -537,6 +547,68 @@ def _csi_msis(name: str) -> bytes:
     return bytes(header) + payload
 
 
+def _csi_texture_reference(name: str, reference: TextureReference, *, width: int, height: int, scale: int = 2, auxiliary_flag: TextureAuxiliaryFlag | None = None) -> bytes:
+    header = bytearray(184); header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, 0, width, height, scale * 100)
+    header[24:28] = b"ARGB"; struct.pack_into("<I2H", header, 32, 0, 1007, 0); header[40:168] = _fixed(name, 128)
+    tlvs = [struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"), struct.pack("<2II",1006,4,1)]
+    if auxiliary_flag is not None:
+        raw = build_texture_auxiliary_flag(auxiliary_flag)
+        tlvs.append(struct.pack("<2I", 1014, len(raw)) + raw)
+    payload = build_texture_reference_payload(reference)
+    struct.pack_into("<4I", header, 168, sum(len(x) for x in tlvs), 1, 0, len(payload))
+    return bytes(header) + b"".join(tlvs) + payload
+
+
+def _csi_texture_data_from_png(data: bytes, filename: str, *, width: int, height: int, scale: int = 2, mode_field: int = 0x80000) -> bytes:
+    try:
+        import lzfse
+    except ImportError as exc:
+        raise ValueError("texture aggregate encoding requires the optional lzfse dependency") from exc
+    tex_w, tex_h, pixels, _opaque = _png_premultiplied_bgra(data)
+    row_bytes = tex_w * 4
+    rows_per_chunk = max(1, 0x155555 // row_bytes)
+    chunks = []
+    for y in range(0, tex_h, rows_per_chunk):
+        rows = min(rows_per_chunk, tex_h - y)
+        compressed = lzfse.compress(pixels[y * row_bytes:(y + rows) * row_bytes])
+        chunks.append(b"KCBC" + struct.pack("<4I", 0, 0, rows, len(compressed)) + compressed)
+    payload = b"MLEC" + struct.pack("<3I", 1, 4, len(chunks)) + b"".join(chunks)
+    header = bytearray(184); header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, 0, width, height, scale * 100)
+    header[24:28] = b"ARGB"; struct.pack_into("<I2H", header, 32, 0, 1008, 0); header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,mode_field)))
+    struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
+    return bytes(header) + tlvs + payload
+
+
+def _csi_solid_image_stack(name: str, *, canvas_points: tuple[int, int], scale: int, identifier_values: list[int]) -> bytes:
+    width, height = canvas_points
+    refs = [
+        SolidImageStackLayerReference(0, 0, 0, width, height, 0, 1.0, SolidImageStackReferencedKey(((1,85),(2,181),(17,ident),(0,0))))
+        for ident in identifier_values
+    ]
+    flags = [SolidImageStackLayerFlag(b"\0"*8, 1, b"\0"*4) for _ in identifier_values]
+    reserved = [SolidImageStackLayerReserved(b"\0"*20) for _ in identifier_values]
+    tlv1012 = build_solidimagestack_layer_list(refs)
+    tlv1020 = build_solidimagestack_layer_flags(flags)
+    tlv1021 = build_solidimagestack_layer_reserved(reserved)
+    header = bytearray(184); header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, 0, width, height, 100)
+    header[24:28] = b"ATAD"; struct.pack_into("<I2H", header, 32, 0, 1018, 0); header[40:168] = _fixed(name, 128)
+    tlvs = b"".join((
+        struct.pack("<2I",1012,len(tlv1012)) + tlv1012,
+        struct.pack("<2I",1020,len(tlv1020)) + tlv1020,
+        struct.pack("<2I",1021,len(tlv1021)) + tlv1021,
+        struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),
+        struct.pack("<2I2I",1005,8 + len(b"public.layeredimage\0"), len(b"public.layeredimage\0"), 0) + b"public.layeredimage\0",
+        struct.pack("<2II",1006,4,1),
+    ))
+    payload = b"DWAR" + struct.pack("<2I", 0, 0)
+    struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
+    return bytes(header) + tlvs + payload
+
+
 def _csi_svg(data: bytes, filename: str) -> bytes:
     text = data.lstrip()
     if not text.startswith(b"<svg") and b"<svg" not in text[:512]:
@@ -687,8 +759,9 @@ def _build_assets_car_multilevel(assets: list[AssetRendition], *, platform: str,
         old = facet_parts.setdefault(asset.name, asset.effective_facet_part)
         if old != asset.effective_facet_part: raise ValueError(f"renditions for {asset.name!r} disagree on facet part")
     ios_attributes = (7,13,12,15,16,17,1,2); layer_attributes = (7,13,12,15,16,9,17,1,2,11); icon_attributes = (7,13,12,15,16,9,17,1,2)
+    stack_attributes = (7,13,12,15,16,8,17,1,2)
     symbol_attributes = (7,13,1,2,4,17,8,9,10,14,12,19,18,25,26,27)
-    attrs = symbol_attributes if any(a.glyph_weight or a.glyph_size or a.atlas_linked for a in ordered) else layer_attributes if any(a.layer for a in ordered) else icon_attributes if any(a.dimension2 for a in ordered) else ios_attributes if any(a.idiom or a.appearance or a.subtype for a in ordered) else KEY_ATTRIBUTES
+    attrs = symbol_attributes if any(a.glyph_weight or a.glyph_size or a.atlas_linked for a in ordered) else layer_attributes if any(a.layer for a in ordered) else stack_attributes if any(a.dimension1 for a in ordered) else icon_attributes if any(a.dimension2 for a in ordered) else ios_attributes if any(a.idiom or a.appearance or a.subtype for a in ordered) else KEY_ATTRIBUTES
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
     locale_ids = {name: _identifier("localization:" + name) for name in locale_names}
     if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
@@ -751,9 +824,10 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
             raise ValueError(f"renditions for {asset.name!r} disagree on facet part")
     ios_attributes = (7, 13, 12, 15, 16, 17, 1, 2)
     app_icon_attributes = (7, 13, 12, 15, 16, 9, 17, 1, 2)
+    stack_attributes = (7, 13, 12, 15, 16, 8, 17, 1, 2)
     layer_attributes = (7,13,12,15,16,9,17,1,2,11)
     symbol_attributes = (7,13,1,2,4,17,8,9,10,14,12,19,18,25,26,27)
-    key_attributes = symbol_attributes if any(asset.glyph_weight or asset.glyph_size or asset.atlas_linked for asset in ordered) else layer_attributes if any(asset.layer for asset in ordered) else app_icon_attributes if any(asset.dimension2 for asset in ordered) else ios_attributes if any(
+    key_attributes = symbol_attributes if any(asset.glyph_weight or asset.glyph_size or asset.atlas_linked for asset in ordered) else layer_attributes if any(asset.layer for asset in ordered) else stack_attributes if any(asset.dimension1 for asset in ordered) else app_icon_attributes if any(asset.dimension2 for asset in ordered) else ios_attributes if any(
         asset.idiom or asset.appearance or asset.subtype for asset in ordered
     ) else KEY_ATTRIBUTES
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
@@ -905,6 +979,47 @@ def layered_image_renditions(name: str, layers: list[bytes], *, idiom: str | int
 def build_layered_icon_car(name: str, layers: list[bytes], *, platform: str = "appletvos", target: str = "15.0", scale: int = 1, depths: list[int] | None = None) -> bytes:
     idiom="vision" if platform.lower() in ("xros","xrsimulator","visionos") else "tv"
     return build_assets_car(layered_image_renditions(name,layers,idiom=idiom,scale=scale,depths=depths),platform=platform,target=target)
+
+
+def solid_image_stack_aggregate_renditions(name: str, layers: list[tuple[str, bytes]], *, platform: str = "xros", scale: int = 2, canvas_points: tuple[int, int] | None = None) -> list[AssetRendition]:
+    """Experimental aggregate-oriented SolidImageStack rendition set.
+
+    This models the currently observed public visionOS `solidimagestack` oracle:
+    one layout-1018 aggregate metadata rendition, ordinary image renditions for
+    each content layer, and texture-oriented 1007/1008 side renditions for two
+    dimension1 modes. The exact Apple writer is still more complex.
+    """
+    if len(layers) < 1:
+        raise ValueError("solid image stack needs at least one layer")
+    idiom = 8 if platform.lower() in ("xros", "xrsimulator", "visionos") else 3
+    if idiom != 8:
+        raise ValueError("aggregate solid image stack is currently enabled for visionOS only")
+    child_names = [f"{name}/{layer_name}/Content" for layer_name, _ in layers]
+    child_ids = [_identifier(child_name) for child_name in child_names]
+    width = height = None
+    image_renditions: list[AssetRendition] = []
+    aggregate: list[AssetRendition] = []
+    for (layer_name, png_bytes), child_name, child_id in zip(layers, child_names, child_ids):
+        w, h = png_dimensions(png_bytes)
+        width = w if width is None else width
+        height = h if height is None else height
+        image_renditions.append(AssetRendition(child_name, _csi_png_deepmap(bytes(png_bytes), 'content.png', scale=scale), 181, scale=scale, idiom=idiom, identifier_override=child_id))
+        for dim1, payload_value, mode_field in ((1, 55, 0x80000), (2, 32, 0x40000)):
+            ref_pairs = ((1, 41), (2, 181), (8, dim1), (12, scale), (17, child_id), (15, idiom), (0, 0))
+            ref = TextureReference(payload_value, 0, 1, 1, 0x1C, ref_pairs)
+            aux = TextureAuxiliaryFlag(b'\0'*8 + (b'\1' if layer_name == 'Back' and dim1 == 1 else b'\0') + b'\0'*4, (0, 0, 1 if layer_name == 'Back' and dim1 == 1 else 0))
+            aggregate.append(AssetRendition(child_name, _csi_texture_reference('content.png', ref, width=w, height=h, scale=scale, auxiliary_flag=aux), 0, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
+            aggregate.append(AssetRendition(child_name, _csi_texture_data_from_png(bytes(png_bytes), 'content.png', width=w, height=h, scale=scale, mode_field=mode_field), 181, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
+    if width is None or height is None:
+        raise ValueError("solid image stack needs image content")
+    if canvas_points is None:
+        canvas_points = (width // scale, height // scale)
+    aggregate.insert(0, AssetRendition(name, _csi_solid_image_stack('Contents.json', canvas_points=canvas_points, scale=scale, identifier_values=child_ids), 181, 181, idiom=0, scale=1))
+    return aggregate + image_renditions
+
+
+def build_solid_image_stack_aggregate_car(name: str, layers: list[tuple[str, bytes]], *, platform: str = 'xros', target: str = '1.0', scale: int = 2, canvas_points: tuple[int, int] | None = None) -> bytes:
+    return build_assets_car(solid_image_stack_aggregate_renditions(name, layers, platform=platform, scale=scale, canvas_points=canvas_points), platform=platform, target=target)
 
 
 WATCH_COMPLICATION_FAMILIES = {"circularSmall":1,"extraLarge":2,"graphicBezel":3,"graphicCircular":4,"graphicCorner":5,"graphicExtraLarge":6,"graphicRectangular":7,"modularLarge":8,"modularSmall":9,"utilitarianLarge":10,"utilitarianSmall":11,"utilitarianSmallFlat":12}

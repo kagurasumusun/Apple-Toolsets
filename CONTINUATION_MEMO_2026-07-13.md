@@ -293,6 +293,7 @@ Those TLVs are now parser-decoded in the clean-room implementation:
 The same oracle also exposes additional texture-oriented payloads around layouts `1007` and `1008`. The clean-room parser now decodes the observed `RTXT` wrapper plus TLV 1014 auxiliary flag blocks as well.
 
 These currently observed payloads can also be serialized back byte-for-byte for the public oracle forms, which closes the loop on the known metadata grammar even though a full aggregate writer is still unfinished.
+An experimental aggregate writer path now exists for this oracle family: it can emit a layout-1018 metadata rendition plus the paired 1007/1008 texture-related renditions for the two observed `dimension1` modes, but it still requires Apple validation before being treated as consumer-compatible.
 
 This is the first direct public-source oracle for a solid image stack aggregate path, and it is no longer opaque to the parser.
 

@@ -8,7 +8,7 @@ HAS_CAIROSVG = importlib.util.find_spec("cairosvg") is not None
 from actool_linux.bom import BOMStore
 from actool_linux.car import CARFile
 from actool_linux.carwriter import (
-    build_app_icon_car, build_assets_car, build_color_car, build_data_car, build_jpeg_car, build_pdf_fallback_car, build_svg_car, build_symbol_car, build_symbol_template_car, build_layered_icon_car, build_watch_complication_car,
+    build_app_icon_car, build_assets_car, build_color_car, build_data_car, build_jpeg_car, build_pdf_fallback_car, build_svg_car, build_symbol_car, build_symbol_template_car, build_layered_icon_car, build_watch_complication_car, build_solid_image_stack_aggregate_car,
     color_rendition, data_rendition, heif_rendition, jpeg_rendition, pdf_rendition, png_rendition,
 )
 
@@ -276,6 +276,14 @@ class CARWriterTests(unittest.TestCase):
         png=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
         car=CARFile(BOMStore(build_watch_complication_car("Complication",[png,png],families=["graphicCircular","graphicRectangular"],roles=["foreground","mask"])))
         self.assertEqual([(r.key["kCRThemeIdiomName"],r.key["kCRThemeSubtypeName"],r.key["kCRThemeDimension2Name"]) for r in car.renditions],[(5,4,2),(5,7,3)])
+
+    @unittest.skipUnless(HAS_LZFSE, "optional lzfse dependency is unavailable")
+    def test_builds_experimental_solid_image_stack_aggregate(self):
+        png=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
+        car=CARFile(BOMStore(build_solid_image_stack_aggregate_car("AppIcon",[("Front",png),("Middle",png),("Back",png)])))
+        self.assertIn(1018,[r.csi.layout for r in car.renditions])
+        self.assertEqual(sum(r.csi.layout==1007 for r in car.renditions),6)
+        self.assertEqual(sum(r.csi.layout==1008 for r in car.renditions),6)
 
 
 if __name__ == "__main__":
