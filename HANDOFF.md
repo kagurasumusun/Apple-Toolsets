@@ -253,7 +253,7 @@ previousState, previousValue, deploymentTarget, glyphWeight, glyphSize
 - Apple-internal vision depth/parallax compositor metadata.
 - Full CLI option cross-product and byte-identical diagnostics corpus. Sixteen focused Xcode 26.5 stdout plist contracts are byte-identical, and version plists are byte-identical for ten distinct Xcode releases from 16.0 through 26.5. See ENGINEERING_LOG.md and xcode-actool-version-matrix.json.
 - Complete CBCK adoption thresholds across every Xcode.
-- Legacy palette-img writer (fixture-gated).
+- Historical automatic palette-img selection heuristic.
 - Exact Xcode atlas pack/page heuristic.
 - Full AppIcon metadata and every platform's deployment side effects.
 
@@ -307,7 +307,7 @@ Current session: `VtnenbVcaWmY2Jd5MyHJ`. Schema-3 diagnostics are now 18/18 byte
 
 ## Legacy palette scan
 
-600 installed CARs (300 System Library, 300 Applications/Xcode resources) were inspected with Apple assetutil; none reported `palette-img`. Do not invent the writer grammar without a fixture. Evidence files: `palette-fixture-scan.json`, `palette-fixture-apps.json`.
+600 installed CARs (300 System Library, 300 Applications/Xcode resources) were inspected with Apple assetutil; none reported `palette-img`. A later legacy-reference host expanded this with 800 more installed CARs and a 448-row indexed-PNG generation matrix across Xcode 15.0–16.2, still with no Apple actool-emitted `palette-img`. However, an explicit clean-room parser/writer based on public quantized-image grammar is now implemented and Apple assetutil/consumer-verified; what remains unproven is Apple actool’s historical automatic selection heuristic. Evidence files: `palette-fixture-scan.json`, `palette-fixture-apps.json`, `palette-fixture-scan-legacy.json`, `palette-probe-legacy-matrix.json`, `paletteimg-consumer-legacy-matrix.json`.
 
 ## Private compositor oracle attempt
 

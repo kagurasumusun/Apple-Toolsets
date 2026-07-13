@@ -348,7 +348,7 @@ Evidence: `palette-fixture-scan.json`, `palette-fixture-apps.json`.
 
 ### Legacy
 
-- Actual palette-img writer/reader semantics require a real fixture.
+- Apple actool's historical automatic palette-img selection heuristic still requires stronger fixture/oracle evidence.
 
 ## 11. Important accepted/rejected hypotheses
 
@@ -364,7 +364,7 @@ Rejected/not established:
 
 - Generic image size threshold causes CBCK: rejected by 45 compatible rows.
 - Public-looking brand/stack hierarchy automatically yields private aggregate CAR: rejected; no CAR emitted.
-- Installed system/Xcode CARs provide palette-img fixture: no hit in 600.
+- Installed system/Xcode CARs provide a direct actool-emitted palette-img fixture: no hit in the original 600-scan, and no hit in the later 800-scan on the legacy reference host.
 - Installed CARs provide aggregate Layer Stack fixture: no hit in 600.
 - Apple corrupt-failure CAR is safe/readable: false; it references a missing block.
 

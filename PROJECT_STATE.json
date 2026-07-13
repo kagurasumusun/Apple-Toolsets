@@ -1,8 +1,8 @@
 {
   "updated": "2026-07-13",
   "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
-  "test_count": 98,
-  "test_status": "OK, local suite 98/98 pass with 7 optional skips; focused remote Apple-host slices pass",
+  "test_count": 100,
+  "test_status": "OK, local suite 100/100 pass with 9 optional skips; focused remote Apple-host slices pass",
   "storage_versions": [
     15,
     16,
@@ -77,7 +77,8 @@
     "Image Stack & Layer Stack exact CoreUI layer-key rendition ordering and catalog integration",
     "watchOS exact 12-family/5-role subtype and dimension2 mapping table",
     "visionOS parallax/depth layer attributes and xros idiom mapping",
-    "CBCK MLEC mode 3 / codec 4 envelope and raw/LZFSE threshold boundaries across Xcode releases"
+    "CBCK MLEC mode 3 / codec 4 envelope and raw/LZFSE threshold boundaries across Xcode releases",
+    "explicit legacy palette-img parser/writer from public quantized-image grammar"
   ],
   "unfinished": [
     "all platform screenshots",
@@ -87,7 +88,7 @@
     "exact vision parallax metadata",
     "full CLI cross-product and byte diagnostics",
     "all-Xcode CBCK thresholds",
-    "legacy palette-img writer",
+    "historical automatic palette-img selection heuristic",
     "exact Xcode atlas heuristic"
   ],
   "authoritative_notes": [
@@ -406,6 +407,11 @@
       "evidence": "palette-probe-legacy-matrix.json"
     },
     "framework_strings": "palette-string-audit-legacy.json",
-    "status": "writer remains fixture-gated"
+    "explicit_writer_parser": {
+      "implemented": true,
+      "current_host_assetutil": "paletteimg-verify-remote.json",
+      "legacy_consumer_matrix": "paletteimg-consumer-legacy-matrix.json"
+    },
+    "remaining": "automatic Apple actool palette-img selection remains unobserved in tested 15/16 generations"
   }
 }

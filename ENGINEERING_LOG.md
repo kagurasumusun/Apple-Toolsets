@@ -631,3 +631,22 @@ Verified exact behavior against Apple `actool` (`xcrun actool`) on macOS 26.4 / 
 - Also compiled a 448-row indexed-PNG matrix across Xcode 15.0/15.0.1/15.1/15.1.0/15.2/15.2.0/15.3/15.3.0/15.4/15.4.0/16.1/16.1.0/16.2/16.2.0, spanning sizes 2/16/64/256, opaque vs alpha, and bit depths 1/2/4/8. Every successful row selected `deepmap2`; no tested legacy Xcode emitted `palette-img` (`palette-probe-legacy-matrix.json`).
 - A legacy-framework string audit still shows palette-related UI/render-mode symbols in Xcode 15/16 AssetCatalogFoundation/AssetCatalogKit, but no concrete emitted `palette-img` fixture or grammar (`palette-string-audit-legacy.json`). The legacy `palette-img` writer therefore remains fixture-gated.
 - Re-ran a focused visionOS/xros depth-key oracle after the AppIcon compiler changes; Apple `assetutil` still reports layer/depth pairs `(1,10)` and `(2,20)` for the explicit-depth `.imagestack` fixture (`vision-depth-verify.json`).
+
+## 2026-07-13 — Explicit legacy palette-img writer/parser from public grammar
+
+- Used the public CAR-format references supplied by the user, plus the publicly posted `Assets.car` sample from Timac and the 2026 dbg.re quantized-image notes, to implement a clean-room legacy `palette-img` parser/writer.
+- Added `src/actool_linux/paletteimg.py` with:
+  - `parse_theme_pixel_rendition(...)`
+  - `decode_quantized_image_payload(...)`
+  - `encode_quantized_image_payload(...)`
+  - `build_palette_img_wrapper(...)`
+- Added `palette_png_rendition(...)` and `build_palette_img_car(...)` to `carwriter.py`. The implementation currently targets indexed PNG inputs and emits an explicit `palette-img` CSI payload using:
+  - theme-pixel wrapper `MLEC`
+  - compression type `8`
+  - inner LZFSE-compressed quantized payload with magic `0xCAFEF00D`
+  - version `1`
+  - ARGB palette table
+  - row-aligned bit-packed indices
+- Current-host Apple verification: Xcode 26.5 `assetutil` recognizes the generated 4×4 test CAR as `Compression = palette-img`, `Encoding = ARGB`, `PixelWidth = 4`, `PixelHeight = 4` (`paletteimg-verify-remote.json`).
+- Legacy-host consumer verification: the generated palette-img CAR was accepted by `assetutil` under all installed Xcode 15/16 releases on the legacy reference host (`15.0`, `15.0.1`, `15.1`, `15.1.0`, `15.2`, `15.2.0`, `15.3`, `15.3.0`, `15.4`, `15.4.0`, `16.1`, `16.1.0`, `16.2`, `16.2.0`) and every row still reported `Compression = palette-img` (`paletteimg-consumer-legacy-matrix.json`).
+- The remaining legacy gap is no longer the explicit writer/parser itself, but reproducing the historical Apple actool *selection heuristic* that would choose palette-img automatically from public catalog inputs. All tested Xcode 15/16 actool generations still selected deepmap2 for our indexed-PNG probes.

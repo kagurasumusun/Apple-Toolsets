@@ -7,6 +7,7 @@ import struct
 import zlib
 
 from .bomwriter import BOMWriter
+from .paletteimg import build_palette_img_wrapper
 
 
 KEY_ATTRIBUTES = (7, 13, 1, 2, 3, 17, 11, 12)
@@ -268,6 +269,70 @@ def _packed_sample(row: bytes, x: int, depth: int) -> int:
     return (row[bit // 8] >> (8 - depth - bit % 8)) & ((1 << depth) - 1)
 
 
+def _decode_indexed_png_for_palette_img(data: bytes) -> tuple[int, int, bytes, bytes]:
+    """Return width, height, ARGB palette bytes, and one-byte-per-pixel indices."""
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("input is not a PNG stream")
+    cursor = 8; ihdr = None; idat = bytearray(); palette = None; transparency = b""
+    while cursor + 12 <= len(data):
+        length = int.from_bytes(data[cursor:cursor + 4], "big"); kind = data[cursor + 4:cursor + 8]; end = cursor + 12 + length
+        if end > len(data): raise ValueError("PNG chunk is truncated")
+        payload = data[cursor + 8:cursor + 8 + length]; expected = int.from_bytes(data[cursor + 8 + length:end], "big")
+        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected: raise ValueError("PNG chunk CRC mismatch")
+        if kind == b"IHDR": ihdr = payload
+        elif kind == b"PLTE": palette = payload
+        elif kind == b"tRNS": transparency = payload
+        elif kind == b"IDAT": idat += payload
+        elif kind == b"IEND": break
+        cursor = end
+    if ihdr is None or len(ihdr) != 13: raise ValueError("PNG has no valid IHDR")
+    width, height, depth, color_type, compression, filtering, interlace = struct.unpack(">IIBBBBB", ihdr)
+    if not width or not height or width > 16384 or height > 16384: raise ValueError("PNG dimensions are invalid or exceed safety limit")
+    if color_type != 3 or depth not in (1, 2, 4, 8) or compression != 0 or filtering != 0 or interlace not in (0, 1):
+        raise ValueError("palette-img encoder accepts indexed PNG at depth 1/2/4/8, with optional Adam7 interlace")
+    try: raw = zlib.decompress(bytes(idat))
+    except zlib.error as exc: raise ValueError(f"invalid PNG deflate stream: {exc}") from exc
+    if palette is None or not palette or len(palette) % 3 or len(palette) > 768:
+        raise ValueError("indexed PNG has invalid or missing PLTE")
+    entries = len(palette) // 3
+    palette_argb = bytearray()
+    for index in range(entries):
+        r, g, b = palette[index * 3:index * 3 + 3]; alpha = transparency[index] if index < len(transparency) else 255
+        palette_argb += bytes((alpha, r, g, b))
+    if interlace == 0:
+        stride = (width * depth + 7) // 8
+        rows = _unfilter_png_rows(raw, stride, height, 1)
+        indices = bytearray()
+        for row in rows:
+            for x in range(width):
+                index = _packed_sample(row, x, depth)
+                if index >= entries: raise ValueError("indexed PNG references palette entry outside PLTE")
+                indices.append(index)
+        return width, height, bytes(palette_argb), bytes(indices)
+    passes = ((0,0,8,8),(4,0,8,8),(0,4,4,8),(2,0,4,4),(0,2,2,4),(1,0,2,2),(0,1,1,2))
+    decoded = bytearray(width * height)
+    pos = 0
+    for x0, y0, dx, dy in passes:
+        pw = 0 if width <= x0 else (width - x0 + dx - 1) // dx
+        ph = 0 if height <= y0 else (height - y0 + dy - 1) // dy
+        if not pw or not ph:
+            continue
+        row_bytes = (pw * depth + 7) // 8
+        pass_len = ph * (row_bytes + 1)
+        if pos + pass_len > len(raw): raise ValueError("Adam7 PNG pass is truncated")
+        rows = _unfilter_png_rows(raw[pos:pos + pass_len], row_bytes, ph, 1)
+        pos += pass_len
+        for py, row in enumerate(rows):
+            y = y0 + py * dy
+            for px in range(pw):
+                x = x0 + px * dx
+                index = _packed_sample(row, px, depth)
+                if index >= entries: raise ValueError("indexed PNG references palette entry outside PLTE")
+                decoded[y * width + x] = index
+    if pos != len(raw): raise ValueError("Adam7 PNG has trailing decompressed data")
+    return width, height, bytes(palette_argb), bytes(decoded)
+
+
 def _decode_png_8bit(data: bytes) -> tuple[int, int, int, bytes, tuple[bytes, bytes] | None]:
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("input is not a PNG stream")
@@ -406,6 +471,16 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
 
+
+
+def _csi_png_palette_img(data: bytes, filename: str, *, scale: int = 1) -> bytes:
+    width, height, palette_argb, indices = _decode_indexed_png_for_palette_img(data)
+    payload = build_palette_img_wrapper(palette_argb, indices, width=width, height=height)
+    header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, 16, width, height, scale * 100)
+    header[24:28] = b"BGRA"; struct.pack_into("<I", header, 28, 1); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I5I",1001,20,1,0,0,width,height),struct.pack("<2I7I",1003,28,1,0,0,0,0,width,height),struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,32)))
+    struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
+    return bytes(header) + tlvs + payload
 
 
 def png_dimensions(data: bytes) -> tuple[int, int]:
@@ -924,6 +999,16 @@ def png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale:
     return AssetRendition(name, _csi_png_deepmap(bytes(data), filename, scale=scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
+def palette_png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
+    """Build a legacy quantized `palette-img` rendition from an indexed PNG input."""
+    if scale not in (1, 2, 3):
+        raise ValueError("image scale must be 1, 2, or 3")
+    idiom_id, appearance_id = _selector_ids(idiom, appearance)
+    if localization is not None and (not localization or len(localization.encode("utf-8")) > 255):
+        raise ValueError("invalid localization tag")
+    return AssetRendition(name, _csi_png_palette_img(bytes(data), filename, scale=scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
+
+
 SYMBOL_WEIGHTS = {"Ultralight":1, "Thin":2, "Light":3, "Regular":4, "Medium":5, "Semibold":6, "Bold":7, "Heavy":8, "Black":9}
 SYMBOL_SIZES = {"S":1, "M":2, "L":3}
 
@@ -985,6 +1070,10 @@ def build_heif_car(name: str, data: bytes, filename: str = "image.heic", *, plat
 
 def build_png_car(name: str, data: bytes, filename: str = "image.png", *, platform: str = "macosx", target: str = "13.0") -> bytes:
     return build_assets_car([png_rendition(name, data, filename)], platform=platform, target=target)
+
+
+def build_palette_img_car(name: str, data: bytes, filename: str = "image.png", *, platform: str = "macosx", target: str = "13.0") -> bytes:
+    return build_assets_car([palette_png_rendition(name, data, filename)], platform=platform, target=target)
 
 
 def build_pdf_car(name: str, data: bytes, filename: str = "image.pdf", *, platform: str = "macosx", target: str = "13.0") -> bytes:

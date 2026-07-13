@@ -97,6 +97,8 @@ The explicit `depth` / `dimension2` handling for `.imagestack` vision/xros paths
 - `palette-fixture-scan-legacy.json`
 - `palette-probe-legacy-matrix.json`
 - `palette-string-audit-legacy.json`
+- `paletteimg-verify-remote.json`
+- `paletteimg-consumer-legacy-matrix.json`
 
 ### What these verify
 
@@ -183,7 +185,29 @@ Indexed-PNG generation matrix on the legacy-reference host:
 - no tested legacy Xcode emitted `palette-img`
 
 #### `palette-string-audit-legacy.json`
-Legacy Xcode 15/16 frameworks still expose palette-related UI/rendering symbols, but no concrete `palette-img` fixture or writer grammar was recovered from observable outputs alone.
+Legacy Xcode 15/16 frameworks still expose palette-related UI/rendering symbols.
+
+#### `paletteimg-verify-remote.json`
+Current-host Apple verification of the explicit clean-room `palette-img` writer:
+
+- Xcode 26.5 `assetutil` reports `Compression = palette-img`
+- `Encoding = ARGB`
+- size `4x4`
+- the wrapper compression type is `8`
+- the decoded quantized payload contains 4 palette colors and 2-bit indices
+
+#### `paletteimg-consumer-legacy-matrix.json`
+An independently generated explicit `palette-img` CAR is accepted by `assetutil` across all installed legacy-reference Xcode releases:
+
+- `15.0`, `15.0.1`
+- `15.1`, `15.1.0`
+- `15.2`, `15.2.0`
+- `15.3`, `15.3.0`
+- `15.4`, `15.4.0`
+- `16.1`, `16.1.0`
+- `16.2`, `16.2.0`
+
+Each row reported `Compression = palette-img` and `Encoding = ARGB` for the generated 4×4 test CAR. This upgrades the legacy state from purely fixture-gated to an explicit writer/parser with consumer verification. What remains unproven is Apple actool’s historical automatic selection heuristic.
 
 ## Test status
 

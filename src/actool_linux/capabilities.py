@@ -14,7 +14,7 @@ CAPABILITIES = {
  "diagnostics": {"implemented": False, "scope": "22 focused byte-identical contracts; 658/658 option/platform contracts across seven Xcode 26 releases after one transient retry; broader malformed corpus incomplete"},
  "cbck_threshold_matrix": {"implemented": True, "scope": "45/45 compatible iPhoneOS ordinary-image boundary builds across Xcode 26.2-26.6 selected deepmap2; Xcode 26.0/26.1 blocked by unavailable matching runtime; role-specific matrix incomplete"},
  "springboard_dock_comparison": {"implemented": False, "scope": "not yet completed across platforms"},
- "legacy_palette_img": {"implemented": False, "scope": "reader/capability evidence; writer fixture-gated"},
+ "legacy_palette_img": {"implemented": True, "apple_assetutil": True, "scope": "explicit indexed-PNG palette-img writer and parser implemented from public quantized-image grammar; automatic historical actool selection across old toolchains remains partial"},
 }
 
 def capability_report() -> dict[str, object]:
