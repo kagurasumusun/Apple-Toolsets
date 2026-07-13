@@ -357,5 +357,55 @@
     "assetutil_verified": true,
     "evidence": "atlas-token-verify.json"
   },
-  "continuation_memo": "CONTINUATION_MEMO_2026-07-13.md"
+  "continuation_memo": "CONTINUATION_MEMO_2026-07-13.md",
+  "legacy_reference_host": {
+    "session": "ZKPsRZJmMFe9fux0eiMB",
+    "macos": "14.8.7",
+    "xcodes": [
+      "15.0",
+      "15.0.1",
+      "15.1",
+      "15.1.0",
+      "15.2",
+      "15.2.0",
+      "15.3",
+      "15.3.0",
+      "15.4",
+      "15.4.0",
+      "16.1",
+      "16.1.0",
+      "16.2",
+      "16.2.0"
+    ]
+  },
+  "legacy_palette_reference": {
+    "installed_car_scan": {
+      "sampled": 800,
+      "palette_img_hits": 0,
+      "evidence": "palette-fixture-scan-legacy.json"
+    },
+    "indexed_png_matrix": {
+      "rows": 448,
+      "all_successful_compression": "deepmap2",
+      "xcode_releases": [
+        "15.0",
+        "15.0.1",
+        "15.1",
+        "15.1.0",
+        "15.2",
+        "15.2.0",
+        "15.3",
+        "15.3.0",
+        "15.4",
+        "15.4.0",
+        "16.1",
+        "16.1.0",
+        "16.2",
+        "16.2.0"
+      ],
+      "evidence": "palette-probe-legacy-matrix.json"
+    },
+    "framework_strings": "palette-string-audit-legacy.json",
+    "status": "writer remains fixture-gated"
+  }
 }

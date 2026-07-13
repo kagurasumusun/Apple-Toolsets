@@ -17,7 +17,9 @@ Read together with:
 - Latest source ZIP: `/home/user/mac-actool-linux-source.zip`
 - Latest ZIP SHA-256: `d5c297ef35aff7cd1f31c190c30b8fcfa56d248cf3a38a7d3b680a47fd672cf2`
 
-## Current remote Apple host
+## Current remote Apple hosts
+
+### Primary validation host
 
 Active Upterm session during this continuation:
 
@@ -37,6 +39,26 @@ Observed host state:
   - xrOS `26.2`, `26.4.1`, `26.5`
 
 A project-local remote venv was created at `/Users/runner/work/mac/mac/.venv` and `lzfse 0.4.2` was installed there for AppIcon/CBCK validation.
+
+### Legacy reference host
+
+Second Upterm session used specifically for `palette-img` investigation:
+
+- session: `ZKPsRZJmMFe9fux0eiMB`
+- host: `uptermd.upterm.dev:22`
+- remote repo: `/Users/runner/work/mac/mac`
+
+Observed host state:
+
+- macOS `14.8.7` (`23J520`)
+- installed Xcodes include:
+  - `15.0`, `15.0.1`
+  - `15.1`, `15.1.0`
+  - `15.2`, `15.2.0`
+  - `15.3`, `15.3.0`
+  - `15.4`, `15.4.0`
+  - `16.1`, `16.1.0`
+  - `16.2`, `16.2.0`
 
 ## Latest implementation changes in this continuation
 
@@ -72,6 +94,9 @@ The explicit `depth` / `dimension2` handling for `.imagestack` vision/xros paths
 - `framework-symbol-audit.json`
 - `atlas-fixture-scan.json`
 - `atlas-token-verify.json`
+- `palette-fixture-scan-legacy.json`
+- `palette-probe-legacy-matrix.json`
+- `palette-string-audit-legacy.json`
 
 ### What these verify
 
@@ -142,6 +167,23 @@ This is the current strongest observable evidence for atlas defaults, but it sti
 
 #### `atlas-token-verify.json`
 After updating the writer to use observed deployment token `25:5` in both link metadata and rendition keys, the focused generated atlas no longer triggers `Asset Parent Image Missing` diagnostics in `assetutil` and is recognized as one `PackedImage` plus linked child images.
+
+#### `palette-fixture-scan-legacy.json`
+Legacy-reference host scan summary:
+
+- sampled `800` installed Apple CARs
+- `0` `palette-img` hits
+
+#### `palette-probe-legacy-matrix.json`
+Indexed-PNG generation matrix on the legacy-reference host:
+
+- Xcode releases: `15.0`, `15.0.1`, `15.1`, `15.1.0`, `15.2`, `15.2.0`, `15.3`, `15.3.0`, `15.4`, `15.4.0`, `16.1`, `16.1.0`, `16.2`, `16.2.0`
+- 448 rows total (sizes `2/16/64/256`, alpha on/off, bit depths `1/2/4/8`)
+- every successful row selected `deepmap2`
+- no tested legacy Xcode emitted `palette-img`
+
+#### `palette-string-audit-legacy.json`
+Legacy Xcode 15/16 frameworks still expose palette-related UI/rendering symbols, but no concrete `palette-img` fixture or writer grammar was recovered from observable outputs alone.
 
 ## Test status
 
