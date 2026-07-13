@@ -293,5 +293,16 @@
     "exit_codes_identical": 8,
     "stderr_dynamic_shape": "4 lines for corrupt PNG",
     "safe_failure_car": true
+  },
+  "private_layer_stack_audit": {
+    "coreui_types": [
+      "LayerStack",
+      "IconLayerStack",
+      "SolidLayerStack"
+    ],
+    "builder_symbols_observed": true,
+    "installed_cars_scanned": 600,
+    "aggregate_hits": 0,
+    "exact_stackData": "fixture-gated"
   }
 }

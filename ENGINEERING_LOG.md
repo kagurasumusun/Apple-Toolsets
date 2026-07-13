@@ -543,3 +543,9 @@ Added an eight-case corrupt/malformed payload oracle. Implemented all observed s
 Apple's corrupt PNG path emits four dynamic `AssetCatalogSimulatorAgent ... CoreThemeDefinition: Unable to create image` stderr lines. actool-linux now reproduces that four-line shape with current timestamp/PID/thread and source URI. Exact stderr bytes are not claimed because Apple's own values vary per invocation. Apple left a structurally incomplete CAR referencing a missing block; the bounds-checked reader rejected it. actool-linux instead writes a safe readable failure CAR while preserving stdout and failure status.
 
 Focused byte-identical stdout contracts now total 30. Unit suite: 84 tests, OK. Evidence: `corrupt-diagnostic.json`, `apple-corrupt-output.car`, and color assetutil JSONs.
+
+## 2026-07-13 — Private layer-stack capability audit and fixture scan
+
+Observable CoreUI strings confirm three aggregate rendition classes/types and builder/consumer entry points: `_CUILayerStackRendition`, `kCUIRenditionTypeLayerStack`, `kCUIRenditionTypeIconLayerStack`, `kCUIRenditionTypeSolidLayerStack`, `addLayerStackWithSize:type:stackData:name:atScale:withRenderingProperties:`, `addIconLayerStackWithSize:stackData:name:atScale:withRenderingProperties:`, and catalog lookup by name/scale/idiom/subtype/size classes.
+
+Added `tools/layer_stack_fixture_scan.py` and inspected 600 installed Apple CARs with `assetutil` for Layer Stack/Icon Layer Stack/Layer records. No aggregate Layer Stack fixture was found. Combined with the controlled actool oracle producing no CAR, exact private `stackData`/`renderingProperties` bytes remain unavailable. No private implementation code was copied and no aggregate equality is claimed.

@@ -314,3 +314,7 @@ A controlled tvOS brand/Top-Shelf and visionOS stack oracle produced no CAR and 
 ## Corrupt diagnostic milestone
 
 Eight additional corrupt/malformed contracts are byte-identical on stdout and exit status. Corrupt PNG stderr has four dynamic Apple-agent lines; actool-linux matches the shape, not volatile timestamp/PID bytes. Apple leaves a malformed CAR; actool-linux deliberately emits a safe readable failure CAR. Focused exact stdout count: 30.
+
+## Private layer-stack audit
+
+CoreUI publicly observable strings confirm LayerStack/IconLayerStack/SolidLayerStack and stackData/renderingProperties builders. `layer-stack-fixtures.json` scanned 600 installed CARs and found no aggregate fixture. Exact private stackData remains fixture-gated; ordinary layers and `.imagestack` compiler integration are Apple verified.
