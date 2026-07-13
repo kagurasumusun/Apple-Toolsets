@@ -1,5 +1,7 @@
 # actool-linux Engineering Handoff
 
+> Canonical full handoff: `SESSION_HANDOFF_COMPLETE.md`. Machine-verifiable hashes: `EVIDENCE_MANIFEST.json`; run `python3 tools/verify_handoff.py`.
+
 Last updated: 2026-07-13 (Etc/GMT-9)
 
 ## Mission and clean-room boundary
