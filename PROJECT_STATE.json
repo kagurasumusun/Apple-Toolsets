@@ -1,8 +1,8 @@
 {
-  "updated": "2026-07-13",
+  "updated": "2026-07-14",
   "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
   "test_count": 115,
-  "test_status": "OK, local suite 115/115 pass with 11 optional skips; focused remote slices pass",
+  "test_status": "OK, local suite 115/115 pass with 11 optional skips; current local state reset to origin/actool d0ab293 and verified",
   "storage_versions": [
     15,
     16,
@@ -82,55 +82,33 @@
     "explicit legacy palette-img parser/writer from public quantized-image grammar"
   ],
   "unfinished": [
-    "all platform screenshots",
     "all macOS AppKit generations",
-    "exact tvOS stack compositor metadata",
-    "exact watch registry",
-    "exact vision parallax metadata",
-    "full CLI cross-product and byte diagnostics",
+    "all platform screenshots",
     "all-Xcode CBCK thresholds",
+    "exact Xcode atlas heuristic",
+    "exact tvOS stack compositor metadata",
+    "exact vision parallax metadata",
+    "exact watch registry",
+    "full CLI cross-product and byte diagnostics",
     "historical automatic palette-img selection heuristic",
-    "exact Xcode atlas heuristic"
+    "private parallax grammar to source-level field mapping",
+    "real renderingProperties fixture bytes",
+    "real stackData fixture bytes",
+    "valid public or private Top Shelf / brandassets materializing input"
   ],
   "authoritative_notes": [
     "HANDOFF.md",
     "ENGINEERING_LOG.md",
     "VERIFICATION.md"
   ],
-  "remote_session": "z4InTbNySiFAh5OZVudP",
+  "remote_session": "QX8mPOpocAXnJg0BOxaB",
   "slow_work_policy": "defer; use short static/assetutil/inventory checks",
   "focused_verification_latest": {
     "host": "macOS 26.4 / Xcode 26.5 (17F42)",
-    "tests": "93 tests OK",
-    "vision_depth_keys": [
-      [
-        1,
-        10
-      ],
-      [
-        2,
-        20
-      ]
-    ],
-    "watch_family_role_keys": [
-      [
-        4,
-        2
-      ],
-      [
-        7,
-        3
-      ]
-    ],
-    "assetutil_exit": 0,
-    "scale_idiom_cli": {
-      "name": "Scaled",
-      "idiom": "phone",
-      "scale": 2,
-      "compression": "deepmap2",
-      "assetutil_exit": 0
-    },
-    "remote_session": "vyUvDyfVq5tQ5Ll20bR0 (macOS 26.4 / Xcode 26.5)"
+    "tests": "115 tests OK (local reset-to-origin baseline); focused remote string/oracle probes on QX8mPOpocAXnJg0BOxaB",
+    "remote_session": "QX8mPOpocAXnJg0BOxaB (macOS 26.4 / Xcode 26.5)",
+    "assetruntime_symbols": "assetruntime-layerstack-symbols-26_5.json",
+    "brandassets_probe": "brandassets-probe-26_5-summary.json"
   },
   "minimal_environment_test_status": "OK, 6 optional-dependency skips",
   "full_optional_environment_test_status": "84 OK, no skips",
@@ -295,7 +273,10 @@
     "tv_car": false,
     "vision_actool_exit": 0,
     "vision_car": false,
-    "conclusion": "hidden schema/role requirements unresolved; do not claim private aggregate equality"
+    "conclusion": "hidden schema/role requirements unresolved; do not claim private aggregate equality",
+    "tv_template_appicon_name": "tvOS App Icon & Top Shelf Image",
+    "current_public_brandassets_probe": "brandassets-probe-26_5-summary.json",
+    "current_public_brandassets_result": "still partial-plist-only, no Assets.car, stderr empty, even with template AppIcon name"
   },
   "corrupt_diagnostic_matrix": {
     "rows": 8,
@@ -313,7 +294,27 @@
     "builder_symbols_observed": true,
     "installed_cars_scanned": 600,
     "aggregate_hits": 0,
-    "exact_stackData": "fixture-gated"
+    "exact_stackData": "fixture-gated",
+    "current_assetruntime_symbols": "assetruntime-layerstack-symbols-26_5.json",
+    "renderingProperties_present_in_assetruntime_coreui": true,
+    "stackData_present_in_assetruntime_coreui_and_corethemedefinition": true,
+    "current_observed_builder_selectors": [
+      "_addLayerStackWithSize:type:stackData:name:atScale:withRenderingProperties:",
+      "addLayerStackWithSize:stackData:name:atScale:",
+      "addIconLayerStackWithSize:stackData:name:atScale:",
+      "addIconLayerStackWithSize:stackData:name:atScale:withRenderingProperties:"
+    ],
+    "current_parallax_editor_symbols": [
+      "_parallaxImages",
+      "_parallaxLayerDepths",
+      "_setDefaultParallaxLayerDepths",
+      "_setParallaxImages:",
+      "_setParallaxLayerDepths:",
+      "maximumParallaxDepth",
+      "maximumParallaxImages",
+      "parallaxDisplayConfiguration",
+      "parallaxDisplayConfigurationForChild:"
+    ]
   },
   "watch_marketing_xcode_matrix": {
     "xcode_releases": [

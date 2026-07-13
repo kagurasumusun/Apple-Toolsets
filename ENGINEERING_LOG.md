@@ -678,3 +678,78 @@ Verified exact behavior against Apple `actool` (`xcrun actool`) on macOS 26.4 / 
 - Compiler integration now understands public `.spriteatlas` source catalogs. Nested 1x PNG `imageset` members are collected and compiled through the explicit atlas path, so real public Xcode SpriteKit atlas sources now build into a CAR containing layouts `1005`, `1004`, and `1003` rather than flattening into ordinary standalone image renditions.
 - The explicit atlas style was refined again using the public SpriteKit oracle: non-transparent alpha bounds are now cropped per source image, trimmed extents are reflected in linked rendition geometry, and TLV 1011 trim metadata is emitted. For the `spark` source in the public Smoke atlas, the clean-room output now matches Apple on `(x=68, y=2, w=63, h=64)` and reproduces the observed TLV-1011 payload shape. Remaining atlas gaps are now concentrated in identifier derivation and any still-unobserved auxiliary heuristics.
 - `carinfo.inspect()` now decodes atlas-specific TLVs (1010 link, 1011 trim, 1013 name list) and explicit palette-img wrappers/quantized payload summaries, making future fixture triage easier without private tools.
+
+## 2026-07-14 — AssetRuntime `renderingProperties` / `stackData` symbol confirmation and brandassets re-probe
+
+- Local workspace had drifted to an older dirty state (`HEAD 9f22ce4` plus stale tests). Recovered the canonical continuation baseline with:
+
+```bash
+cd /home/user/mac
+git remote add origin https://github.com/kagurasumusun/mac.git   # if needed
+git fetch origin actool
+git reset --hard origin/actool
+git clean -fd
+PYTHONPATH=src python3 -m unittest discover -s tests -q
+```
+
+- Verified reset state: `HEAD d0ab293` (`Add experimental solid image stack aggregate writer`), local suite `115` tests, `OK (skipped=11)`.
+- Revalidated live Apple host session `QX8mPOpocAXnJg0BOxaB` (`macOS 26.4`, `Xcode 26.5`, `17F42`). Older auxiliary sessions `LUnMD48Mddy4PP4KeqJX` and `ZrWtAfDSvKdWHtrrmfNR` returned `Permission denied (publickey)` during this continuation and were not used further.
+- Pulled the actual tvOS template AppIcon setting from `tvOS App Base.xctemplate/TemplateInfo.plist`:
+
+```text
+ASSETCATALOG_COMPILER_APPICON_NAME = tvOS App Icon & Top Shelf Image
+```
+
+- Re-ran a controlled public `.brandassets` oracle using the documented directory shape and the correct template AppIcon name (`tvOS App Icon & Top Shelf Image`). Observable Xcode 26.5 result:
+  - `actool` exit `0`
+  - stderr empty
+  - requested partial plist emitted
+  - **no `Assets.car` emitted**
+  - therefore public docs + correct AppIcon name are still insufficient to materialize Top Shelf/brand aggregate output on this host
+- Saved concise evidence as `brandassets-probe-26_5-summary.json` and added a reusable probe helper `tools/brandassets_probe.py`.
+- Extended the private aggregate audit beyond the earlier high-level framework string scan and searched the **AssetRuntime** private frameworks directly.
+- New exact observable results:
+  - raw term `renderingProperties` is present in AssetRuntime `CoreUI`
+  - raw term `stackData` is present in AssetRuntime `CoreUI` and `CoreThemeDefinition`
+  - exact nearby selectors / strings observed:
+
+```text
+_addLayerStackWithSize:type:stackData:name:atScale:withRenderingProperties:
+addLayerStackWithSize:stackData:name:atScale:
+addIconLayerStackWithSize:stackData:name:atScale:
+addIconLayerStackWithSize:stackData:name:atScale:withRenderingProperties:
+```
+
+- Reconfirmed the current parallax-editing surface in `AssetCatalogKit` with exact observable strings:
+
+```text
+_parallaxImages
+_parallaxLayerDepths
+_setDefaultParallaxLayerDepths
+_setParallaxImages:
+_setParallaxLayerDepths:
+maximumParallaxDepth
+maximumParallaxImages
+parallaxDisplayConfiguration
+parallaxDisplayConfigurationForChild:
+```
+
+- Reconfirmed current brandassets / Top Shelf slotting symbols in `AssetCatalogAppleTVFoundation`:
+
+```text
+registerBrandAssetCollectionSlots:
+setChildClass:forBrandAssetCollectionSlot:
+setChildSlots:forBrandAssetCollectionSlot:
+slotWithIdiom:role:size:
+primary-app-icon
+top-shelf-image
+top-shelf-image-wide
+TVTopShelfPrimaryImage
+TVTopShelfImage
+TVTopShelfPrimaryImageWide
+```
+
+- Saved a concise aggregate summary as `assetruntime-layerstack-symbols-26_5.json` and added a reusable scan helper `tools/assetruntime_string_probe.py`.
+- Boundary update:
+  - this continuation **does** close the earlier uncertainty about whether `renderingProperties` / `stackData` remain observable in the current Apple stack — they do, in AssetRuntime CoreUI/CoreThemeDefinition.
+  - this continuation still **does not** provide byte-level fixture payloads for real aggregate `renderingProperties` or `stackData`, nor a materializing public Top Shelf / brandassets source catalog.

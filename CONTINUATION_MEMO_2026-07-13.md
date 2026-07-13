@@ -431,3 +431,140 @@ So the authoritative deliverables for this continuation are:
 3. Probe non-marketing AppIcon paths for watchOS/macOS/visionOS platform metadata and deployment side-effects.
 4. If a host with Xcode 16 apps becomes available, rerun the extended 94-case matrix there.
 5. If real Apple aggregate CAR fixtures become available, add parsers before attempting any writer claims.
+
+## 2026-07-14 follow-up
+
+### Current live host
+
+- primary usable session in this follow-up: `QX8mPOpocAXnJg0BOxaB`
+- ssh target: `QX8mPOpocAXnJg0BOxaB@uptermd.upterm.dev`
+- observed host:
+  - macOS `26.4`
+  - Xcode `26.5`
+  - build `17F42`
+- repo path: `/Users/runner/work/mac/mac`
+
+### Session health changes
+
+- `LUnMD48Mddy4PP4KeqJX`: returned `Permission denied (publickey)` in this follow-up.
+- `ZrWtAfDSvKdWHtrrmfNR`: returned `Permission denied (publickey)` in this follow-up.
+- The working host for this follow-up was therefore the current 26.5 host above.
+
+### Local workspace recovery
+
+The local repo had drifted backward and tests were broken. It was reset to the remote continuation tip:
+
+```bash
+cd /home/user/mac
+git fetch origin actool
+git reset --hard origin/actool
+git clean -fd
+PYTHONPATH=src python3 -m unittest discover -s tests -q
+```
+
+Recovered state:
+
+- `HEAD d0ab293` — `Add experimental solid image stack aggregate writer`
+- local tests: `Ran 115 tests`, `OK (skipped=11)`
+
+### New concrete discoveries in this follow-up
+
+#### 1. `renderingProperties` is still observable in current Apple AssetRuntime
+
+A direct raw-byte scan of Xcode 26.5 AssetRuntime private frameworks found:
+
+- `renderingProperties` present in:
+  - `.../System/AssetRuntime/.../CoreUI.framework/Versions/A/CoreUI`
+- `stackData` present in:
+  - `.../System/AssetRuntime/.../CoreUI.framework/Versions/A/CoreUI`
+  - `.../System/AssetRuntime/.../CoreThemeDefinition.framework/Versions/A/CoreThemeDefinition`
+
+Exact nearby observable selectors/strings now captured:
+
+- `_addLayerStackWithSize:type:stackData:name:atScale:withRenderingProperties:`
+- `addLayerStackWithSize:stackData:name:atScale:`
+- `addIconLayerStackWithSize:stackData:name:atScale:`
+- `addIconLayerStackWithSize:stackData:name:atScale:withRenderingProperties:`
+
+This is stronger than the earlier generic layer-stack string audit because it ties `renderingProperties` and `stackData` directly to current AssetRuntime layer-stack/icon-layer-stack builder entry points.
+
+Evidence:
+
+- `assetruntime-layerstack-symbols-26_5.json`
+- `coreui_exact_rendering_stack_terms_26_5.txt`
+- `coretheme_rendering_stackdata_context_26_5.txt`
+
+#### 2. Current parallax editing surface tightened further
+
+`AssetCatalogKit` exact observable strings reconfirm the current parallax editor/control surface:
+
+- `_parallaxImages`
+- `_parallaxLayerDepths`
+- `_setDefaultParallaxLayerDepths`
+- `_setParallaxImages:`
+- `_setParallaxLayerDepths:`
+- `maximumParallaxDepth`
+- `maximumParallaxImages`
+- `parallaxDisplayConfiguration`
+- `parallaxDisplayConfigurationForChild:`
+
+Evidence:
+
+- `assetruntime-layerstack-symbols-26_5.json`
+- `assetcatalogkit_parallax_context_26_5.txt`
+- `assetcatalogkit_parallax_context2_26_5.txt`
+
+#### 3. Public Top Shelf / brandassets still does not materialize on current Xcode 26.5
+
+Pulled the actual template AppIcon name from:
+
+- `tvOS App Base.xctemplate/TemplateInfo.plist`
+
+Observable value:
+
+```text
+ASSETCATALOG_COMPILER_APPICON_NAME = tvOS App Icon & Top Shelf Image
+```
+
+Then re-ran a clean public `.brandassets` probe using:
+
+- asset name `tvOS App Icon & Top Shelf Image.brandassets`
+- two imagestacks sized `1280x768` and `400x240`
+- top-shelf imagesets sized `1920x720` and `2320x720`
+- `--app-icon 'tvOS App Icon & Top Shelf Image'`
+
+Observed Apple result on Xcode 26.5:
+
+- rc `0`
+- stderr empty
+- requested partial plist emitted
+- **no `Assets.car`**
+
+So even with the template-correct AppIcon name plus the documented public `.brandassets` directory shape, the hidden applicability/schema gate is still unresolved.
+
+Evidence:
+
+- `brandassets-probe-26_5-summary.json`
+- reusable helper: `tools/brandassets_probe.py`
+
+### New helper tools added
+
+- `tools/assetruntime_string_probe.py`
+- `tools/brandassets_probe.py`
+
+### State delta vs previous memo
+
+This follow-up upgrades the state from:
+
+- "`renderingProperties` / `stackData` existence uncertain in current Apple stack"
+
+to:
+
+- "both are definitely still present in current AssetRuntime private frameworks, and are directly adjacent to layer-stack/icon-layer-stack builder selectors"
+
+But the following are **still not solved**:
+
+- real fixture bytes for aggregate `renderingProperties`
+- real fixture bytes for aggregate `stackData`
+- source-level field mapping for the private parallax grammar
+- a public or private materializing Top Shelf / `.brandassets` input schema

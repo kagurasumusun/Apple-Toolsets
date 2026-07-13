@@ -12,18 +12,19 @@ It stores **connection metadata only**, not private key contents.
 
 ## Current validation host
 
-- session: `z4InTbNySiFAh5OZVudP`
-- ssh target: `z4InTbNySiFAh5OZVudP@uptermd.upterm.dev`
+- session: `QX8mPOpocAXnJg0BOxaB`
+- ssh target: `QX8mPOpocAXnJg0BOxaB@uptermd.upterm.dev`
 - repo path: `/Users/runner/work/mac/mac`
-- observed OS: macOS `15.7.7`
-- observed default Xcode: `16.4 (16F6)`
+- observed OS: macOS `26.4`
+- observed default Xcode: `26.5 (17F42)`
+- note: usable in the 2026-07-14 follow-up
 
 Direct command form:
 
 ```bash
 ssh -i /home/user/.ssh/upterm_test_ed25519 \
   -o IdentitiesOnly=yes -tt \
-  z4InTbNySiFAh5OZVudP@uptermd.upterm.dev
+  QX8mPOpocAXnJg0BOxaB@uptermd.upterm.dev
 ```
 
 ## Additional analysis host
@@ -34,6 +35,7 @@ ssh -i /home/user/.ssh/upterm_test_ed25519 \
 - observed OS: macOS `15.7.7` (`24G720`)
 - observed default Xcode: `16.4 (16F6)`
 - observed installed Xcodes include `16.0`–`16.4` and `26.0`–`26.3`
+- note: returned `Permission denied (publickey)` in the 2026-07-14 follow-up; re-test before use
 
 Direct command form:
 
@@ -51,6 +53,7 @@ ssh -i /home/user/.ssh/upterm_test_ed25519 \
 - observed OS: macOS `14.8.7`
 - observed default Xcode: `15.4 (15F31d)`
 - observed installed Xcodes: `15.0`–`15.4`, `16.1`–`16.2`
+- note: returned `Permission denied (publickey)` in the 2026-07-14 follow-up; re-test before use
 
 Direct command form:
 
@@ -59,6 +62,10 @@ ssh -i /home/user/.ssh/upterm_test_ed25519 \
   -o IdentitiesOnly=yes -tt \
   ZrWtAfDSvKdWHtrrmfNR@uptermd.upterm.dev
 ```
+
+## Older session retained for history
+
+- `z4InTbNySiFAh5OZVudP` — older macOS 15.7.7 / Xcode 16.4 validation host from the previous continuation phase
 
 ## Notes
 
