@@ -9,9 +9,10 @@
     "build outputs"
   ],
   "summary": {
-    "files": 99,
-    "bytes": 20607839,
-    "tests": "84 OK"
+    "files": 102,
+    "bytes": 20614764,
+    "tests": "84 OK",
+    "scripts_included": true
   },
   "files": [
     {
@@ -41,8 +42,13 @@
     },
     {
       "path": "SESSION_HANDOFF_COMPLETE.md",
-      "size": 14947,
-      "sha256": "a9c5fb19d0850e64551340266f996809a5c0020f5ad9a8259f0a8ef0f64c8565"
+      "size": 15085,
+      "sha256": "ca67195dfaae1088ca2cebad1e9f15dcb5919a08fa8587e115fa84ce8eee891c"
+    },
+    {
+      "path": "USED_SCRIPTS.md",
+      "size": 3226,
+      "sha256": "072bf90a8d9b1d230f8989e430045427c6f69d922fa0ba0b08d65a09043a1f44"
     },
     {
       "path": "VERIFICATION.md",
@@ -478,6 +484,16 @@
       "path": "tools/runtime_consumer_matrix.py",
       "size": 9210,
       "sha256": "7b3012ffa6a837875fd6d64f870be49392bdfa9ba0b51d9d4e4d386c380cbf4c"
+    },
+    {
+      "path": "tools/session_helpers/run_upterm_command.py",
+      "size": 1768,
+      "sha256": "e0a7ec4c9ad6d6e888d1798fa4621d8af177c538566330ec3b272bb426bfc380"
+    },
+    {
+      "path": "tools/session_helpers/run_upterm_interrupt.py",
+      "size": 1793,
+      "sha256": "b148fa7f2aa28537c354764b89729c5efa1d21c2e97a838314b73e908728a9b0"
     },
     {
       "path": "tools/simulator_runtime_matrix.py",

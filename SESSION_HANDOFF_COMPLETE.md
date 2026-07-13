@@ -370,6 +370,14 @@ Rejected/not established:
 
 ## 12. Evidence file map
 
+Script inventory:
+
+```text
+USED_SCRIPTS.md
+tools/session_helpers/run_upterm_command.py
+tools/session_helpers/run_upterm_interrupt.py
+```
+
 Core evidence:
 
 ```text
