@@ -3,6 +3,7 @@
 This memo is a compact exact-session carryover for the current `actool` branch workspace.
 Read together with:
 
+- `REMOTE_MACS.md`
 - `HANDOFF.md`
 - `SESSION_HANDOFF_COMPLETE.md`
 - `ENGINEERING_LOG.md`

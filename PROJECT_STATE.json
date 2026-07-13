@@ -428,5 +428,6 @@
       "render-layout-fixture-scan-current.json",
       "render-layout-fixture-scan-legacy.json"
     ]
-  }
+  },
+  "remote_macs_file": "REMOTE_MACS.md"
 }
