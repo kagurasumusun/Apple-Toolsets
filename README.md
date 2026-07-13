@@ -103,3 +103,7 @@ SF Symbols template groups named `Weight-S`, `Weight-M`, or `Weight-L` are expan
 ### Runtime matrix and CLI contracts
 
 `tools/simulator_runtime_matrix.py` inventories all installed iOS/tvOS/watchOS/visionOS runtimes and has an opt-in boot mode with bounded boot/cleanup timeouts and incremental JSON output. The CLI accepts target-device and device model/OS filters, product type, development region, PNG-compression, and on-demand-resource switches; a single target device drives rendition thinning and metadata recording.
+
+## Session handoff
+
+Read `HANDOFF.md` first when continuing in another session. `PROJECT_STATE.json` provides the same verification boundary in machine-readable form. Neither file upgrades partial features to verified status; detailed commands and observations remain in `ENGINEERING_LOG.md`.

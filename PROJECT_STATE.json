@@ -1,0 +1,42 @@
+{
+  "updated": "2026-07-13",
+  "mission": "Clean-room Linux actool/CoreUI CAR writer accepted by Apple consumers",
+  "test_count": 64,
+  "test_status": "pass",
+  "storage_versions": [15, 16, 17],
+  "assetutil_consumer_matrix": {
+    "rows": 100,
+    "pass": 100,
+    "xcode_versions": ["16.0", "16.1", "16.2", "16.3", "16.4", "26.0.1", "26.1.1", "26.2", "26.3"],
+    "sdks": ["macosx", "iphoneos", "appletvos", "watchos", "xros"]
+  },
+  "focused_xcode": "26.5 (17F42)",
+  "verified_hosts": [
+    "macOS 15.7.7 / Xcode 16.4 / CoreUI 918.5",
+    "macOS 26.4 / Xcode 26.5 / assetutil 974.1"
+  ],
+  "simulator_inventory": [
+    "iOS 26.2", "iOS 26.4.1", "iOS 26.5",
+    "tvOS 26.2", "tvOS 26.4", "tvOS 26.5",
+    "watchOS 26.2", "watchOS 26.4", "watchOS 26.5",
+    "visionOS 26.2", "visionOS 26.4.1", "visionOS 26.5"
+  ],
+  "runtime_verified": ["iOS 26.2 UIKit CBCK consumer"],
+  "implemented": [
+    "BOM/CAR reader-writer", "multi-level trees", "DATA/JPEG/HEIF/colors",
+    "PNG deepmap2 variants", "CBCK/LZFSE", "PDF/SVG", "AppIcons",
+    "all current CoreUI idioms", "symbols and multi-weight templates",
+    "packed atlas INLK", "layer/depth keys", "watch family/role keys",
+    "thinning", "launch sidecars", "platform icon sidecar manifests",
+    "major CLI option parsing", "capability report", "runtime inventory tool"
+  ],
+  "unfinished": [
+    "all 12 runtime consumers", "all platform screenshots", "all macOS AppKit generations",
+    "exact tvOS stack compositor metadata", "exact watch registry", "exact vision parallax metadata",
+    "full CLI cross-product and byte diagnostics", "all-Xcode CBCK thresholds",
+    "legacy palette-img writer", "exact Xcode atlas heuristic"
+  ],
+  "authoritative_notes": ["HANDOFF.md", "ENGINEERING_LOG.md", "VERIFICATION.md"],
+  "remote_session": "jNGXJkmYQMCMVK0wv6sZ",
+  "slow_work_policy": "defer; use short static/assetutil/inventory checks"
+}
