@@ -18,6 +18,8 @@ SUFFIXES = (
     '.complicationset',
     '.imagestack',
     '.imagestacklayer',
+    '.solidimagestack',
+    '.solidimagestacklayer',
     '.appiconset',
 )
 

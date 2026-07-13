@@ -519,5 +519,27 @@
     ],
     "spriteatlas_compiler_integration": true,
     "trim_tlv_match_for_public_spark": true
+  },
+  "layered_icon_oracle": {
+    "solidimagestack_public_source_fixture": "solidimagestack-oracle.json",
+    "apple_asset_type": "SolidImageStack",
+    "observed_layouts": [
+      "1018",
+      "12",
+      "0",
+      "1007",
+      "1004"
+    ],
+    "aggregate_tlvs": [
+      "1012",
+      "1020",
+      "1021"
+    ],
+    "source_suffixes_supported": [
+      ".imagestack",
+      ".imagestacklayer",
+      ".solidimagestack",
+      ".solidimagestacklayer"
+    ]
   }
 }

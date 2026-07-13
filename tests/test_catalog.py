@@ -242,6 +242,21 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(result.ok,[d.render() for d in result.diagnostics]);car=CARFile(BOMStore.from_path(output/"Assets.car"))
             self.assertEqual([(r.key["kCRThemeLayerName"],r.key["kCRThemeDimension2Name"]) for r in car.renditions],[(1,10),(2,20)])
 
+    def test_compiles_solid_image_stack_with_nested_content_imageset(self):
+        png=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"Assets.xcassets";stack=root/"AppIcon.solidimagestack";front=stack/"Front.solidimagestacklayer";middle=stack/"Middle.solidimagestacklayer";back=stack/"Back.solidimagestacklayer"
+            for d in (front,middle,back): (d/"Content.imageset").mkdir(parents=True)
+            (stack/"Contents.json").write_text(json.dumps({"layers":[{"filename":"Front.solidimagestacklayer"},{"filename":"Middle.solidimagestacklayer"},{"filename":"Back.solidimagestacklayer"}],"info":{"author":"xcode","version":1}}))
+            for d in (front,middle,back):
+                (d/"Contents.json").write_text(json.dumps({"info":{"author":"xcode","version":1}}))
+                (d/"Content.imageset"/"content.png").write_bytes(png)
+                (d/"Content.imageset"/"Contents.json").write_text(json.dumps({"images":[{"idiom":"vision","scale":"2x","filename":"content.png"}],"info":{"author":"xcode","version":1}}))
+            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="xros",minimum_deployment_target="1.0"))
+            self.assertTrue(result.ok,[d.render() for d in result.diagnostics]);car=CARFile(BOMStore.from_path(output/"Assets.car"))
+            self.assertEqual(len(car.renditions),3)
+            self.assertTrue(all(r.key["kCRThemeIdiomName"]==8 for r in car.renditions))
+
     def test_compiles_launch_image_sidecar(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "Assets.xcassets"; item = root / "Launch.launchimage"

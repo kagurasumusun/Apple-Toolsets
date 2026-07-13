@@ -98,7 +98,7 @@ SF Symbols template groups named `Weight-S`, `Weight-M`, or `Weight-L` are expan
 
 ### Layered icons, complications, and sidecars
 
-`build_layered_icon_car` emits ordered layer-key images for tvOS or visionOS, and `build_watch_complication_car` emits watch-idiom subtype variants. Xcode 26.5 `assetutil` recognizes the layer and subtype keys. The compiler now emits complete compatibility PNG manifests for iOS/iPad, watchOS, and macOS; layered tvOS/visionOS icons are not incorrectly flattened.
+`build_layered_icon_car` emits ordered layer-key images for tvOS or visionOS, and `build_watch_complication_car` emits watch-idiom subtype variants. Xcode 26.5 `assetutil` recognizes the layer and subtype keys. The compiler now traverses `.imagestack` / `.imagestacklayer` and the public template-discovered `.solidimagestack` / `.solidimagestacklayer` source forms; layered tvOS/visionOS icons are not incorrectly flattened into ordinary compatibility PNGs.
 
 ### Runtime matrix and CLI contracts
 

@@ -221,15 +221,24 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     if layer_asset is None:
                         continue
                     selected = next((entry for entry in layer_asset.entries if isinstance(entry.get("filename"), str) and (layer_dir / str(entry["filename"])).is_file()), None)
+                    selected_base = layer_dir
+                    selected_props: dict[str, object] = dict(layer_asset.properties)
                     if selected is None:
-                        continue
+                        nested_image = next((candidate for candidate in assets if candidate.kind == "image" and candidate.directory.parent == layer_dir), None)
+                        if nested_image is None:
+                            continue
+                        selected = next((entry for entry in nested_image.entries if isinstance(entry.get("filename"), str) and (nested_image.directory / str(entry["filename"])).is_file()), None)
+                        if selected is None:
+                            continue
+                        selected_base = nested_image.directory
+                        selected_props.update(nested_image.properties)
                     scale_text = str(selected.get("scale", "1x"))
                     if scale_text in ("1x", "2x", "3x"):
                         stack_scale = int(scale_text[0])
-                    layer_bytes.append((layer_dir / str(selected["filename"])).read_bytes())
+                    layer_bytes.append((selected_base / str(selected["filename"])).read_bytes())
                     if is_vision_stack:
                         try:
-                            depth_source = dict(layer_asset.properties)
+                            depth_source = dict(selected_props)
                             depth_source.update(selected)
                             depth_source.update(layer_ref)
                             layer_depths.append(layer_depth(depth_source, len(layer_depths) + 1))
@@ -308,6 +317,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     continue
                 scale_text = str(entry.get("scale", "1x"))
                 if asset.directory in atlas_member_dirs:
+                    continue
+                if asset.directory.parent.suffix in (".imagestacklayer", ".solidimagestacklayer"):
                     continue
                 if asset.kind in ("image", "symbol") and scale_text not in ("1x", "2x", "3x"):
                     continue

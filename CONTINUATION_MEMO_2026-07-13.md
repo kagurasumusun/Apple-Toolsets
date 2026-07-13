@@ -119,6 +119,7 @@ The explicit `depth` / `dimension2` handling for `.imagestack` vision/xros paths
 - `xros-template-assetgeneration.json`
 - `template-assetgeneration-summary.json`
 - `template-assetgeneration-types.json`
+- `solidimagestack-oracle.json`
 - `interesting-car-scan-current.json`
 - `interesting-car-scan-legacy.json`
 - `interesting-car-scan-legacy-320.json`
@@ -273,6 +274,16 @@ A cross-Xcode extraction of public `AssetGeneration` metadata on the active mode
 - `stickersicon`
 
 No explicit `brandassets` or `complicationset` AssetGeneration type was found in the scanned public TemplateInfo metadata, which further narrows where private aggregate generation is likely happening.
+
+#### `solidimagestack-oracle.json`
+A synthetic public-source `AppIcon.solidimagestack` catalog compiled with Apple actool on Xcode 26.5 demonstrates that Apple accepts the public `.solidimagestack` / `.solidimagestacklayer` source form and emits a richer aggregate-oriented CAR than the current clean-room layered-image path. The observable Apple output includes:
+
+- `AssetType = SolidImageStack` in `assetutil`
+- CSI layouts `1018`, `12`, `0`, `1007`, plus packed pages
+- packed pages named `ZZZZPackedAsset-2.0.0-gamut0` and `ZZZZPackedAsset-2.1.0-gamut0`
+- aggregate-associated TLVs `1012`, `1020`, and `1021` on the layout-1018 rendition
+
+This is the first direct public-source oracle for a solid image stack aggregate path.
 
 #### `interesting-car-scan-current.json` / `interesting-car-scan-legacy.json` / `interesting-car-scan-legacy-320.json`
 Installed CAR scans for candidate aggregate fixtures show:

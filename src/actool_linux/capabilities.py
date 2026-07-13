@@ -7,7 +7,7 @@ CAPABILITIES = {
  "symbols": {"implemented": True, "apple_assetutil": True, "scope": "part-59 vectors, 9 weights, S/M/L; advanced effects partial"},
  "packed_atlas": {"implemented": True, "apple_assetutil": True, "scope": "INLK links and deterministic bounded multi-page shelf packer Apple-accepted; exact Xcode split/order heuristic not byte-identical"},
  "app_icons": {"implemented": True, "apple_assetutil": True, "platforms": ["iOS","iPadOS","tvOS","watchOS","macOS","visionOS"]},
- "layered_icons": {"implemented": True, "apple_assetutil": True, "scope": "tvOS/visionOS .imagestack and .imagestacklayer catalog integration plus layer/depth keys; proprietary compositor aggregate metadata partial"},
+ "layered_icons": {"implemented": True, "apple_assetutil": True, "scope": "tvOS/visionOS .imagestack/.imagestacklayer plus .solidimagestack/.solidimagestacklayer source traversal and layer/depth keys; proprietary compositor aggregate metadata partial"},
  "watch_complications": {"implemented": True, "apple_assetutil": True, "scope": "12 family IDs and 5 role IDs in subtype/dimension2 keys"},
  "thinning": {"implemented": True, "apple_assetutil": True, "scope": "writer-side deterministic selector; exact actool device-model policy partial"},
  "simulator_consumers": {"implemented": True, "verified": ["all 12 installed iOS/tvOS/watchOS/visionOS 26.2/26.4/26.5 runtimes: build, install, launch, materialization, screenshot"], "remaining": "Home/SpringBoard compositor comparison is separate"},
