@@ -813,3 +813,93 @@ The same larger sample also strengthens the current hypothesis that `1019` auxil
 ### State change
 
 At this point the project is no longer missing fixture bytes for the aggregate family under investigation. The remaining work is **semantic naming and writer reproduction**, not basic fixture discovery.
+
+## 2026-07-14 fourth follow-up — broad semantics scan and Xcode 26 generation matrix
+
+### New reusable tools added
+
+- `tools/iconstack_semantics_scan.py`
+- `tools/brandassets_xcode_matrix.py`
+
+### Broad semantics scan result
+
+A broad installed-CAR scan over `/Applications` + `/System/Library` on the active Apple host produced:
+
+- `sampled_cars = 1183`
+- `cars_with_hits = 148`
+
+Evidence:
+
+- `iconstack-semantics-summary.json`
+
+#### Root-style kind correlation
+
+For `layout 1019` root `1020` records, the observed kind field correlates with referenced child part as follows:
+
+- `217:0` — named color children
+- `247:0` — named gradient children
+- `246:2` — icon group children
+- `246:0` — unresolved exception subset
+
+This is now the strongest current evidence that:
+
+- `kind=0` belongs to the fill/background branch
+- `kind=2` belongs to the icon-group branch
+
+while explicitly preserving the current unresolved `246:0` exception family.
+
+#### Group-style reference statistics
+
+Observed `layout 1020` group-style payloads show:
+
+- `count` always `1` in the current scanned set
+- dominant kinds:
+  - `kind=1` — 1095 rows
+  - `kind=0` — 84 rows
+- referenced-name families:
+  - `color` — 371
+  - `gradient` — 276
+  - `other` — 532
+
+This strongly supports the interpretation that group `renderingProperties` links a group to one named style asset, often a named color or named gradient. The `kind=0` / `other` family remains unresolved.
+
+#### Named gradient scan statistics
+
+Across all parsed `layout 1021` current fixtures:
+
+- `2:1` (`stop_count=2`, `mode=1`) — 611 rows
+- `1:0` (`stop_count=1`, `mode=0`) — 44 rows
+
+All `655` scanned gradients shared the same scalar tuple:
+
+- `(0.0, 0.5, 0.0, 0.5, 1.0)`
+
+This strongly suggests the five scalar fields are fixed default gradient geometry parameters in the current family, although the exact semantic names are still unresolved.
+
+### Xcode 26 generation matrix for public `.brandassets`
+
+Evidence:
+
+- `brandassets-xcode26-targettv-matrix.json`
+
+Observed across installed Xcode 26 apps:
+
+- without `--target-device tv`:
+  - `26.0.1` through `26.6` all rc `0`, no `Assets.car`
+- with `--target-device tv`:
+  - `26.2`, `26.3`, `26.4.1`, `26.5`, `26.6` all rc `0`, `Assets.car` emitted
+  - `26.0.1` and `26.1.1` failed on this host because no matching AppleTV simulator runtime was installed for their older SDKs:
+    - `23J352`
+    - `23J576`
+
+So the current conservative generation statement is:
+
+- from Xcode `26.2` onward on the tested host, public `.brandassets` materialization requires `--target-device tv`;
+- `26.0/26.1` remain environment-blocked rather than semantically disproved.
+
+### Current local test state after this phase
+
+```text
+Ran 122 tests
+OK (skipped=11)
+```

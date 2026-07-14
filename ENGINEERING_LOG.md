@@ -881,3 +881,85 @@ scalar_5 = 1.0
   - `f32_1` in `{0.0,0.5,0.6,0.7,0.9}`
   - `f32_2` in `{0.0,0.5,0.6,1.0}`
 - This strengthens the conclusion that the `1021` per-entry auxiliary block is carrying actual per-layer parallax/style semantics rather than unused padding.
+
+## 2026-07-14 — Broad iconstack semantics scan and Xcode 26 generation matrix for `--target-device tv`
+
+- Added reusable tools:
+  - `tools/iconstack_semantics_scan.py`
+  - `tools/brandassets_xcode_matrix.py`
+- Ran the broad semantics scan on the current Apple host across `/Applications` + `/System/Library` (`1183` CARs sampled, `148` cars with `1002/1019/1020/1021` hits). Evidence: `iconstack-semantics-summary.json`.
+
+### Root style vs referenced part correlation
+
+Observed `1019` root `1020` entry kind strongly correlates with the referenced child part from `1012`:
+
+```text
+217:0  -> 11 rows   (named color children)
+247:0  -> 532 rows  (named gradient children)
+246:2  -> 1592 rows (icon group children)
+246:0  -> 73 rows   (exception subset still unresolved)
+```
+
+This is now the strongest current evidence that root-style `kind=2` denotes the icon-group branch, while `kind=0` denotes the fill/background branch (named color or gradient). The `246:0` exception family remains unresolved and is preserved explicitly rather than guessed.
+
+### Root style value distribution
+
+For root-style `kind=0`, values are overwhelmingly `0.0` with only a very small tail (`0.12` observed 3 times). For root-style `kind=2`, values span a wide range including `0.0`, `0.1`, `0.15`, `0.2`, `0.23`, `0.25`, `0.3`, `0.35`, `0.406`, `0.5`, `0.6`, `0.8`, and `1.0`, which is consistent with a real per-layer parallax/depth control rather than a boolean/enum.
+
+### Group style reference grammar
+
+Broad scan summary for `layout 1020` group-style payloads (`TLV 1020` interpreted as variable-length references):
+
+```text
+group_style_count_counts: {1: 1179}
+group_style_kind_counts:  {1: 1095, 0: 84}
+group_style_name_kind:    {other: 532, gradient: 276, color: 371}
+```
+
+Implications:
+
+- the observable count field is always `1` in the scanned current fixtures;
+- `kind=1` is dominant;
+- names often target named colors or named gradients, confirming that this branch of `renderingProperties` links groups to named style assets;
+- there is also a nontrivial `kind=0` family that remains unresolved and must not be overclaimed.
+
+### Named gradient grammar
+
+The broad scan covered `655` parsed `layout 1021` fixtures. Results:
+
+```text
+stop_count:mode -> count
+2:1 -> 611
+1:0 -> 44
+```
+
+All `655` parsed fixtures shared the exact same scalar tuple:
+
+```text
+(0.0, 0.5, 0.0, 0.5, 1.0)
+```
+
+This means the `ARGG` payload grammar is no longer only locally observed — the same five scalars repeat across the entire current installed sample. That is strong evidence they are fixed default gradient geometry parameters in this current family, although the exact field names remain unresolved.
+
+### Xcode 26 generation matrix for public tvOS brandassets target-device path
+
+Ran the public `.brandassets` probe across every installed Xcode 26 app alias. Evidence: `brandassets-xcode26-targettv-matrix.json`.
+
+Results:
+
+- `base` case (no `--target-device tv`):
+  - Xcode `26.0.1` through `26.6`: rc `0`, no `Assets.car`
+- `target_tv` case (`--target-device tv`):
+  - Xcode `26.2`, `26.3`, `26.4.1`, `26.5`, `26.6`: rc `0`, **`Assets.car` materialized**
+  - Xcode `26.0.1` and `26.1.1`: rc `1`, no `Assets.car`, but the failure is environmental on this host:
+
+```text
+No simulator runtime version from ["23K51", "23L243a", "23L470"] available to use with appletvsimulator SDK version 23J352/23J576
+```
+
+So the current evidence supports this conservative statement:
+
+- from Xcode `26.2` onward on the tested host, public `.brandassets` materialization requires `--target-device tv`;
+- the older `26.0/26.1` target-device path could not be fully evaluated on this host due unavailable matching runtimes, not due contradictory successful behavior.
+
+- Full local suite after parser + registry additions: `122` tests, `OK (skipped=11)`.

@@ -101,8 +101,11 @@
     "private parallax grammar to source-level semantic names",
     "complete semantic naming for macOS iconstack appearance-specific auxiliary entries",
     "complete semantic naming of root 1019 rendering-property records",
-    "complete semantic naming of group 1020 style-reference records",
-    "complete semantic naming of 1021 named-gradient scalar tuple"
+    "complete semantic naming of 1021 named-gradient scalar tuple",
+    "interpretation of root-style kind 0 vs kind 2 names beyond current fixture correlation",
+    "interpretation of group-style kind 0 rows with empty or non color/gradient names",
+    "exact semantic names for iconstack auxiliary tuple fields u32_1/u32_2/u32_3 and floats",
+    "exact semantic names for named-gradient scalar_1..scalar_5"
   ],
   "authoritative_notes": [
     "HANDOFF.md",
@@ -117,8 +120,10 @@
     "remote_session": "NoqRgiONpDaSlIzApHRa (macOS 26.4 / Xcode 26.5)",
     "brandassets_target_device_tv_matrix": "brandassets-target-device-tv-matrix.json",
     "brandassets_target_device_tv_assetutil": "brandassets-target-device-tv-assetutil-summary.json",
+    "brandassets_xcode26_targettv_matrix": "brandassets-xcode26-targettv-matrix.json",
     "iconstack_scan": "iconstack-scan-summary.json",
     "iconstack_fixture_summary": "iconstack-fixture-summary.json",
+    "iconstack_semantics_summary": "iconstack-semantics-summary.json",
     "xcode_main_iconstack_dump": "xcode-main-iconstack-dump.json"
   },
   "minimal_environment_test_status": "OK, 6 optional-dependency skips",
@@ -344,7 +349,41 @@
       "NSAppearanceNameAqua": 8,
       "ISAppearanceTintable": 10
     },
-    "xcode_main_iconstack_dump": "xcode-main-iconstack-dump.json"
+    "xcode_main_iconstack_dump": "xcode-main-iconstack-dump.json",
+    "brandassets_xcode26_targettv_matrix": "brandassets-xcode26-targettv-matrix.json",
+    "iconstack_semantics_summary": "iconstack-semantics-summary.json",
+    "root_style_kind_by_refpart": {
+      "217:0": 11,
+      "246:0": 73,
+      "246:2": 1592,
+      "247:0": 532
+    },
+    "group_style_kind_counts": {
+      "1": 1095,
+      "0": 84
+    },
+    "group_style_count_counts": {
+      "1": 1179
+    },
+    "group_style_name_kind": {
+      "other": 532,
+      "gradient": 276,
+      "color": 371
+    },
+    "gradient_stopcount_mode": {
+      "2:1": 611,
+      "1:0": 44
+    },
+    "gradient_scalar_tuple_invariant": "(0.0, 0.5, 0.0, 0.5, 1.0) observed for all 655 parsed layout-1021 fixtures in the broad scan",
+    "brandassets_targettv_generations": {
+      "26.0.1": "target-device tv path blocked on this host by unavailable appletvsimulator runtime",
+      "26.1.1": "target-device tv path blocked on this host by unavailable appletvsimulator runtime",
+      "26.2": "materializes Assets.car with --target-device tv",
+      "26.3": "materializes Assets.car with --target-device tv",
+      "26.4.1": "materializes Assets.car with --target-device tv",
+      "26.5": "materializes Assets.car with --target-device tv",
+      "26.6": "materializes Assets.car with --target-device tv"
+    }
   },
   "watch_marketing_xcode_matrix": {
     "xcode_releases": [
