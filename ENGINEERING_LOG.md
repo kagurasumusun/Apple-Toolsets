@@ -1084,3 +1084,64 @@ Remote host (session `EGWf17GG5atCmsgJGl5B`) became unreachable mid-session (upt
 tools/assetutil_semantic_matrix.py (new, runs on the Mac host): probe6 22/24 full matches; the 2 differences are atlas rectangle geometry only. Legacy suites unchanged (basic 5/5, colordata 4/4, brand 14/14, scales 7/8, probe3a 21/23, probe3b 5/6). diff payload gaps narrowed (basic GA16 66 vs 82 B (was 556), Gray8 64 vs 80 B (was 172)).
 
 Tests: 150 OK (incl. C-extension-less run, 11 optional skips).
+
+---
+
+## 2026-07-16 (third batch) — facet u16 identifier campaign + Apple output-dir contract
+
+### Facet identifier (kCRThemeIdentifierName u16) — evidence gathered
+
+Goal: identify Apple's name->u16 function. Method: purely-observed probes on the
+Mac host (no Apple code read), plus public-reverse-engineering corpus.
+
+1. DETERMINISTIC: same catalog compiled twice -> bit-identical car, same
+   identifiers (`Solo` -> 20815 both runs; IDENTICAL_BYTES).
+2. PURE FUNCTION OF THE NAME STRING: outer catalog filename/location change ->
+   bit-identical car; pixel content change -> same identifier (`Solo` -> 20815
+   with completely different PNG). Only the imageset name changes it.
+3. 110 unique names across 239 Apple-produced cars: zero collisions of
+   name->value — deterministic per name (coreui-498 era pairs from public
+   writeups (Image1-8 -> 32793/3194/39131/... W0 = 35937 there too) match the
+   SAME algorithm: unchanged 2018 -> Xcode 26.5).
+4. Positional-weight analysis (single-char-difference pairs, dozens unanimous):
+   effective weight of the char at distance k from the string end is
+   33^(k+3) mod 2^16 exactly for k = 0..3 (35937 / 6273 / 10401 / 15553;
+   67, 28, 40+ pair constraints). dc-linarity (dv = dc*W) holds for k <= 2 at
+   every measured dc (1..19) and for k = 3 at dc = 1.
+5. Deviations appear exactly when dc*33^(k+3) crosses 2^31: k = 3 with dc = 11
+   (G->R: 46545 observed vs 40011 linear), k = 4 dc = 1 (8563 vs 54497),
+   k = 5 dc = 8 (+1089 correction). k = 4..6 dc = 1 weights (8563/23702/1179)
+   are consistent between n = 8 and n = 12 names; k = 7 differs with n.
+   A plain 32/64-bit djb2 family with any seed/projection/modulus does NOT
+   reproduce these (fitted exhaustively); the final mixing is still open.
+6. Case flips (dc = 32) break char-additivity entirely (dv not divisible by
+   gcd(dc, 2^16)) — the hashed byte stream differs in more than the char for
+   case changes (case-insensitive filesystem limitations now respected in our
+   probe design).
+
+**Impact reassessment**: FACETKEYS maps name -> token VALUES incl. the u16
+identifier (per public format docs + our parser); CoreUI name lookup matches
+RENDITIONS keys against FACETKEYS-supplied tokens, so the identifier is not
+recomputed at runtime. Self-consistent u16 values (ours) therefore resolve
+names identically — the remaining exact-hash work is byte-parity/cosmetic.
+Tools added: tools/dump_facet_hashes.py (name -> u16 dumper used for probes).
+
+### Apple output-directory contract (implemented)
+
+Observed (Xcode 26.5): `--compile OUT` requires OUT to already exist;
+otherwise actool emits one error `The output directory "<path>" does not
+exist.`, an empty output-files array, exits 1, and writes nothing. We used to
+auto-create the directory. compiler.py now matches; affected tests updated to
+pre-create output dirs; new regression test. CLI smoke output verified to
+match Apple's plist shape.
+
+### Full legacy-matrix re-verification (post grammar-rules writers)
+
+All 72 matrix cars regenerated with current writers and compared with
+diff_cars: residuals decompose into the four documented open categories only
+(facet-hash16 213, payload-length 93 (v3-mini + LZFSE quality), atlas
+geometry/sizes, GA atlas page split in probe4a/b where Apple paginates into a
+2nd atlas page). assetutil semantic matrix on the Mac host: 59/72 FULL
+matches; all 13 differing cases are packed-atlas cases where the only assetutil
+delta is the atlas rectangle size (semantically transparent). 24/24 probe6
+accepted; probe6 semantic 22/24 (the 2 are the GA pair atlas rotation).

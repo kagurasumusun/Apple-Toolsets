@@ -41,11 +41,26 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual([(a.name, a.kind) for a in catalog.assets], [("Logo", "image")])
             self.assertTrue(any("missing" in d.message for d in catalog.diagnostics))
 
+    def test_missing_output_directory_is_apple_error(self):
+        # Observed Apple behavior (Xcode 26.5): --compile requires the output
+        # directory to already exist; otherwise one error, no outputs, exit 1.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "Assets.xcassets"
+            root.mkdir()
+            missing = Path(tmp) / "absent"
+            result = compile_catalogs([root], CompileOptions(missing))
+            self.assertFalse(result.ok)
+            self.assertEqual(result.outputs, [])
+            self.assertFalse(missing.exists())
+            errors = [d for d in result.diagnostics if d.severity == "error"]
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(errors[0].message, f'The output directory "{missing}" does not exist.')
+
     def test_empty_catalog_is_valid_and_does_not_emit_fake_car(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "Assets.xcassets"
             root.mkdir()
-            result = compile_catalogs([root], CompileOptions(Path(tmp) / "out"))
+            result = compile_catalogs([root], CompileOptions((lambda q:(q.mkdir(parents=True,exist_ok=True),q)[1])(Path(tmp) / "out")))
             self.assertTrue(result.ok)
             self.assertFalse((Path(tmp) / "out" / "Assets.car").exists())
 
@@ -61,7 +76,7 @@ class CatalogTests(unittest.TestCase):
                 {"idiom":"universal","scale":"3x"},
                 {"filename":"one.png","idiom":"unsupported","scale":"1x"},
             ], "info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="iphoneos",minimum_deployment_target="15.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="iphoneos",minimum_deployment_target="15.0"))
             self.assertTrue(result.ok)
             car=CARFile(BOMStore.from_path(output/"Assets.car"))
             self.assertEqual(len(car.renditions),3)
@@ -78,7 +93,7 @@ class CatalogTests(unittest.TestCase):
                     "data": [{"filename": "data.bin", "idiom": "universal", "universal-type-identifier": "public.data"}],
                     "info": {"author": "xcode", "version": 1},
                 }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output))
             self.assertTrue(result.ok)
             car = CARFile(BOMStore.from_path(output / "Assets.car"))
@@ -89,7 +104,7 @@ class CatalogTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"Assets.xcassets";item=root/"Bad.imageset";item.mkdir(parents=True);(item/"bad.png").write_bytes(b"not png")
             (item/"Contents.json").write_text(json.dumps({"images":[{"idiom":"universal","scale":"1x","filename":"bad.png"}],"info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="iphoneos",minimum_deployment_target="15.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="iphoneos",minimum_deployment_target="15.0"))
             self.assertFalse(result.ok);self.assertEqual(result.diagnostics[0].message,"Distill failed for unknown reasons.");self.assertTrue((output/"Assets.car").is_file())
             CARFile(BOMStore.from_path(output/"Assets.car"))
 
@@ -97,7 +112,7 @@ class CatalogTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"Assets.xcassets";item=root/"Bad.colorset";item.mkdir(parents=True)
             (item/"Contents.json").write_text(json.dumps({"colors":[{"idiom":"universal","color":{"color-space":"srgb","components":{"red":"1","alpha":"1"}}}],"info":{"author":"xcode","version":1}}))
-            result=compile_catalogs([root],CompileOptions(Path(tmp)/"out",platform="iphoneos",minimum_deployment_target="15.0"));self.assertTrue(result.ok)
+            result=compile_catalogs([root],CompileOptions((lambda q:(q.mkdir(parents=True,exist_ok=True),q)[1])(Path(tmp)/"out"),platform="iphoneos",minimum_deployment_target="15.0"));self.assertTrue(result.ok)
 
     def test_compiles_single_color_set_to_car(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -111,7 +126,7 @@ class CatalogTests(unittest.TestCase):
                 }}],
                 "info": {"author": "xcode", "version": 1},
             }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output))
             self.assertTrue(result.ok)
             car = CARFile(BOMStore.from_path(output / "Assets.car"))
@@ -129,7 +144,7 @@ class CatalogTests(unittest.TestCase):
                 "images": [{"filename": "photo.jpg", "idiom": "universal", "scale": "1x"}],
                 "info": {"author": "xcode", "version": 1},
             }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output))
             self.assertTrue(result.ok)
             car = CARFile(BOMStore.from_path(output / "Assets.car"))
@@ -149,7 +164,7 @@ class CatalogTests(unittest.TestCase):
                 "images": [{"filename":"small.png","idiom":"iphone","size":"1x1"},{"filename": "icon.png", "idiom": "universal", "platform": "ios", "size": "2x2"}],
                 "info": {"author": "xcode", "version": 1},
             }))
-            output = Path(tmp) / "out"; partial = Path(tmp) / "partial.plist"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True); partial = Path(tmp) / "partial.plist"
             result = compile_catalogs([root], CompileOptions(
                 output, platform="iphoneos", minimum_deployment_target="15.0",
                 app_icon="AppIcon", partial_info_plist=partial,
@@ -181,7 +196,7 @@ class CatalogTests(unittest.TestCase):
                 ],
                 "info": {"author": "xcode", "version": 1},
             }))
-            output = Path(tmp) / "out"; partial = Path(tmp) / "partial.plist"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True); partial = Path(tmp) / "partial.plist"
             result = compile_catalogs([root], CompileOptions(
                 output, platform="watchos", minimum_deployment_target="11.0",
                 app_icon="AppIcon", partial_info_plist=partial,
@@ -208,7 +223,7 @@ class CatalogTests(unittest.TestCase):
                     "images": [{"filename": f"{stem}.png", "idiom": "universal", "scale": "1x"}],
                     "info": {"author": "xcode", "version": 1},
                 }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output, platform="macosx", minimum_deployment_target="13.0"))
             self.assertTrue(result.ok, [d.render() for d in result.diagnostics])
             car = CARFile(BOMStore.from_path(output / "Assets.car"))
@@ -225,7 +240,7 @@ class CatalogTests(unittest.TestCase):
             (stack/"Contents.json").write_text(json.dumps({"layers":[{"filename":"Front.imagestacklayer"},{"filename":"Back.imagestacklayer"}],"info":{"author":"xcode","version":1}}))
             for d,n in ((front,"front.png"),(back,"back.png")):
                 (d/n).write_bytes(png);(d/"Contents.json").write_text(json.dumps({"images":[{"idiom":"tv","scale":"1x","filename":n}],"info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="appletvos",minimum_deployment_target="15.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="appletvos",minimum_deployment_target="15.0"))
             doc=[d for d in result.diagnostics if d.document]
             self.assertEqual(len(doc),1)
             self.assertIn('The image stack "Hero" must have at least 2 layers with applicable content',doc[0].message)
@@ -247,7 +262,7 @@ class CatalogTests(unittest.TestCase):
             (stack/"Contents.json").write_text(json.dumps({"layers":[{"filename":"Front.imagestacklayer"},{"filename":"Back.imagestacklayer"}],"info":{"author":"xcode","version":1}}))
             for d,n,c in ((front,"front.png",(250,10,10,255)),(back,"back.png",(10,10,250,255))):
                 (d/n).write_bytes(png_rgba(4,4,c));(d/"Contents.json").write_text(json.dumps({"images":[{"idiom":"universal","scale":"1x","filename":n}],"info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="appletvos",minimum_deployment_target="15.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="appletvos",minimum_deployment_target="15.0"))
             self.assertTrue(result.ok,[d.render() for d in result.diagnostics]);car=CARFile(BOMStore.from_path(output/"Assets.car"))
             layouts=sorted(r.csi.layout for r in car.renditions)
             self.assertEqual(layouts,[0,0,12,12,1002])
@@ -270,7 +285,7 @@ class CatalogTests(unittest.TestCase):
             ],"info":{"author":"xcode","version":1}}))
             for d,n in ((front,"front.png"),(back,"back.png")):
                 (d/n).write_bytes(png);(d/"Contents.json").write_text(json.dumps({"images":[{"idiom":"vision","scale":"1x","filename":n}],"info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="xros",minimum_deployment_target="1.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="xros",minimum_deployment_target="1.0"))
             self.assertTrue(result.ok,[d.render() for d in result.diagnostics]);car=CARFile(BOMStore.from_path(output/"Assets.car"))
             self.assertEqual([(r.key["kCRThemeLayerName"],r.key["kCRThemeDimension2Name"]) for r in car.renditions],[(1,10),(2,20)])
 
@@ -284,7 +299,7 @@ class CatalogTests(unittest.TestCase):
                 (d/"Contents.json").write_text(json.dumps({"info":{"author":"xcode","version":1}}))
                 (d/"Content.imageset"/"content.png").write_bytes(png)
                 (d/"Content.imageset"/"Contents.json").write_text(json.dumps({"images":[{"idiom":"vision","scale":"2x","filename":"content.png"}],"info":{"author":"xcode","version":1}}))
-            output=Path(tmp)/"out";result=compile_catalogs([root],CompileOptions(output,platform="xros",minimum_deployment_target="1.0"))
+            output=Path(tmp)/"out";output.mkdir(parents=True,exist_ok=True);result=compile_catalogs([root],CompileOptions(output,platform="xros",minimum_deployment_target="1.0"))
             self.assertTrue(result.ok,[d.render() for d in result.diagnostics]);car=CARFile(BOMStore.from_path(output/"Assets.car"))
             self.assertEqual(len(car.renditions),3)
             self.assertTrue(all(r.key["kCRThemeIdiomName"]==8 for r in car.renditions))
@@ -299,7 +314,7 @@ class CatalogTests(unittest.TestCase):
                 "images": [{"filename":"launch.png","idiom":"iphone","scale":"2x","minimum-system-version":"7.0","orientation":"portrait","extent":"full-screen"}],
                 "info": {"author":"xcode","version":1},
             }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output, platform="iphoneos", launch_image="Launch"))
             self.assertTrue(result.ok, [d.render() for d in result.diagnostics])
             self.assertEqual((output / "Launch-700@2x.png").read_bytes(), png)
@@ -318,7 +333,7 @@ class CatalogTests(unittest.TestCase):
                 }],
                 "info": {"author": "xcode", "version": 1},
             }))
-            output = Path(tmp) / "out"
+            output = Path(tmp) / "out"; output.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(output))
             self.assertTrue(result.ok)
             car = CARFile(BOMStore.from_path(output / "Assets.car"))

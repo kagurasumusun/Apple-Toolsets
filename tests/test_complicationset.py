@@ -33,7 +33,7 @@ class ComplicationSetTests(unittest.TestCase):
                     'images': [{'idiom': 'watch', 'scale': '2x', 'filename': 'image.png'}],
                     'info': {'author': 'xcode', 'version': 1},
                 }))
-            out = Path(td) / 'out'
+            out = Path(td) / 'out'; out.mkdir(parents=True, exist_ok=True)
             result = compile_catalogs([root], CompileOptions(out, platform='watchos', minimum_deployment_target='8.0', complication='Complication'))
             self.assertTrue(result.ok, [d.render() for d in result.diagnostics])
             car = CARFile(BOMStore.from_path(out / 'Assets.car'))

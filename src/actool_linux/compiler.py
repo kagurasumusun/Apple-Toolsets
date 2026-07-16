@@ -232,6 +232,14 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
     if any(d.severity == "notice" and d.message.startswith("The Contents.json describing") for d in diagnostics):
         return CompileResult(catalogs, diagnostics, outputs)
 
+    # Observed Apple behavior (Xcode 26.5): --compile requires the output
+    # directory to already exist. When it does not, actool reports a single
+    # error ('The output directory "<path>" does not exist.'), writes no
+    # output files, and exits with status 1.
+    if not options.output.exists():
+        diagnostics.append(Diagnostic("error", f'The output directory "{options.output}" does not exist.'))
+        return CompileResult(catalogs, diagnostics, outputs)
+
     if options.app_icon and any(asset.kind == "app-icon" and asset.name == options.app_icon for catalog in catalogs for asset in catalog.assets) and options.partial_info_plist is None:
         diagnostics.append(Diagnostic("notice", 'Compiling app icons requires passing "--output-partial-info-plist [path]".'))
         return CompileResult(catalogs, diagnostics, outputs)
