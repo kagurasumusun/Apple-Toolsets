@@ -78,14 +78,18 @@ class CARWriterTests(unittest.TestCase):
         car = CARFile(BOMStore(build_assets_car([png_rendition("Logo", png, "pixel.png")])))
         rendition = car.renditions[0]
         self.assertEqual((rendition.csi.pixel_format, rendition.csi.width, rendition.csi.height), ("GA8 ", 1, 1))
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543020000000b0000001e00000001000000020000000e00000000000000646d703201010a020100010000ff"))
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode, version), ((1, 1), 2, 3))  # constant-v -> v3 LZFSE frame
+        self.assertEqual(pixels, bytes.fromhex("00ff"))
 
     def test_builds_general_size_ga8_deepmap(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
         car = CARFile(BOMStore(build_assets_car([png_rendition("Grid", png, "grid.png")])))
         rendition = car.renditions[0]
         self.assertEqual((rendition.csi.width, rendition.csi.height), (2, 2))
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543000000000b0000002400000001000000020000001400000000000000646d703201010a02020002000bff2be242c550a8"))
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode, version), ((2, 2), 0, 2))  # varying value channel -> v2
+        self.assertEqual(pixels, bytes.fromhex("0bff2be242c550a8"))
 
     @staticmethod
     def _decode_dmp2_pixels(payload: bytes) -> tuple[int, int, int, int, bytes]:
@@ -100,8 +104,8 @@ class CARWriterTests(unittest.TestCase):
         w, h = struct.unpack_from("<HH", dmp2, 8)
         if version == 1:
             return mode, version, w, h, bytes(dmp2[12:])
-        if version == 2:
-            (slen,) = struct.unpack_from("<H", dmp2, 12)
+        if version in (2, 3):
+            (slen,) = struct.unpack_from("<I", dmp2, 12)
             return mode, version, w, h, lzfse_compat.decompress(dmp2[16:16 + slen])
         if version == 4:
             count, _bppv = struct.unpack_from("<HH", dmp2, 12)
@@ -129,10 +133,10 @@ class CARWriterTests(unittest.TestCase):
         car = CARFile(BOMStore(build_assets_car([png_rendition("RGB", png, "rgb.png")])))
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "ARGB")
-        # varied RGB(A) sources store a premultiplied-BGRA LZFSE stream (v2)
+        # varied RGB(A) sources store a premultiplied-BGRA LZFSE stream (v2);
+        # MLEC mode 2 when fully opaque (probe6 chk oracles)
         mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
-        self.assertEqual(((w, h), mode), ((2, 2), 0))
-        self.assertIn(version, (1, 2))
+        self.assertEqual(((w, h), mode, version), ((2, 2), 2, 2))
         self.assertEqual(pixels, bytes.fromhex("29170bff3a3430ff4b5155ff5c6e7aff"))
 
     def test_expands_indexed_png_to_argb_deepmap(self):
@@ -140,14 +144,18 @@ class CARWriterTests(unittest.TestCase):
         car = CARFile(BOMStore(build_assets_car([png_rendition("Indexed", png, "indexed.png")])))
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "ARGB")
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543000000000b0000002c00000001000000040000001c00000000000000646d703201010a04020002000000ffff00800080ff0000ff00404040"))
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode, version), ((2, 2), 0, 2))
+        self.assertEqual(pixels, bytes.fromhex("0000ffff00800080ff0000ff00404040"))
 
     def test_quantizes_16bit_ga_to_ga8_deepmap(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACEAQAAACILxnsAAAAG0lEQVR4nGMQMvn/3yTszBmGsIqZMytmpaUBAEo6CEVd9yF5AAAAAElFTkSuQmCC")
         car = CARFile(BOMStore(build_assets_car([png_rendition("GA16", png, "ga16.png")])))
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "GA8 ")
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543000000000b0000002400000001000000020000001400000000000000646d703201010a020200020012ff2acc34993066"))
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode, version), ((2, 2), 0, 2))
+        self.assertEqual(pixels, bytes.fromhex("12ff2acc34993066"))
 
     def test_decodes_adam7_rgba_png(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAMAAAADCAYAAAEhL4UpAAAALUlEQVR4nA3IMQEAMAgDwZeDEubIYUQAIuI07Y0HEA4FrJwdmlras6Da1m/NPiwfDxJlJIrIAAAAAElFTkSuQmCC")

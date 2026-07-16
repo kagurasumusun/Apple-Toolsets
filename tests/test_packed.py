@@ -231,8 +231,90 @@ class GrayscaleReencodeTests(unittest.TestCase):
         mode, _codec, _flen, _f1, bpp, dlen, _z = struct.unpack_from("<7I", pl, 4)
         self.assertEqual((mode, bpp), (0, 2))
         dmp2 = pl[32:32 + dlen]
-        v, a = struct.unpack_from("<2B", dmp2, 12)
+        self.assertEqual(dmp2[4], 3)  # constant value channel -> v3 LZFSE frame
+        (slen,) = struct.unpack_from("<I", dmp2, 12)
+        ga = lzfse_compat.decompress(dmp2[16:16 + slen])
+        self.assertEqual(len(ga), 2 * 16)
+        v, a = struct.unpack_from("<2B", ga, 0)
         self.assertEqual((v, a), ((9 * 128 + 127) // 255, 128))  # premultiplied
+
+
+class Probe6GrammarTests(unittest.TestCase):
+    """probe6 oracle grammar rules for layout-12 color/GA sources."""
+
+    def _checker_png(self, w, h, c0, c1, cell=1):
+        def px(x, y):
+            return c0 if ((x // cell) + (y // cell)) % 2 == 0 else c1
+        raw = b"".join(b"\x00" + b"".join(bytes(px(x, y)) for x in range(w)) for y in range(h))
+        return (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                + _chunk(b"IDAT", zlib.compress(raw, 9)) + _chunk(b"IEND", b""))
+
+    def _payload(self, png):
+        csi = png_rendition("P", png, "p.png", scale=1).csi
+        tlv_length, _one, _zero, payload_length = struct.unpack_from("<4I", csi, 168)
+        return csi[184 + tlv_length:184 + tlv_length + payload_length]
+
+    def _dmp2(self, png):
+        pl = self._payload(png)
+        mode, _codec, _flen, _f1, bpp, dlen, _z = struct.unpack_from("<7I", pl, 4)
+        return mode, bpp, pl[32:32 + dlen]
+
+    def test_two_color_checkerboard_uses_v4_palette_and_mode2(self):
+        mode, bpp, dmp2 = self._dmp2(self._checker_png(64, 64, (255, 0, 0, 255), (0, 0, 255, 255), cell=8))
+        self.assertEqual((mode, bpp, dmp2[4]), (2, 4, 4))  # opaque -> mode 2 (chk64 oracle)
+        _w, _h, n, _bp = struct.unpack_from("<HHHH", dmp2, 8)
+        self.assertEqual(n, 2)
+        (slen,) = struct.unpack_from("<I", dmp2, 16 + 4 * n)
+        plane = lzfse_compat.decompress(dmp2[20 + 4 * n:20 + 4 * n + slen])
+        self.assertEqual(len(plane), 64 * 64)
+        self.assertEqual(len(set(plane)), 2)
+
+    def test_rich_translucent_gradient_uses_v2_mode0(self):
+        rows = []
+        for y in range(32):
+            row = bytearray(b"\x00")
+            for x in range(32):
+                row += bytes((x * 255 // 31, y * 255 // 31, (x + y) * 255 // 62, 64 + 191 * x // 31))
+            rows.append(bytes(row))
+        png = (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", struct.pack(">IIBBBBB", 32, 32, 8, 6, 0, 0, 0))
+               + _chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _chunk(b"IEND", b""))
+        mode, bpp, dmp2 = self._dmp2(png)
+        self.assertEqual((mode, bpp, dmp2[4]), (0, 4, 2))
+        (slen,) = struct.unpack_from("<I", dmp2, 12)
+        raw = lzfse_compat.decompress(dmp2[16:16 + slen])
+        self.assertEqual(len(raw), 32 * 32 * 4)
+
+    def test_opaque_noise_uses_v2_with_u32_frame_and_roundtrips(self):
+        import random
+        rng = random.Random(42)
+        raw = b"\x00" + rng.randbytes(64 * 64 * 3)
+        raw_rows = b"".join(b"\x00" + raw[1 + y * 64 * 3: 1 + (y + 1) * 64 * 3] for y in range(64))
+        png = (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", struct.pack(">IIBBBBB", 64, 64, 8, 2, 0, 0, 0))
+               + _chunk(b"IDAT", zlib.compress(raw_rows, 9)) + _chunk(b"IEND", b""))
+        mode, bpp, dmp2 = self._dmp2(png)
+        self.assertEqual((mode, bpp, dmp2[4]), (2, 4, 2))  # opaque non-uniform rich: v2 + mode 2
+        (slen,) = struct.unpack_from("<I", dmp2, 12)
+        self.assertEqual(len(dmp2), 16 + slen)           # u32 frame is exact
+        restored = lzfse_compat.decompress(dmp2[16:16 + slen])
+        self.assertEqual(len(restored), 64 * 64 * 4)
+        from actool_linux.packed import _decode_deepmap_pixels
+        csi = png_rendition("P", png, "p.png", scale=1).csi
+        decoded = _decode_deepmap_pixels(csi)
+        self.assertIsNotNone(decoded)                    # noisy sources stay packable
+
+    def test_ga_alpha_ramp_constant_value_uses_v3(self):
+        rows = b"".join(b"\x00" + b"".join(bytes((90, 16 + x * 8)) for x in range(16)) for _y in range(16))
+        png = (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 4, 0, 0, 0))
+               + _chunk(b"IDAT", zlib.compress(rows, 9)) + _chunk(b"IEND", b""))
+        mode, bpp, dmp2 = self._dmp2(png)
+        self.assertEqual((mode, bpp, dmp2[4]), (0, 2, 3))  # ga_agrad oracle: v3, translucent -> mode 0
+
+    def test_ga_value_gradient_uses_v2_mode2(self):
+        rows = b"".join(b"\x00" + b"".join(bytes((x * 16, 255)) for x in range(16)) for _y in range(16))
+        png = (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 4, 0, 0, 0))
+               + _chunk(b"IDAT", zlib.compress(rows, 9)) + _chunk(b"IEND", b""))
+        mode, bpp, dmp2 = self._dmp2(png)
+        self.assertEqual((mode, bpp, dmp2[4]), (2, 2, 2))  # ga_vgrad oracle: v2, opaque -> mode 2
 
 
 class MacosDimension1KeyFormatTests(unittest.TestCase):

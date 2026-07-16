@@ -46,7 +46,7 @@ from __future__ import annotations
 import struct
 from dataclasses import replace
 
-from .carwriter import AssetRendition, _fixed, lzfse_compat
+from .carwriter import AssetRendition, _fixed, lzfse_compat, _dmp2_lzfse_stream
 
 ATLAS_PADDING = 2
 _LINK_MAGIC = bytes.fromhex("4b4c4e49")
@@ -63,8 +63,10 @@ def _decode_deepmap_pixels(csi: bytes) -> tuple[int, int, bytes, bytes] | None:
     """Recover ``(width, height, premultiplied BGRA, premultiplied GA)`` view.
 
     Returns None for anything not understood. Understands the grammars this
-    package emits: color v1/v2/v4 (bpp 4) and grayscale v1 (bpp 2). The GA
-    view is only set for grayscale sources.
+    package emits: color v1/v2/v4 (bpp 4), grayscale v1 (bpp 2, legacy test
+    fixtures), and the shared v2/v3 LZFSE frame (both bpp values; GA v3 is
+    what our writer emits for constant-straight-gray sources). The GA view is
+    only set for grayscale sources.
     """
     if len(csi) < 184 or csi[:4] != b"ISTC":
         return None
@@ -98,8 +100,8 @@ def _decode_deepmap_pixels(csi: bytes) -> tuple[int, int, bytes, bytes] | None:
     if version == 1:
         body = dmp2[12:]
         raw = bytes(body) if len(body) == npix * bpp else None
-    elif version == 2:
-        stream_length = struct.unpack_from("<H", dmp2, 12)[0]
+    elif version in (2, 3):
+        (stream_length,) = struct.unpack_from("<I", dmp2, 12)
         stream = dmp2[16:16 + stream_length]
         try:
             body = lzfse_compat.decompress(stream)
@@ -241,23 +243,18 @@ def _atlas_dmp2(width: int, height: int, bgra: bytes, gray: bool) -> bytes:
     - color atlases: v4 palette when <=255 colors else v2 raw BGRA LZFSE.
     """
     if gray:
-        bpp = 2
         pixels = bytearray(width * height * 2)
         for i in range(width * height):
             pixels[2 * i] = bgra[4 * i]
             pixels[2 * i + 1] = bgra[4 * i + 3]
-        stream = lzfse_compat.compress(bytes(pixels))
-        return (b"dmp2" + bytes((2, 1, 10, bpp)) + struct.pack("<HH", width, height)
-                + struct.pack("<HH", len(stream), 0) + stream)
+        return _dmp2_lzfse_stream(width, height, bytes(pixels), 2, 2)
     paletted = _atlas_palette(width, height, bgra)
     if paletted is not None:
         swatches, plane = paletted
         stream = lzfse_compat.compress(plane)
         return (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, len(swatches), 4)
                 + b"".join(swatches) + struct.pack("<I", len(stream)) + stream)
-    stream = lzfse_compat.compress(bgra)
-    return (b"dmp2" + bytes((2, 1, 10, 4)) + struct.pack("<HH", width, height)
-            + struct.pack("<HH", len(stream), 0) + stream)
+    return _dmp2_lzfse_stream(width, height, bgra, 4, 2)
 
 
 def _csi_atlas(name: str, width: int, height: int, bgra: bytes, *, gray: bool, opaque: bool) -> bytes:

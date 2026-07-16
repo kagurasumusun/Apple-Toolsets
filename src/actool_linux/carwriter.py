@@ -641,10 +641,61 @@ def _gray_ga_bytes(premultiplied: bytes) -> bytes | None:
     return bytes(ga)
 
 
+def _dmp2_lzfse_stream(width: int, height: int, raw: bytes, bpp: int, version: int) -> bytes:
+    """dmp2 v2/v3 frame: magic, version, (1, 10, bpp), u16 w/h, u32 stream
+    length, then the LZFSE stream. The u32 length field matters: streams of
+    noisy sources exceed 64KiB (Apple's frame confirmed u32 in oracles)."""
+    stream = lzfse_compat.compress(raw)
+    return (b"dmp2" + bytes((version, 1, 10, bpp)) + struct.pack("<HH", width, height)
+            + struct.pack("<I", len(stream)) + stream)
+
+
+def _dmp2_v4_palette(width: int, height: int, swatches: list[bytes], plane: bytes) -> bytes:
+    """dmp2 v4 palette frame (swatches are 4-byte premultiplied BGRA)."""
+    stream = lzfse_compat.compress(plane)
+    return (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, len(swatches), 4)
+            + b"".join(swatches) + struct.pack("<I", len(stream)) + stream)
+
+
+def _palette_plane(premultiplied: bytes, cap: int = 255) -> tuple[list[bytes], bytes] | None:
+    """(swatches in first-occurrence order, 8-bit index plane), or None when
+    the source has more than ``cap`` distinct premultiplied colors.
+
+    Swatch ordering is cosmetic (consumers resolve through the index plane);
+    Apple's private order (observed: chk64 blue first) is undocumented, so we
+    use deterministic first-occurrence order (documented difference).
+    """
+    index_of: dict[bytes, int] = {}
+    plane = bytearray(len(premultiplied) // 4)
+    for i in range(len(plane)):
+        px = bytes(premultiplied[4 * i:4 * i + 4])
+        idx = index_of.get(px)
+        if idx is None:
+            if len(index_of) >= cap:
+                return None
+            idx = len(index_of)
+            index_of[px] = idx
+        plane[i] = idx
+    swatches = [c for c, _ in sorted(index_of.items(), key=lambda kv: kv[1])]
+    return swatches, bytes(plane)
+
+
 def _csi_ga_deepmap(width: int, height: int, ga: bytes, filename: str, *, scale: int = 1,
-                    all_opaque: bool, flags: int = 16) -> bytes:
-    """GA8 (`` 8AG``) layout-12 deepmap with the verified v1 grammar."""
-    dmp2 = b"dmp2" + bytes((1, 1, 10, 2)) + struct.pack("<HH", width, height) + ga
+                    all_opaque: bool, v_constant: bool, flags: int = 16) -> bytes:
+    """GA8 (`` 8AG``) layout-12 deepmap (probe5/probe6 grammar rules).
+
+    Grammar is selected on the *source* (straight) gray channel: a constant
+    straight gray (uniform sources, or alpha-only ramps like probe6
+    ga_agrad — premultiplied v varies with alpha but the source gray does
+    not) selects a v3 frame wrapping an LZFSE stream; a varying straight
+    gray selects a v2 frame + LZFSE (probe6 ga_vgrad oracle; Apple sometimes
+    substitutes an LZVN stream there — a public codec, queued). Apple also
+    has a compact "v3-mini" opcode form for small/constant sources
+    (<= ~4096 raw bytes), not fully decoded; the LZFSE frame is
+    byte-replicable and accepted at every probed size (documented gap).
+    """
+    version = 3 if v_constant else 2
+    dmp2 = _dmp2_lzfse_stream(width, height, ga, 2, version)
     mode = 2 if all_opaque else 0
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, 2, len(dmp2), 0) + dmp2
     header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
@@ -666,28 +717,44 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
     if color_type == 4:
         for gray, alpha in zip(pixels[0::2], pixels[1::2]):
             premultiplied += bytes(((gray * alpha + 127) // 255, alpha)); all_opaque &= alpha == 255
-        return _csi_ga_deepmap(width, height, bytes(premultiplied), filename, scale=scale, all_opaque=all_opaque, flags=flags)
+        straight = pixels[0::2]
+        return _csi_ga_deepmap(width, height, bytes(premultiplied), filename, scale=scale,
+                               all_opaque=all_opaque, v_constant=straight == straight[:1] * len(straight), flags=flags)
     elif color_type == 2:
         for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]): premultiplied += bytes((b, g, r, 255))
     else:
         for r, g, b, alpha in zip(pixels[0::4], pixels[1::4], pixels[2::4], pixels[3::4]):
             premultiplied += bytes(((b * alpha + 127) // 255, (g * alpha + 127) // 255, (r * alpha + 127) // 255, alpha)); all_opaque &= alpha == 255
     if indexed is None:
-        # Grayscale-representable RGB(A) sources normalize to GA8. The rule
-        # is verified for packed renditions (probe5 c04) and inferred for
-        # standalone storage (single gray-RGB(A) images are not yet probed;
-        # next probe batch candidate).
+        # Grayscale-representable RGB(A) sources normalize to GA8 (packed:
+        # probe5 c04; standalone storage: probe6 solo_* oracles).
         ga = _gray_ga_bytes(bytes(premultiplied))
         if ga is not None:
-            return _csi_ga_deepmap(width, height, ga, filename, scale=scale, all_opaque=all_opaque, flags=flags)
+            # v3-vs-v2 grammar decision uses the straight source gray channel
+            # (probe6 ga_agrad: constant straight gray -> v3 despite the
+            # premultiplied alpha ramp).
+            rs = pixels[0::3] if color_type == 2 else pixels[0::4]
+            return _csi_ga_deepmap(width, height, ga, filename, scale=scale,
+                                   all_opaque=all_opaque, v_constant=rs == rs[:1] * len(rs), flags=flags)
     pixel_format, color_space, bpp = b"BGRA", 1, 4
-    dmp2 = b"dmp2" + bytes((1, 1, 10, bpp)) + struct.pack("<HH", width, height) + premultiplied
     mode = 2 if all_opaque else 0
     if indexed is not None and width * height >= 4096:
-        from . import lzfse_compat
-        palette_bgra, indices = indexed; compressed = lzfse_compat.compress(indices)
-        dmp2 = b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, len(palette_bgra) // 4, 4) + palette_bgra + struct.pack("<I", len(compressed)) + compressed
+        palette_bgra, indices = indexed
+        swatches = [palette_bgra[i:i + 4] for i in range(0, len(palette_bgra), 4)]
+        dmp2 = _dmp2_v4_palette(width, height, swatches, indices)
         mode = 2
+    elif premultiplied[:4] * (width * height) == premultiplied:
+        # Uniform: mirror the variant writer (Apple v4; v3-mini below 512 raw
+        # bytes is an undecoded Apple optimization, documented).
+        stream = lzfse_compat.compress(b"\x00" * (width * height))
+        dmp2 = (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, 1, 4)
+                + bytes(premultiplied[:4]) + struct.pack("<I", len(stream)) + stream)
+    elif width * height * 4 > 512:
+        pal = _palette_plane(bytes(premultiplied))
+        dmp2 = (_dmp2_v4_palette(width, height, pal[0], pal[1]) if pal is not None
+                else _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2))
+    else:
+        dmp2 = _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2)
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, bpp, len(dmp2), 0) + dmp2
     header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
     header[24:28] = pixel_format; struct.pack_into("<I", header, 28, color_space); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
@@ -749,7 +816,9 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
     # standalone gray-RGB(A) storage is inferred, not yet probed.
     ga = _gray_ga_bytes(premultiplied)
     if ga is not None:
-        return _csi_ga_deepmap(width, height, ga, filename, scale=scale, all_opaque=all_opaque)
+        rs = pixels[0::3] if color_type == 2 else pixels[0::4]
+        return _csi_ga_deepmap(width, height, ga, filename, scale=scale,
+                               all_opaque=all_opaque, v_constant=rs == rs[:1] * len(rs))
     uniform = premultiplied[:4] * (width * height) == premultiplied
 
     def band_dmp2(rows_pixels: bytes, band_height: int) -> bytes:
@@ -759,9 +828,7 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
             stream = lzfse.compress(indices)
             return (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, band_height, 1, 4)
                     + rows_pixels[:4] + struct.pack("<I", len(stream)) + stream)
-        stream = lzfse.compress(rows_pixels)
-        return (b"dmp2" + bytes((2, 1, 10, 4)) + struct.pack("<HH", width, band_height)
-                + struct.pack("<HH", len(stream), 0) + stream)
+        return _dmp2_lzfse_stream(width, band_height, rows_pixels, 4, 2)
 
     row_bytes = width * 4
     use_cbck = prefer_cbck and (row_bytes * height > DMP2_CBCK_CHUNK_RAW_CAP * 4) and height > 1
@@ -777,12 +844,23 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
         payload = b"MLEC" + struct.pack("<3I", 3, 11, len(chunks)) + b"".join(chunks)
         mode_field = 3
     else:
+        mode_field = 2 if (all_opaque and stack_bottom) else 0
         if uniform:
+            # Apple: v4 above 512 raw bytes, v3-mini at/below (undecoded; v4
+            # is a valid readable container at every size, documented gap).
             dmp2 = band_dmp2(premultiplied, height)
-            mode_field = 2 if (all_opaque and stack_bottom) else 0
+        elif width * height * 4 > 512:
+            # probe6 chk64 + iconstack layer oracles: up-to-255-color sources
+            # use the v4 palette grammar; richer sources use v2 raw LZFSE.
+            pal = _palette_plane(premultiplied)
+            if pal is not None:
+                dmp2 = _dmp2_v4_palette(width, height, pal[0], pal[1])
+            else:
+                dmp2 = _dmp2_lzfse_stream(width, height, premultiplied, 4, 2)
         else:
+            # Apple: v3-mini opcode streams here (undecoded; v2 remains a
+            # valid readable stream of comparable size, documented gap).
             dmp2 = band_dmp2(premultiplied, height)
-            mode_field = 0
         payload = b"MLEC" + struct.pack("<7I", mode_field, 11, 16 + len(dmp2), 1, 4, len(dmp2), 0) + dmp2
     tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height),
                      struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height),
