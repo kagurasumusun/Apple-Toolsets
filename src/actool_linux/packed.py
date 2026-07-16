@@ -47,6 +47,7 @@ import struct
 from dataclasses import replace
 
 from .carwriter import AssetRendition, _fixed, lzfse_compat, _dmp2_lzfse_stream
+from . import dmp2mini
 
 ATLAS_PADDING = 2
 _LINK_MAGIC = bytes.fromhex("4b4c4e49")
@@ -100,7 +101,18 @@ def _decode_deepmap_pixels(csi: bytes) -> tuple[int, int, bytes, bytes] | None:
     if version == 1:
         body = dmp2[12:]
         raw = bytes(body) if len(body) == npix * bpp else None
-    elif version in (2, 3):
+    elif version == 3:
+        # Either Apple's v3-mini opcode form or an LZFSE stream frame.
+        raw = dmp2mini.decode_mini(dmp2, width, height, bpp)
+        if raw is None:
+            (stream_length,) = struct.unpack_from("<I", dmp2, 12)
+            stream = dmp2[16:16 + stream_length]
+            try:
+                body = lzfse_compat.decompress(stream)
+            except ValueError:
+                return None
+            raw = body if len(body) == npix * bpp else None
+    elif version == 2:
         (stream_length,) = struct.unpack_from("<I", dmp2, 12)
         stream = dmp2[16:16 + stream_length]
         try:
@@ -112,21 +124,27 @@ def _decode_deepmap_pixels(csi: bytes) -> tuple[int, int, bytes, bytes] | None:
         count, bppv = struct.unpack_from("<HH", dmp2, 12)
         if bppv != 4 or not 1 <= count <= 256:
             return None
-        palette = dmp2[16:16 + 4 * count]
-        stream_length = struct.unpack_from("<I", dmp2, 16 + 4 * count)[0]
-        stream = dmp2[20 + 4 * count: 20 + 4 * count + stream_length]
-        try:
-            indices = lzfse_compat.decompress(stream)
-        except ValueError:
-            return None
-        if len(indices) != npix:
-            return None
-        out = bytearray(npix * 4)
-        for i, idx in enumerate(indices):
-            if idx >= count:
+        mini = None
+        if count == 1:
+            mini = dmp2mini.decode_mini(dmp2, width, height, bpp)
+        if mini is not None:
+            raw = mini
+        else:
+            palette = dmp2[16:16 + 4 * count]
+            stream_length = struct.unpack_from("<I", dmp2, 16 + 4 * count)[0]
+            stream = dmp2[20 + 4 * count: 20 + 4 * count + stream_length]
+            try:
+                indices = lzfse_compat.decompress(stream)
+            except ValueError:
                 return None
-            out[4 * i:4 * i + 4] = palette[4 * idx:4 * idx + 4]
-        raw = bytes(out)
+            if len(indices) != npix:
+                return None
+            out = bytearray(npix * 4)
+            for i, idx in enumerate(indices):
+                if idx >= count:
+                    return None
+                out[4 * i:4 * i + 4] = palette[4 * idx:4 * idx + 4]
+            raw = bytes(out)
     if raw is None:
         return None
     if bpp == 2:

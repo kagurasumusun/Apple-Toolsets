@@ -8,6 +8,7 @@ import zlib
 
 from .bomwriter import BOMWriter
 from . import lzfse_compat
+from . import dmp2mini
 from .coreui import CoreUIProfile, resolve_profile
 from .paletteimg import build_palette_img_wrapper
 from .solidstack import (
@@ -694,8 +695,18 @@ def _csi_ga_deepmap(width: int, height: int, ga: bytes, filename: str, *, scale:
     (<= ~4096 raw bytes), not fully decoded; the LZFSE frame is
     byte-replicable and accepted at every probed size (documented gap).
     """
-    version = 3 if v_constant else 2
-    dmp2 = _dmp2_lzfse_stream(width, height, ga, 2, version)
+    gray_const = ga == ga[:2] * (width * height)
+    nbytes = 2 * width * height
+    if v_constant and gray_const and nbytes <= 8:
+        dmp2 = dmp2mini.v1_raw(width, height, ga, 2)
+        version = 1
+    elif v_constant and gray_const and 32 <= nbytes <= 3200:
+        # Apple v3-mini opcode form (hp9 oracles: e.g. g_8x8/g_40x40).
+        dmp2 = dmp2mini.v3_mini_ga(width, height, ga[:2])
+        version = 3
+    else:
+        version = 3 if v_constant else 2
+        dmp2 = _dmp2_lzfse_stream(width, height, ga, 2, version)
     mode = 2 if all_opaque else 0
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, 2, len(dmp2), 0) + dmp2
     header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
@@ -743,16 +754,27 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
         swatches = [palette_bgra[i:i + 4] for i in range(0, len(palette_bgra), 4)]
         dmp2 = _dmp2_v4_palette(width, height, swatches, indices)
         mode = 2
-    elif premultiplied[:4] * (width * height) == premultiplied:
-        # Uniform: mirror the variant writer (Apple v4; v3-mini below 512 raw
-        # bytes is an undecoded Apple optimization, documented).
-        stream = lzfse_compat.compress(b"\x00" * (width * height))
+    npix = width * height
+    if premultiplied[:4] * npix == premultiplied and npix <= 8:
+        dmp2 = dmp2mini.v1_raw(width, height, bytes(premultiplied[:4]) * npix, 4)
+    elif premultiplied[:4] * npix == premultiplied and npix <= 128:
+        # Apple v3-mini opcode form (hp9 color-uniform sweep, 36..512 B).
+        dmp2 = dmp2mini.v3_mini_color(width, height, bytes(premultiplied[:4]))
+    elif premultiplied[:4] * npix == premultiplied and 144 <= npix <= 2304:
+        # Apple v4-mini RLE form (hp9/probe5 12x12..48x48 uniform oracles).
+        dmp2 = dmp2mini.v4_mini(width, height, bytes(premultiplied[:4]))
+    elif premultiplied[:4] * npix == premultiplied:
+        # Uniform: mirror the variant writer (Apple v4 LZFSE at large sizes).
+        stream = lzfse_compat.compress(b"\x00" * npix)
         dmp2 = (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, 1, 4)
                 + bytes(premultiplied[:4]) + struct.pack("<I", len(stream)) + stream)
     elif width * height * 4 > 512:
         pal = _palette_plane(bytes(premultiplied))
         dmp2 = (_dmp2_v4_palette(width, height, pal[0], pal[1]) if pal is not None
                 else _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2))
+    elif npix <= 8:
+        # Tiny multi-color sources are stored as v1 raw frames (hp9 k_2x4 etc).
+        dmp2 = dmp2mini.v1_raw(width, height, bytes(premultiplied), 4)
     else:
         dmp2 = _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2)
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, bpp, len(dmp2), 0) + dmp2
@@ -845,9 +867,16 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
         mode_field = 3
     else:
         mode_field = 2 if (all_opaque and stack_bottom) else 0
-        if uniform:
-            # Apple: v4 above 512 raw bytes, v3-mini at/below (undecoded; v4
-            # is a valid readable container at every size, documented gap).
+        npix = width * height
+        if uniform and npix <= 8:
+            dmp2 = dmp2mini.v1_raw(width, height, premultiplied, 4)
+        elif uniform and npix <= 128:
+            # Apple v3-mini opcode form (hp9 color-uniform sweep, 36..512 B).
+            dmp2 = dmp2mini.v3_mini_color(width, height, premultiplied[:4])
+        elif uniform and 144 <= npix <= 2304:
+            # Apple v4-mini RLE form (hp9/probe5 12x12..48x48 uniform oracles).
+            dmp2 = dmp2mini.v4_mini(width, height, premultiplied[:4])
+        elif uniform:
             dmp2 = band_dmp2(premultiplied, height)
         elif width * height * 4 > 512:
             # probe6 chk64 + iconstack layer oracles: up-to-255-color sources
@@ -857,9 +886,13 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
                 dmp2 = _dmp2_v4_palette(width, height, pal[0], pal[1])
             else:
                 dmp2 = _dmp2_lzfse_stream(width, height, premultiplied, 4, 2)
+        elif npix <= 8:
+            # Tiny multi-color sources: Apple stores v1 raw frames (hp9 k_2x4).
+            dmp2 = dmp2mini.v1_raw(width, height, premultiplied, 4)
         else:
-            # Apple: v3-mini opcode streams here (undecoded; v2 remains a
-            # valid readable stream of comparable size, documented gap).
+            # Apple: v3-mini multi-swatch opcode streams here (token grammar
+            # not fully decoded; v2 remains a valid readable stream of
+            # comparable size, documented gap).
             dmp2 = band_dmp2(premultiplied, height)
         payload = b"MLEC" + struct.pack("<7I", mode_field, 11, 16 + len(dmp2), 1, 4, len(dmp2), 0) + dmp2
     tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height),

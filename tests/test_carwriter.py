@@ -79,7 +79,7 @@ class CARWriterTests(unittest.TestCase):
         rendition = car.renditions[0]
         self.assertEqual((rendition.csi.pixel_format, rendition.csi.width, rendition.csi.height), ("GA8 ", 1, 1))
         mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
-        self.assertEqual(((w, h), mode, version), ((1, 1), 2, 3))  # constant-v -> v3 LZFSE frame
+        self.assertEqual(((w, h), mode, version), ((1, 1), 2, 1))  # 1px: Apple g_1x1 oracle -> v1 raw
         self.assertEqual(pixels, bytes.fromhex("00ff"))
 
     def test_builds_general_size_ga8_deepmap(self):
@@ -133,10 +133,11 @@ class CARWriterTests(unittest.TestCase):
         car = CARFile(BOMStore(build_assets_car([png_rendition("RGB", png, "rgb.png")])))
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "ARGB")
-        # varied RGB(A) sources store a premultiplied-BGRA LZFSE stream (v2);
-        # MLEC mode 2 when fully opaque (probe6 chk oracles)
+        # tiny (<=8px) varied sources store a v1 raw frame (hp9 k_2x2
+        # oracle); larger varied RGB(A) use v2 LZFSE. MLEC mode 2 when
+        # fully opaque (probe6 chk oracles)
         mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
-        self.assertEqual(((w, h), mode, version), ((2, 2), 2, 2))
+        self.assertEqual(((w, h), mode, version), ((2, 2), 2, 1))
         self.assertEqual(pixels, bytes.fromhex("29170bff3a3430ff4b5155ff5c6e7aff"))
 
     def test_expands_indexed_png_to_argb_deepmap(self):
@@ -145,7 +146,7 @@ class CARWriterTests(unittest.TestCase):
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "ARGB")
         mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
-        self.assertEqual(((w, h), mode, version), ((2, 2), 0, 2))
+        self.assertEqual(((w, h), mode, version), ((2, 2), 0, 1))  # 4px: Apple k_2x2 oracle -> v1 raw
         self.assertEqual(pixels, bytes.fromhex("0000ffff00800080ff0000ff00404040"))
 
     def test_quantizes_16bit_ga_to_ga8_deepmap(self):

@@ -231,9 +231,12 @@ class GrayscaleReencodeTests(unittest.TestCase):
         mode, _codec, _flen, _f1, bpp, dlen, _z = struct.unpack_from("<7I", pl, 4)
         self.assertEqual((mode, bpp), (0, 2))
         dmp2 = pl[32:32 + dlen]
-        self.assertEqual(dmp2[4], 3)  # constant value channel -> v3 LZFSE frame
-        (slen,) = struct.unpack_from("<I", dmp2, 12)
-        ga = lzfse_compat.decompress(dmp2[16:16 + slen])
+        self.assertEqual(dmp2[4], 3)  # constant value channel -> v3 grammar
+        from actool_linux import dmp2mini
+        ga = dmp2mini.decode_mini(dmp2, r.csi.width, r.csi.height, 2)
+        if ga is None:  # larger sizes: v3 frame wraps an LZFSE stream
+            (slen,) = struct.unpack_from("<I", dmp2, 12)
+            ga = lzfse_compat.decompress(dmp2[16:16 + slen])
         self.assertEqual(len(ga), 2 * 16)
         v, a = struct.unpack_from("<2B", ga, 0)
         self.assertEqual((v, a), ((9 * 128 + 127) // 255, 128))  # premultiplied
