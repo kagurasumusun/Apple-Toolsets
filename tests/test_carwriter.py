@@ -87,19 +87,53 @@ class CARWriterTests(unittest.TestCase):
         self.assertEqual((rendition.csi.width, rendition.csi.height), (2, 2))
         self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543000000000b0000002400000001000000020000001400000000000000646d703201010a02020002000bff2be242c550a8"))
 
+    @staticmethod
+    def _decode_dmp2_pixels(payload: bytes) -> tuple[int, int, int, int, bytes]:
+        """Decode our MLEC/dmp2 payload (v1 raw / v2 LZFSE / v4 palette)."""
+        import struct
+        from actool_linux import lzfse_compat
+        assert payload[:4] == b"MLEC"
+        mode, codec, _flen, _f1, bpp, dlen, _z = struct.unpack_from("<7I", payload, 4)
+        dmp2 = payload[32:32 + dlen]
+        assert dmp2[:4] == b"dmp2"
+        version = dmp2[4]
+        w, h = struct.unpack_from("<HH", dmp2, 8)
+        if version == 1:
+            return mode, version, w, h, bytes(dmp2[12:])
+        if version == 2:
+            (slen,) = struct.unpack_from("<H", dmp2, 12)
+            return mode, version, w, h, lzfse_compat.decompress(dmp2[16:16 + slen])
+        if version == 4:
+            count, _bppv = struct.unpack_from("<HH", dmp2, 12)
+            palette = dmp2[16:16 + 4 * count]
+            (slen,) = struct.unpack_from("<I", dmp2, 16 + 4 * count)
+            indices = lzfse_compat.decompress(dmp2[20 + 4 * count:20 + 4 * count + slen])
+            out = bytearray()
+            for idx in indices:
+                out += palette[4 * idx:4 * idx + 4]
+            return mode, version, w, h, bytes(out)
+        raise AssertionError(f"unexpected dmp2 version {version}")
+
     def test_builds_rgba_argb_deepmap(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGklEQVR4nGPgFtf8b2Bi9YAhNND7YFVezCIAMaYGYTE5bUIAAAAASUVORK5CYII=")
         car = CARFile(BOMStore(build_assets_car([png_rendition("RGBA", png, "rgba.png")])))
         rendition = car.renditions[0]
         self.assertEqual((rendition.csi.pixel_format, rendition.csi.width, rendition.csi.height), ("ARGB", 2, 2))
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543000000000b0000002c00000001000000040000001c00000000000000646d703201010a040200020029170bff332e2ae0393d40c13a464ea2"))
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode), ((2, 2), 0))
+        self.assertIn(version, (1, 2))
+        self.assertEqual(pixels, bytes.fromhex("29170bff332e2ae0393d40c13a464ea2"))
 
     def test_builds_opaque_rgb_argb_deepmap(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGPgFtc0MLFiCA30rsqLAQAQXQMfVfFocgAAAABJRU5ErkJggg==")
         car = CARFile(BOMStore(build_assets_car([png_rendition("RGB", png, "rgb.png")])))
         rendition = car.renditions[0]
         self.assertEqual(rendition.csi.pixel_format, "ARGB")
-        self.assertEqual(rendition.csi.rendition_data, bytes.fromhex("4d4c4543020000000b0000002c00000001000000040000001c00000000000000646d703201010a040200020029170bff3a3430ff4b5155ff5c6e7aff"))
+        # varied RGB(A) sources store a premultiplied-BGRA LZFSE stream (v2)
+        mode, version, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual(((w, h), mode), ((2, 2), 0))
+        self.assertIn(version, (1, 2))
+        self.assertEqual(pixels, bytes.fromhex("29170bff3a3430ff4b5155ff5c6e7aff"))
 
     def test_expands_indexed_png_to_argb_deepmap(self):
         png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAgMAAAAP2OW3AAAADFBMVEX/AAAA/wAAAP///wDWAo97AAAABHRSTlP/gP9AaVvHCQAAAAxJREFUeJxjEGDYAAAA5ADBJ6joVwAAAABJRU5ErkJggg==")
@@ -120,14 +154,14 @@ class CARWriterTests(unittest.TestCase):
         car = CARFile(BOMStore(build_assets_car([png_rendition("Adam7", png)])))
         rendition = car.renditions[0]
         self.assertEqual((rendition.csi.width, rendition.csi.height), (3, 3))
-        dmp = rendition.csi.rendition_data
-        self.assertEqual(dmp[32:44], b"dmp2" + bytes((1, 1, 10, 4)) + b"\x03\0\x03\0")
+        _mode, _ver, w, h, pixels = self._decode_dmp2_pixels(rendition.csi.rendition_data)
+        self.assertEqual((w, h), (3, 3))
         expected = bytearray()
         for y in range(3):
             for x in range(3):
                 r, g, b, a = x * 70, y * 80, (x + y) * 40, 255 if (x + y) % 2 == 0 else 128
                 expected += bytes(((b*a+127)//255, (g*a+127)//255, (r*a+127)//255, a))
-        self.assertEqual(dmp[44:], expected)
+        self.assertEqual(pixels, bytes(expected))
 
     @unittest.skipUnless(HAS_LZFSE, "optional lzfse dependency is unavailable")
     def test_builds_cbck_app_icon_records(self):

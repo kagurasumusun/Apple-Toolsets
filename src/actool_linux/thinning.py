@@ -63,6 +63,9 @@ def thin_renditions(assets: list[AssetRendition], options: ThinningOptions) -> l
         if idiom is not None:
             allowed = {idiom}
             if options.keep_fallbacks: allowed.add(0)
+            # Marketing (App Store) content is device-independent: Apple
+            # retains idiom 6 renditions under --target-device thinning.
+            allowed.add(6)
             if asset.idiom not in allowed: continue
         if options.scale is not None and asset.part != 42 and asset.scale != options.scale:
             continue

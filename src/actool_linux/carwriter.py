@@ -34,7 +34,22 @@ SYMBOL_ATTRIBUTES = (7, 13, 1, 2, 4, 17, 8, 9, 10, 14, 12, 19, 18, 25, 26, 27)
 _IMAGE_STACK_PARTS = (208, 209)
 
 
-def _select_key_attributes(assets) -> tuple[int, ...]:
+# Platforms whose catalogs use the iOS-family rendition key tuple
+# (appearance, localization, scale, idiom, subtype, identifier, element,
+# part). Verified against Apple oracles: macosx compiles color/data/image
+# catalogs with the base tuple even when appearance renditions exist, while
+# iphoneos/appletvos catalogs use the iOS tuple. Specialized families
+# (symbols, layers, stacks, app icons) keep their own tuples on all
+# platforms.
+IOS_KEY_FORMAT_PLATFORMS = frozenset({
+    "iphoneos", "iphonesimulator", "ios",
+    "appletvos", "appletvsimulator", "tvos",
+    "watchos", "watchsimulator",
+    "xros", "xrsimulator", "visionos",
+})
+
+
+def _select_key_attributes(assets, platform: str = "macosx") -> tuple[int, ...]:
     """Single source of truth for the CoreUI KEYFORMAT attribute tuple.
 
     The tuple families mirror the layouts Apple actool emits per rendition
@@ -49,9 +64,13 @@ def _select_key_attributes(assets) -> tuple[int, ...]:
         return STACK_ATTRIBUTES
     if any(a.dimension2 for a in seq):
         return APP_ICON_ATTRIBUTES
-    if any(a.idiom or a.appearance or a.subtype for a in seq):
-        return IOS_ATTRIBUTES
     if any(a.part in _IMAGE_STACK_PARTS for a in seq):
+        return IOS_ATTRIBUTES
+    if (platform or "macosx").lower() in IOS_KEY_FORMAT_PLATFORMS:
+        return IOS_ATTRIBUTES
+    # macosx stays on the base tuple even when appearance renditions exist
+    # (verified with Apple oracles); explicit idiom/subtype still upgrades.
+    if any(a.idiom or a.subtype for a in seq):
         return IOS_ATTRIBUTES
     return KEY_ATTRIBUTES
 
@@ -86,6 +105,7 @@ class AssetRendition:
     identifier_override: int | None = None
     atlas_linked: bool = False
     layer: int = 0
+    skip_facet: bool = False     # internal renditions (packed atlases) with no facet record
 
     @property
     def effective_facet_part(self) -> int:
@@ -117,9 +137,21 @@ def _car_header(rendition_count: int) -> bytes:
     ))
 
 
+# Apple EXTENDED_METADATA records the deployment platform with its short
+# token, not the actool --platform spelling (verified against oracles).
+DEPLOYMENT_PLATFORM_TOKENS = {
+    "macosx": "macosx",
+    "iphoneos": "ios", "iphonesimulator": "ios", "ios": "ios",
+    "appletvos": "atv", "appletvsimulator": "atv", "tvos": "atv",
+    "watchos": "watchos", "watchsimulator": "watchos",
+    "xros": "xros", "xrsimulator": "xros", "visionos": "xros",
+}
+
+
 def _extended_metadata(platform: str, target: str, thinning_arguments: str = "") -> bytes:
+    token = DEPLOYMENT_PLATFORM_TOKENS.get((platform or "macosx").lower(), platform)
     return b"META" + b"".join((
-        _fixed(thinning_arguments, 256), _fixed(target, 256), _fixed(platform, 256),
+        _fixed(thinning_arguments, 256), _fixed(target, 256), _fixed(token, 256),
         _fixed("actool-linux clean-room CoreUI encoder", 256),
     ))
 
@@ -871,21 +903,25 @@ def _add_multilevel_tree(
 
 def _build_assets_car_multilevel(assets: list[AssetRendition], *, platform: str, target: str, thinning_arguments: str = "") -> bytes:
     """Large-catalog writer using true multi-level trees for all indexes."""
+    if any(a.appearance for a in assets) or any(a.localization for a in assets):
+        from .packed import pack_renditions
+        assets = pack_renditions(list(assets))
     ordered = sorted(assets, key=lambda item: (item.name.encode("utf-8"), item.part, item.scale, item.csi))
-    facet_names = sorted({asset.name for asset in ordered}, key=lambda item: item.encode("utf-8"))
+    facet_names = sorted({asset.name for asset in ordered if not asset.skip_facet}, key=lambda item: item.encode("utf-8"))
     names = [name.encode("utf-8") for name in facet_names]
     if any(not name or len(name) > 255 for name in names): raise ValueError("asset names must contain 1..255 UTF-8 bytes")
     identifiers = {name: _identifier(name) for name in facet_names}
     if len(set(identifiers.values())) != len(identifiers): raise ValueError("asset identifier collision; rename one of the colliding assets")
     facet_parts: dict[str, int] = {}
     for asset in ordered:
+        if asset.skip_facet: continue
         old = facet_parts.setdefault(asset.name, asset.effective_facet_part)
         if old != asset.effective_facet_part: raise ValueError(f"renditions for {asset.name!r} disagree on facet part")
-    attrs = _select_key_attributes(ordered)
+    attrs = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
     locale_ids = {name: _identifier("localization:" + name) for name in locale_names}
     if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
-    keys = [_rendition_key_for(asset, identifiers[asset.name], attrs, locale_ids.get(asset.localization, 0)) for asset in ordered]
+    keys = [_rendition_key_for(asset, identifiers.get(asset.name, 0), attrs, locale_ids.get(asset.localization, 0)) for asset in ordered]
     if len(set(keys)) != len(keys): raise ValueError("duplicate rendition key")
 
     writer = BOMWriter(); writer.add_block(_car_header(len(ordered)), "CARHEADER")
@@ -929,8 +965,11 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
         raise ValueError("at least one asset is required")
     if len(assets) > 128 or len({asset.name for asset in assets}) > 128:
         return _build_assets_car_multilevel(assets, platform=platform, target=target, thinning_arguments=thinning_arguments)
+    if any(a.appearance for a in assets) or any(a.localization for a in assets):
+        from .packed import pack_renditions
+        assets = pack_renditions(list(assets))
     ordered = sorted(assets, key=lambda item: (item.name.encode("utf-8"), item.part, item.scale, item.csi))
-    facet_names = sorted({asset.name for asset in ordered}, key=lambda item: item.encode("utf-8"))
+    facet_names = sorted({asset.name for asset in ordered if not asset.skip_facet}, key=lambda item: item.encode("utf-8"))
     names = [name.encode("utf-8") for name in facet_names]
     if any(not name or len(name) > 255 for name in names):
         raise ValueError("asset names must contain 1..255 UTF-8 bytes")
@@ -939,14 +978,16 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
         raise ValueError("asset identifier collision; rename one of the colliding assets")
     facet_parts: dict[str, int] = {}
     for asset in ordered:
+        if asset.skip_facet:
+            continue
         previous = facet_parts.setdefault(asset.name, asset.effective_facet_part)
         if previous != asset.effective_facet_part:
             raise ValueError(f"renditions for {asset.name!r} disagree on facet part")
-    key_attributes = _select_key_attributes(ordered)
+    key_attributes = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
     locale_ids = {name: _identifier("localization:" + name) for name in locale_names}
     if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
-    keys = [_rendition_key_for(asset, identifiers[asset.name], key_attributes, locale_ids.get(asset.localization, 0)) for asset in ordered]
+    keys = [_rendition_key_for(asset, identifiers.get(asset.name, 0), key_attributes, locale_ids.get(asset.localization, 0)) for asset in ordered]
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate rendition key for the same asset, part, and scale")
     rendition_count = len(ordered); facet_count = len(facet_names)
@@ -1224,7 +1265,10 @@ def png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale:
     if idiom_id not in range(9): raise ValueError("enabled idioms are universal, iphone, ipad, tv, car, watch, marketing, mac, and vision")
     if appearance_id not in (0, 1, 2): raise ValueError("enabled appearances are any/light, dark, and high-contrast")
     if localization is not None and (not localization or len(localization.encode("utf-8")) > 255): raise ValueError("invalid localization tag")
-    return AssetRendition(name, _csi_png_deepmap(bytes(data), filename, scale=scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
+    # Xcode 26.x stores ordinary imageset PNGs as LZFSE deepmap2 (v2/v4
+    # grammar); GA and indexed sources keep the verified v1 grammar.
+    csi = make_deepmap_csi_variant(bytes(data), filename, scale=scale, stack_bottom=True)
+    return AssetRendition(name, csi, 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
 def palette_png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:

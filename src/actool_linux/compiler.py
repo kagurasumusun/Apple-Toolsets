@@ -234,8 +234,9 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
     if options.app_icon and any(asset.kind == "app-icon" and asset.name == options.app_icon for catalog in catalogs for asset in catalog.assets) and options.partial_info_plist is None:
         diagnostics.append(Diagnostic("notice", 'Compiling app icons requires passing "--output-partial-info-plist [path]".'))
         return CompileResult(catalogs, diagnostics, outputs)
+    _APP_ICON_MATCH_KINDS = ("app-icon", "brand-assets", "image-stack", "sticker-pack-icon")
     missing_app_icon = bool(options.app_icon) and not any(
-        asset.kind == "app-icon" and asset.name == options.app_icon
+        asset.kind in _APP_ICON_MATCH_KINDS and asset.name == options.app_icon
         for catalog in catalogs for asset in catalog.assets
     )
     # Xcode still compiles unrelated assets and writes the partial plist before
@@ -508,6 +509,14 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                         diagnostics.append(Diagnostic("error", f"invalid AppIcon: {exc}", asset.directory))
                 continue
 
+            # Every asset inside a .brandassets tree (stacks, layer content,
+            # shelves) is owned exclusively by the brandassets compiler above;
+            # its materialization gate decides whether any of it reaches the
+            # CAR. Never compile them a second time through the generic path
+            # (that produced duplicate rendition keys for top shelf images).
+            if any(parent.suffix == ".brandassets" for parent in asset.directory.parents):
+                continue
+
             # Empty placeholder sets and unassigned slots are legal in genuine
             # catalogs.  Iterate every assigned entry rather than enforcing the
             # old single-entry development restriction.
@@ -606,8 +615,11 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 from .thinning import ThinningOptions, thin_renditions
                 device_idioms = {"iphone":"iphone","ipad":"ipad","tv":"tv","watch":"watch","mac":"mac","vision":"vision"}
                 thinning = ThinningOptions(idiom=device_idioms[options.target_devices[0]])
-                renditions = thin_renditions(renditions, thinning)
-                thinning_arguments = thinning.metadata_arguments()
+                thinned = thin_renditions(renditions, thinning)
+                # Apple records the thinning arguments only when thinning
+                # actually discarded renditions (verified against oracles).
+                thinning_arguments = thinning.metadata_arguments() if len(thinned) != len(renditions) else ""
+                renditions = thinned
             if options.filter_for_device_model: thinning_arguments += (" " if thinning_arguments else "") + "model " + options.filter_for_device_model
             if options.filter_for_device_os_version: thinning_arguments += (" " if thinning_arguments else "") + "os-version " + options.filter_for_device_os_version
             car_path = options.output / "Assets.car"
