@@ -10,11 +10,9 @@
     [
       "probe3a/Assets.car",
       [
-        "hash16",
         "payload",
-        "struct:/renditions/('Loc8', 181, 1, 0, 0, 0, 20711, 85, 0, 0, 0, 0, 0)",
-        "struct:/renditions/('Loc8', 181, 1, 0, 0, 0, 4651, 85, 0, 0, 0, 0, 0)",
-        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/size"
+        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/size",
+        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 1, 0, 0, 9, 0, 0, 0, 0, 0)/size"
       ]
     ]
   ],
@@ -22,39 +20,21 @@
     "probe3a/Assets.car": {
       "class": "struct",
       "kinds": [
-        "hash16",
         "payload",
-        "struct:/renditions/('Loc8', 181, 1, 0, 0, 0, 20711, 85, 0, 0, 0, 0, 0)",
-        "struct:/renditions/('Loc8', 181, 1, 0, 0, 0, 4651, 85, 0, 0, 0, 0, 0)",
-        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/size"
+        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/size",
+        "struct:/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 1, 0, 0, 9, 0, 0, 0, 0, 0)/size"
       ],
       "diffs": [
-        "/facets/GA8set/kCRThemeIdentifierName: apple='32340' ours='56221'",
-        "/facets/Loc8/kCRThemeIdentifierName: apple='37284' ours='36965'",
-        "/facets/NU32/kCRThemeIdentifierName: apple='2134' ours='11079'",
-        "/facets/S16/kCRThemeIdentifierName: apple='32361' ours='25222'",
-        "/facets/S17/kCRThemeIdentifierName: apple='2762' ours='39093'",
-        "/facets/S24/kCRThemeIdentifierName: apple='32296' ours='33450'",
-        "/facets/S32/kCRThemeIdentifierName: apple='32231' ours='23301'",
-        "/facets/S48/kCRThemeIdentifierName: apple='57518' ours='8690'",
-        "/facets/U16single/kCRThemeIdentifierName: apple='32402' ours='24423'",
-        "/facets/U24/kCRThemeIdentifierName: apple='53098' ours='16455'",
-        "/facets/U32/kCRThemeIdentifierName: apple='53033' ours='1920'",
-        "/facets/U64/kCRThemeIdentifierName: apple='12654' ours='47236'",
-        "/facets/U8/kCRThemeIdentifierName: apple='62863' ours='29492'",
-        "/renditions/('Loc8', 181, 1, 0, 0, 0, 20711, 85, 0, 0, 0, 0, 0): only in ours (\"{'facet_name': 'Loc8', 'identifier': 36965, 'name': 'de.png', 'size': (8, 8), 'scale': 1.0, 'pixel_format': 'ARGB', 'layout': 12, 'flags': 16, 'tlvs': [(1001, 2\")",
-        "/renditions/('Loc8', 181, 1, 0, 0, 0, 4651, 85, 0, 0, 0, 0, 0): only in apple (\"{'facet_name': 'Loc8', 'identifier': 37284, 'name': 'de.png', 'size': (8, 8), 'scale': 1.0, 'pixel_format': 'ARGB', 'layout': 12, 'flags': 16, 'tlvs': [(1001, 2\")",
         "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='901' ours='4086'",
         "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/size: apple='(144, 120)' ours='(118, 128)'",
-        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 1, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='679' ours='4354'"
+        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 1, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='679' ours='4123'",
+        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 1, 0, 0, 9, 0, 0, 0, 0, 0)/size: apple='(102, 102)' ours='(136, 68)'"
       ]
     },
     "probe3b/Assets.car": {
       "class": "payload",
       "diffs": [
-        "/facets/MU32/kCRThemeIdentifierName: apple='52117' ours='47177'",
-        "/facets/MU8/kCRThemeIdentifierName: apple='5513' ours='45184'",
-        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='264' ours='277'"
+        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='264' ours='303'"
       ]
     }
   }
