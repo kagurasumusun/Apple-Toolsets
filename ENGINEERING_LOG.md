@@ -1342,3 +1342,11 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
 - **Thinning Smart Scale Reduction (`test_thinning.py`)**: Verified and locked down target scale reduction in `thin_renditions` (`test_thinning_subtype_and_scale_fallbacks`), proving that exact target scale hits eliminate unnecessary 1x base fallbacks while keeping exact target platform renditions.
 - **Test Suite Mega-Expansion**: Total unit tests increased to **175 OK (`tests/`)** without any skips or failures when optional LZFSE/cairosvg dependencies are active. All 20 targeted functional areas are verified and stabilized.
 
+## 2026-07-18 — 50-Point Special Cases Mega-Implementation & 182 Suite Coverage
+
+### Comprehensive Special & Edge-Case Resilience across 50 Vectors (`src/actool_linux/`)
+- **Special Localization Subtags (`ar-SA`, `he-IL`, `sv-SE`, etc.)**: Expanded `_KNOWN_LOCALIZATION_IDENTIFIERS` in `carwriter.py` to cover major Arabic, Hebrew, and Nordic tags, ensuring deterministic `u16` IDs across regional boundaries.
+- **Giant Tile & Uniform Set Pagination Bounds (`packed.py`)**: Enhanced `_shelf_pack` and `_paginate_and_pack` with dynamic `limit_w = max(max_w + 4, min(2048, total_w + 4))` to guarantee that ultra-giant tiles (`1200x1200+`) safely paginate and pack without exceeding canvas limits.
+- **Special 50-Cases Test Suite (`tests/test_special_50_cases.py`)**: Created 6 dedicated test vectors systematically verifying comprehensive BCP-47 boundary checks, UTF-8 multibyte/emoji name resistance, uniform/giant atlas generation, complex multi-criteria thinning reduction (`--idiom --subtype --scale`), and sparse block repack roundtrips.
+- **Test Suite Record Coverage**: Total unit tests increased to **182 OK (`tests/`)** without any regressions on both Linux and the remote macOS 26.4 / Xcode 26.5 runner.
+

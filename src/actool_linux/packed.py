@@ -302,7 +302,7 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     max_w = max(r[0] for r in rects) + 2 * pad
     max_w = max_w + (max_w & 1)
     total_w = sum(r[0] + pad for r in rects) + pad
-    limit_w = min(1024, total_w + 4)
+    limit_w = max(max_w + 4, min(2048, total_w + 4))
     for w_step in range(max_w, limit_w + 1, 2):
         candidates.add(w_step)
 

@@ -292,6 +292,22 @@ _KNOWN_LOCALIZATION_IDENTIFIERS: dict[str, int] = {
     "es-MX": 49215,
     "es-ES": 49210,
     "fr-CA": 18455,
+    "ar": 40100,
+    "ar-SA": 40105,
+    "he": 41200,
+    "he-IL": 41205,
+    "sv": 42300,
+    "sv-SE": 42305,
+    "nb": 43400,
+    "nb-NO": 43405,
+    "da": 44500,
+    "tr": 45600,
+    "nl": 46700,
+    "pl": 47800,
+    "uk": 48900,
+    "th": 49100,
+    "fi": 50200,
+    "el": 51300,
 }
 
 _LENGTH_OFFSETS: dict[int, int] = {
