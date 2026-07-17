@@ -282,6 +282,16 @@ _KNOWN_LOCALIZATION_IDENTIFIERS: dict[str, int] = {
     "ko": 15402,
     "ru": 38911,
     "pt": 52190,
+    "en-GB": 31340,
+    "en-US": 31336,
+    "en-AU": 31345,
+    "zh-Hans": 20115,
+    "zh-Hant": 20120,
+    "pt-BR": 52195,
+    "pt-PT": 52190,
+    "es-MX": 49215,
+    "es-ES": 49210,
+    "fr-CA": 18455,
 }
 
 _LENGTH_OFFSETS: dict[int, int] = {

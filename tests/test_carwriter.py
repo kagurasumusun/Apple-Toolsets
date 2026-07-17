@@ -338,6 +338,14 @@ class CARWriterTests(unittest.TestCase):
         self.assertGreater(val, 0)
         self.assertLessEqual(val, 65535)
 
+    def test_extended_localization_subtags(self):
+        from actool_linux.carwriter import _localization_identifier
+        subtags = ["en-GB", "en-US", "zh-Hans", "zh-Hant", "pt-BR", "es-MX", "fr-CA"]
+        ids = [_localization_identifier(tag) for tag in subtags]
+        self.assertEqual(len(set(ids)), len(subtags))
+        self.assertEqual(_localization_identifier("en-GB"), 31340)
+        self.assertEqual(_localization_identifier("zh-Hans"), 20115)
+
 
 if __name__ == "__main__":
     unittest.main()
