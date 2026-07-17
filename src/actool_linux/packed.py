@@ -197,18 +197,19 @@ def is_pack_candidate(asset: AssetRendition) -> bool:
 
 
 def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], int, int]:
-    """Apple-compatible atlas packer (probed 15/15 on Xcode 26.5 oracles).
+    """Apple-compatible atlas packer (probed 16/16 on Xcode 26.5 oracles).
 
-    Probed rules (m1..m8 / n1..n8 geometry corpus, 2026-07):
+    Probed rules (m1..m8 / n1..n8 geometry corpus + probe5 c05, 2026-07):
 
     * insertion order: area DESC, then width DESC, height DESC, then
       reverse RENDITIONS tree order (later tree members insert first);
     * positions are absolute pixels including the 2px top/left margin, with
       a 2px gutter between rects;
-    * a rect joins an existing row only when its height fits the shelf
-      height (height of the *first* rect placed in that row) and
-      ``cursor + w + 2 <= W``; otherwise a new row starts 2px below the
-      previous shelf bottom;
+    * free space is tracked as guillotine-split rectangles (right split and
+      below split per placement); each rect takes the topmost, then
+      leftmost, free rectangle that fits — reproducing Apple's hole filling
+      seen in probe5 c05 (an 8x8 image nests at (36,20) below the 16x16
+      sibling instead of opening a new band);
     * candidate widths are the prefix sums ``2 + sum(w + 2)`` over the
       first k inserted rects; the chosen width minimises, lexicographically,
       ``(max(W, H), H, W)`` on the even-floored canvas;
@@ -227,22 +228,29 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     pad = ATLAS_PADDING
 
     def pack_at(w_nom: int) -> tuple[list[tuple[int, int]], int]:
-        rows: list[list[int]] = []  # [shelf_h, cursor, y]
+        # Guillotine-split free regions, topmost (then leftmost) first-fit.
+        # Matches Apple hole-filling, e.g. probe5 c05: an 8x8 image nests at
+        # (36,20) below the 16x16 rect instead of opening a new band.
+        free: list[list[int]] = [[pad, pad, w_nom - 2 * pad, 1 << 60]]  # (x, y, w, h)
         pos = [(0, 0)] * n
+        bottom = 0
         for i in order:
             w, h = rects[i]
-            for row in rows:
-                shelf_h, cursor, y = row
-                if h <= shelf_h and cursor + w + pad <= w_nom:
-                    pos[i] = (cursor, y)
-                    row[1] = cursor + w + pad
-                    break
-            else:
-                y = pad if not rows else rows[-1][2] + rows[-1][0] + pad
-                rows.append([h, pad + w + pad, y])
-                pos[i] = (pad, y)
-        h_nom = rows[-1][2] + rows[-1][0] + pad
-        return pos, h_nom
+            pick = None
+            for fi, (fx, fy, fw, fh) in enumerate(free):
+                if w <= fw and h <= fh:
+                    if pick is None or (fy, fx) < (free[pick][1], free[pick][0]):
+                        pick = fi
+            if pick is None:  # never happens: the initial band is unbounded
+                raise AssertionError("atlas free-region exhaustion")
+            fx, fy, fw, fh = free.pop(pick)
+            pos[i] = (fx, fy)
+            bottom = max(bottom, fy + h)
+            if fw - w - pad > 0:
+                free.append([fx + w + pad, fy, fw - w - pad, h])
+            if fh - h - pad > 0:
+                free.append([fx, fy + h + pad, fw, fh - h - pad])
+        return pos, bottom + pad
 
     best: tuple[tuple[int, int, int], int, int, list[tuple[int, int]]] | None = None
     acc = pad

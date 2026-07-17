@@ -194,11 +194,13 @@ class PackedAssetTests(unittest.TestCase):
         rects = [(16, 16), (8, 8), (32, 32)]
         positions, w, h = _shelf_pack(rects)
         # Apple-probed packer: insertion area-desc -> 32px first, candidate
-        # widths 36/54/64;  (max(W,H), H, W) minimised -> 54x46.
-        self.assertEqual((w, h), (54, 46))
-        self.assertEqual(positions[2], (2, 2))    # 32px rect first at origin
-        self.assertEqual(positions[0], (36, 2))   # 16px shares its wide row
-        self.assertEqual(positions[1], (2, 36))   # 8px wraps below the shelf
+        # widths 36/54/64; (max(W,H), H, W) minimised -> 54x36.  The 8x8
+        # rect guillotine-fills the hole below the 16x16 sibling (probe5 c05
+        # shows Apple doing exactly this).
+        self.assertEqual((w, h), (54, 36))
+        self.assertEqual(positions[2], (2, 2))     # 32px rect first at origin
+        self.assertEqual(positions[0], (36, 2))    # 16px shares its wide row
+        self.assertEqual(positions[1], (36, 20))   # 8px nests in the hole below
         # deterministic: same input -> identical layout
         self.assertEqual(_shelf_pack(rects), (positions, w, h))
 
@@ -219,6 +221,9 @@ class PackedAssetTests(unittest.TestCase):
             ([(1, 1), (1, 3)], 8, 6, [(5, 2), (2, 2)]),
             ([(1, 2), (2, 2)], 8, 6, [(6, 2), (2, 2)]),   # odd total -> right margin 1
             ([(1, 1), (1, 1)], 8, 4, [(5, 2), (2, 2)]),
+            # probe5 c05: guillotine hole filling — the 8x8 nests below the
+            # 16x16 sibling at (36,20) instead of starting a new band.
+            ([(8, 8), (16, 16), (32, 32)], 54, 36, [(36, 20), (36, 2), (2, 2)]),
         ]
         for rects, want_w, want_h, want_pos in corpus:
             positions, w, h = _shelf_pack(rects)

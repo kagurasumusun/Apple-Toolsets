@@ -1176,3 +1176,16 @@ packer is gone; unit test locks all 13 distinct geometry oracles.
 Open sub-items: palette order inside multi-swatch atlases (5/5 = paint order
 (x desc, y desc) but hash correlation unresolved), multi-page pagination
 (>1024px) still single-page-per-class (documented divergence).
+
+### Guillotine hole-filling packer (probe5 c05) + semantic matrix 4/4
+
+The c05_thresh3 oracle (32x32 + 16x16 + 8x8 same-named images) showed Apple
+nesting the 8x8 rect at (36,20) — below the 16x16 sibling — instead of
+opening a new band. Packer upgraded from band/shelf packing to
+guillotine-split free rectangles with topmost-then-leftmost first-fit.
+Re-verified against all 16 geometry oracles (m1..m8, n1..n8 unchanged;
+c05 now exact): every atlas (W,H) and (x,y) matches Apple. probe5 size
+mismatches went 8 -> 0. assetutil semantic matrix on the Mac host for the
+four packed cases c02..c05: 4/4 FULL matches (was 0/4 solely from the atlas
+rectangle delta). Remaining per-case diffs: facet-hash16 (documented
+cosmetic) and multi-swatch mini ISA payload bytes (open).
