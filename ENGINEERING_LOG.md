@@ -1145,3 +1145,34 @@ geometry/sizes, GA atlas page split in probe4a/b where Apple paginates into a
 matches; all 13 differing cases are packed-atlas cases where the only assetutil
 delta is the atlas rectangle size (semantically transparent). 24/24 probe6
 accepted; probe6 semantic 22/24 (the 2 are the GA pair atlas rotation).
+
+### Packed-atlas geometry fully decoded (15/15 Apple oracle fit, implemented)
+
+New probe corpus m1..m8 (rect mixes incl. GA) and n1..n8 (1px/odd sizes,
+name-tie Z1/Z2) compiled with Apple actool on the Mac host; LINK (TLV1010)
+placements extracted via tools/atlas_geometry_probe.py (new tool).
+
+Probed rules now implemented in packed.py `_shelf_pack`:
+
+* insertion order = area DESC, then width DESC, height DESC, then reverse
+  RENDITIONS tree order (n8 proves reverse-tree tie-break: file [Z1,Z2]
+  places Z2 first; m7 proves width beats height on area ties);
+* 2px top/left margin and 2px gutters; LINK (x,y) are absolute incl. margin;
+* a rect joins an existing row only if its height fits the shelf height
+  (height of the FIRST rect in the row) and cursor + w + 2 <= W;
+* candidate atlas widths = prefix sums 2 + sum(w+2) over the first k inserted
+  rects; the chosen width minimises (max(W,H), H, W) lexicographically on
+  the even-floored canvas (this one objective reproduces every observed
+  choice, including the m5 (10,10) over (14,6) and m7 (12,16) over (16,16)
+  picks that defeated aspect/area/perimeter hypotheses);
+* nominal (odd) canvas dimensions truncate to even, seen as 1px right/bottom
+  margins (n1/n2/n6/n7/n8). Right margin is otherwise always 2.
+
+Result: m/n suites — every atlas (W,H,x,y,w,h) byte-consistent with Apple;
+remaining per-case diff = facet hash16 (documented cosmetic) + payload bytes
+(multi-swatch mini-vocab ISA, still open). Our previous sqrt-target shelf
+packer is gone; unit test locks all 13 distinct geometry oracles.
+
+Open sub-items: palette order inside multi-swatch atlases (5/5 = paint order
+(x desc, y desc) but hash correlation unresolved), multi-page pagination
+(>1024px) still single-page-per-class (documented divergence).

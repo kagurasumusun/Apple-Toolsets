@@ -351,3 +351,11 @@ Eight additional corrupt/malformed contracts are byte-identical on stdout and ex
 ## Private layer-stack audit
 
 CoreUI publicly observable strings confirm LayerStack/IconLayerStack/SolidLayerStack and stackData/renderingProperties builders. `layer-stack-fixtures.json` scanned 600 installed CARs and found no aggregate fixture. Exact private stackData remains fixture-gated; ordinary layers and `.imagestack` compiler integration are Apple verified.
+
+## 2026-07-17 update — atlas geometry parity
+
+The packed-atlas packer now reproduces Apple placements exactly (15/15 m/n
+probe oracles): insertion area-dESC/width/height/reverse-tree, prefix-width
+candidates, objective min (max(W,H), H, W), even-floor canvas. See
+ENGINEERING_LOG "Packed-atlas geometry fully decoded". Remaining CAR diffs on
+atlas cases are only facet-hash16 (cosmetic) and multi-swatch mini ISA bytes.

@@ -193,11 +193,37 @@ class PackedAssetTests(unittest.TestCase):
     def test_shelf_pack_deterministic_and_padded(self):
         rects = [(16, 16), (8, 8), (32, 32)]
         positions, w, h = _shelf_pack(rects)
-        self.assertEqual(w, 36)
-        self.assertEqual(positions[2], (2, 2))  # tallest first
-        self.assertEqual(h, 54)                 # second shelf below the 32px row
+        # Apple-probed packer: insertion area-desc -> 32px first, candidate
+        # widths 36/54/64;  (max(W,H), H, W) minimised -> 54x46.
+        self.assertEqual((w, h), (54, 46))
+        self.assertEqual(positions[2], (2, 2))    # 32px rect first at origin
+        self.assertEqual(positions[0], (36, 2))   # 16px shares its wide row
+        self.assertEqual(positions[1], (2, 36))   # 8px wraps below the shelf
         # deterministic: same input -> identical layout
         self.assertEqual(_shelf_pack(rects), (positions, w, h))
+
+    def test_shelf_pack_matches_probed_apple_geometry(self):
+        # Every (W, H, placements) below was extracted from Apple actool
+        # (Xcode 26.5) output; rects are given in RENDITIONS tree order.
+        corpus = [
+            ([(2, 2), (2, 2)], 10, 6, [(6, 2), (2, 2)]),
+            ([(2, 2), (4, 4)], 12, 8, [(8, 2), (2, 2)]),
+            ([(4, 4), (2, 2)], 12, 8, [(2, 2), (8, 2)]),
+            ([(2, 2), (2, 2), (2, 2)], 10, 10, [(2, 6), (6, 2), (2, 2)]),
+            ([(2, 8), (8, 2)], 12, 16, [(2, 6), (2, 2)]),
+            ([(6, 3), (1, 12), (10, 10)], 22, 28, [(14, 2), (2, 14), (2, 2)]),
+            ([(2, 1), (1, 1)], 8, 4, [(2, 2), (6, 2)]),   # odd total -> right margin 1
+            ([(1, 2), (1, 1)], 8, 6, [(2, 2), (5, 2)]),
+            ([(1, 1), (1, 1), (1, 1)], 8, 8, [(2, 5), (5, 2), (2, 2)]),
+            ([(4, 4), (4, 4)], 14, 8, [(8, 2), (2, 2)]),
+            ([(1, 1), (1, 3)], 8, 6, [(5, 2), (2, 2)]),
+            ([(1, 2), (2, 2)], 8, 6, [(6, 2), (2, 2)]),   # odd total -> right margin 1
+            ([(1, 1), (1, 1)], 8, 4, [(5, 2), (2, 2)]),
+        ]
+        for rects, want_w, want_h, want_pos in corpus:
+            positions, w, h = _shelf_pack(rects)
+            self.assertEqual((w, h), (want_w, want_h), rects)
+            self.assertEqual(positions, want_pos, rects)
 
     def test_pack_renditions_preserves_non_candidates(self):
         ga = png_rendition("G", _png_gray(8, 8, 90), "g.png", scale=1)

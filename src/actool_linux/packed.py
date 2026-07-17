@@ -197,34 +197,66 @@ def is_pack_candidate(asset: AssetRendition) -> bool:
 
 
 def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], int, int]:
-    """Deterministic shelf packing with 2px padding, tallest first.
+    """Apple-compatible atlas packer (probed 15/15 on Xcode 26.5 oracles).
 
-    Returns (positions, width, height). Shelf packing differs from Apple's
-    private bin packer; LINK offsets stay internally consistent.
+    Probed rules (m1..m8 / n1..n8 geometry corpus, 2026-07):
+
+    * insertion order: area DESC, then width DESC, height DESC, then
+      reverse RENDITIONS tree order (later tree members insert first);
+    * positions are absolute pixels including the 2px top/left margin, with
+      a 2px gutter between rects;
+    * a rect joins an existing row only when its height fits the shelf
+      height (height of the *first* rect placed in that row) and
+      ``cursor + w + 2 <= W``; otherwise a new row starts 2px below the
+      previous shelf bottom;
+    * candidate widths are the prefix sums ``2 + sum(w + 2)`` over the
+      first k inserted rects; the chosen width minimises, lexicographically,
+      ``(max(W, H), H, W)`` on the even-floored canvas;
+    * nominal canvas dimensions are truncated to even (observed as right or
+      bottom margins of 1px for odd totals, e.g. n2/n7 right margin 1).
+
+    Returns (positions aligned with ``rects`` order, width, height).
     """
-    order = sorted(range(len(rects)), key=lambda i: (-rects[i][1], -rects[i][0]))
-    pad = ATLAS_PADDING
-    total = sum((w + pad) * (h + pad) for w, h in rects)
-    max_w = max(w for w, _ in rects) + pad
-    target = max(max_w, int(total ** 0.5) + 1)
-    positions = [(0, 0)] * len(rects)
-    x = y = pad
-    shelf_h = 0
-    max_x = max_y = 0
-    for i in order:
-        w, h = rects[i]
-        if shelf_h and x + w + pad > target:
-            x = pad
-            y += shelf_h + pad
-            shelf_h = 0
-        positions[i] = (x, y)
-        x += w + pad
-        shelf_h = max(shelf_h, h)
-        max_x = max(max_x, positions[i][0] + w)
-        max_y = max(max_y, positions[i][1] + h)
+    n = len(rects)
     if not rects:
-        return positions, 0, 0
-    return positions, max_x + pad, max_y + pad
+        return [], 0, 0
+    order = sorted(
+        range(n),
+        key=lambda i: (-(rects[i][0] * rects[i][1]), -rects[i][0], -rects[i][1], -i),
+    )
+    pad = ATLAS_PADDING
+
+    def pack_at(w_nom: int) -> tuple[list[tuple[int, int]], int]:
+        rows: list[list[int]] = []  # [shelf_h, cursor, y]
+        pos = [(0, 0)] * n
+        for i in order:
+            w, h = rects[i]
+            for row in rows:
+                shelf_h, cursor, y = row
+                if h <= shelf_h and cursor + w + pad <= w_nom:
+                    pos[i] = (cursor, y)
+                    row[1] = cursor + w + pad
+                    break
+            else:
+                y = pad if not rows else rows[-1][2] + rows[-1][0] + pad
+                rows.append([h, pad + w + pad, y])
+                pos[i] = (pad, y)
+        h_nom = rows[-1][2] + rows[-1][0] + pad
+        return pos, h_nom
+
+    best: tuple[tuple[int, int, int], int, int, list[tuple[int, int]]] | None = None
+    acc = pad
+    for k, i in enumerate(order):
+        acc += rects[i][0] + pad
+        pos, h_nom = pack_at(acc)
+        width = acc - (acc & 1)
+        height = h_nom - (h_nom & 1)
+        key = (max(width, height), height, width)
+        if best is None or key < best[0]:
+            best = (key, width, height, pos)
+    assert best is not None
+    _, width, height, positions = best
+    return positions, width, height
 
 
 def _atlas_palette(width: int, height: int, bgra: bytes) -> tuple[list[bytes], bytes] | None:
