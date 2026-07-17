@@ -13,8 +13,8 @@
     },
     {
       "path": "ENGINEERING_LOG.md",
-      "sha256": "52c9d9d093e3ef57f8ed2640a95f62721a4c20cf1cb8daca3ece2e41e3cd1316",
-      "size": 103001
+      "sha256": "16141daae9bbf4a62b5cfd3963490d9585705a4c4694dcfe0ff85213a6e4be8a",
+      "size": 103651
     },
     {
       "path": "HANDOFF.md",
@@ -53,17 +53,42 @@
     },
     {
       "path": "fixtures/SELF-GENERATED.md",
-      "sha256": "c0cc8f3f9fc530e301a720b83c32113e0b5b7041fa14d9d44b48e957361d9571",
-      "size": 747
+      "sha256": "71dc58a8f2c7adb2e401efa9492fa8d97ce7809ded5fa8e27f78832fcdb50e48",
+      "size": 1005
+    },
+    {
+      "path": "fixtures/report/selfgen-ios-Assets.assetutil.json",
+      "sha256": "71bc5bc1e46f4cb1801081ac200af846639f99b54dc40db6af44b1267603b0e0",
+      "size": 6949
+    },
+    {
+      "path": "fixtures/report/selfgen-rich-Assets.assetutil.json",
+      "sha256": "f478fcaca127775f94c62253fb795a7d257ab9e450ce0dcdb36a36ab29d55f63",
+      "size": 12681
     },
     {
       "path": "fixtures/report/selfgen-solidstack-demo.assetutil.json",
-      "sha256": "4e958c3106856d6f84028f3ab3c407b70a0eb5b79aca4650e6d85f5fd705781f",
+      "sha256": "647a765af6c5c035528ef4a4eb3f8922138b7cf09468c490af5d34c37e670e44",
       "size": 7772
     },
     {
+      "path": "fixtures/report/selfgen-stacks-Assets.assetutil.json",
+      "sha256": "2d8d10bec0cf83da915a0c1c36e93a8025c20208cb3015dea0db07d458bf97cd",
+      "size": 10768
+    },
+    {
+      "path": "fixtures/report/selfgen-vec-Assets.assetutil.json",
+      "sha256": "98bb69345d5a27b824458ef77a84147700bb4dac124596898d7534bf1aef8c04",
+      "size": 6664
+    },
+    {
+      "path": "fixtures/selfgen-ios-Assets.car",
+      "sha256": "51e04da41c30dd35e493ab57c0e1e3e5821990529fe7b4f1fdac4a896ccb2f99",
+      "size": 37432
+    },
+    {
       "path": "fixtures/selfgen-rich-Assets.car",
-      "sha256": "28cd4425760d8f73098791b2a4a151e1bbfe8f77e0a3958b8a130b076cbc10ad",
+      "sha256": "b3249c3830e85fdb4b4a929b50b1caf8f077a9dbe1b62b0498b3424379723edb",
       "size": 1272776
     },
     {
@@ -75,6 +100,11 @@
       "path": "fixtures/selfgen-stacks-Assets.car",
       "sha256": "91f279d8f0fb222ae4945fb829194a8bd69deca429d53af036b64d2e22f97e3d",
       "size": 1353704
+    },
+    {
+      "path": "fixtures/selfgen-vec-Assets.car",
+      "sha256": "ee0385e1b6d5a1518122efbb00e184e27d04b547f3e66b19f48972f2f2f49d4a",
+      "size": 31304
     },
     {
       "path": "public-fixtures/README.md",

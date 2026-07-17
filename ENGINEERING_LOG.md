@@ -1291,3 +1291,12 @@ scales dmp2 mode-selection boundary cases).
   behavior of compiled catalogs); swapped to translucent Display-P3.
 - One-shot workflow v2 stages every case, validates with the clean-room parser AND
   Apple `assetutil` ground truth, records provenance, and commits back.
+
+## 2026-07-17 — Self-made fixtures v2 collected; workflow retired
+
+- Fixture bot commit `3b2bf38` (run 29552595632, macOS 26.4 / Xcode 26.5 17F42):
+  - `selfgen-vec-Assets.car` (31,304 B) — Apple assetutil AssetTypes: Color, Data, Image, **Vector** (self-authored PDF preserve-vector accepted).
+  - `selfgen-ios-Assets.car` (37,432 B) — Color, Image, PackedImage.
+  - `selfgen-rich-Assets.car` regenerated (1,272,776 B), `selfgen-stacks`/`solidstack-demo` byte-identical.
+- One-shot workflow v2 deleted after collection (same single-use pattern as v1).
+- EVIDENCE_MANIFEST updated with the new fixtures + Apple assetutil ground truth reports.
