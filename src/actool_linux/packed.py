@@ -227,7 +227,7 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     )
     pad = ATLAS_PADDING
 
-    def pack_at(w_nom: int) -> tuple[list[tuple[int, int]], int]:
+    def pack_at(w_nom: int) -> tuple[list[tuple[int, int]], int] | tuple[None, int]:
         # Guillotine-split free regions, topmost (then leftmost) first-fit.
         # Matches Apple hole-filling, e.g. probe5 c05: an 8x8 image nests at
         # (36,20) below the 16x16 rect instead of opening a new band.
@@ -241,8 +241,8 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
                 if w <= fw and h <= fh:
                     if pick is None or (fy, fx) < (free[pick][1], free[pick][0]):
                         pick = fi
-            if pick is None:  # never happens: the initial band is unbounded
-                raise AssertionError("atlas free-region exhaustion")
+            if pick is None:
+                return None, 0
             fx, fy, fw, fh = free.pop(pick)
             pos[i] = (fx, fy)
             bottom = max(bottom, fy + h)
@@ -257,11 +257,25 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     for k, i in enumerate(order):
         acc += rects[i][0] + pad
         pos, h_nom = pack_at(acc)
+        if pos is None:
+            continue
         width = acc - (acc & 1)
         height = h_nom - (h_nom & 1)
         key = (max(width, height), height, width)
         if best is None or key < best[0]:
             best = (key, width, height, pos)
+    if best is None:
+        # Fallback to sufficiently wide nominal canvas
+        max_w = max(r[0] for r in rects) + 2 * pad
+        total_w = sum(r[0] + pad for r in rects) + pad
+        for test_w in range(max_w, total_w + pad + 1, max(1, (total_w - max_w) // 20 or 1)):
+            pos, h_nom = pack_at(test_w)
+            if pos is not None:
+                width = test_w - (test_w & 1)
+                height = h_nom - (h_nom & 1)
+                key = (max(width, height), height, width)
+                if best is None or key < best[0]:
+                    best = (key, width, height, pos)
     assert best is not None
     _, width, height, positions = best
     return positions, width, height
