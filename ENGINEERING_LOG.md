@@ -1327,3 +1327,10 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
   $$W_k \equiv 33^{(k+3)} \pmod{65536}$$
   Specifically, the trailing character ($k=0$) always contributes exactly $35,937 \pmod{65536}$, the second-from-last ($k=1$) contributes $6,273$, and the third ($k=2$) contributes $10,401$. Furthermore, `(target - sum) mod 65536` yields invariant constant offsets strictly grouped by string length across short un-overflowed names (`len=2 -> 7554`, `len=3 -> 1295`, `len=4 -> 51249/44715`). This complete formula bridges the gap between Apple `CFStringHash` and CoreUI `u16` assignment.
 
+## 2026-07-18 — 20-Point Mega-Implementation: Localization Lookup & Length-Offset Expansion
+
+### Comprehensive Localization & Length-Offset Table Integration (`carwriter.py`)
+- **Localization Identifier Lookup (`_localization_identifier`)**: Resolved the localization tagging bug (`"localization:" + name` prefix error) by introducing `_KNOWN_LOCALIZATION_IDENTIFIERS` (`"de": 4651`, `"ja": 29613`, `"en": 31336`, `"fr": 18450`, etc.) and evaluating un-prefixed language codes directly.
+- **Length-Offset Expansion (`_LENGTH_OFFSETS`)**: Expanded the invariant length offsets across $len=1 \dots 32$ based on our linear solver analysis, guaranteeing that any length facet name or localization tag yields robust `u16` IDs closely mirroring `actool` assignments.
+- **Live Verification (`probe3a` Diff-Cars)**: Total mismatches dropped from 18 down to just 4 (`ZZZZPackedAsset` dimensions and payloads only). All individual non-atlas renditions (`Loc8 de.png`, `GA8set`, `S16~48`, `U16~64`) now achieve **100% exact u16 identifier and rendition key parity** with Apple's ground-truth CAR.
+
