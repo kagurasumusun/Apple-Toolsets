@@ -12,6 +12,10 @@ Last updated: 2026-07-17 (Etc/GMT-9)
   - `verify`: `tools/verify_handoff.py` + clean-room compile of the generated probe suite (`make_probe_suite.py` → `run_ours_matrix.py`) + every generated CAR and every fixture CAR must parse through `actool_linux.carinfo` — locally verified.
   - `oracle-matrix` (dispatch-only, macos-latest): compiles the probe suite with real `xcrun actool` and with actool-linux, diffs via `tools/diff_cars.py`, uploads an `oracle-report` artifact. Tracking job: reports mismatch counts, does not fail the build (hosted-runner Xcode version may differ from the probed 26.5 baseline).
 
+## Status (2026-07-17, license hygiene)
+
+- Removed third-party compiled fixtures (`fixtures/firefox-Assets.car`, `fixtures/filemerge-Assets.car`) and the copied blog article; replacements are self-made (`tools/make_public_fixtures.py`) and are compiled + validated by Apple actool/assetutil through the one-shot workflow `generate-fixtures.yml`, then committed back by the fixture bot. `tests/test_car_appearance_registry.py` skips until `fixtures/selfgen-rich-Assets.car` lands; pin values from the generated artifact afterwards. Packer infeasible-layout crash converted to a documented standalone-rendition fallback.
+
 ## Status (2026-07-16)
 
 - Workspace moves: local repo is `/home/user/mac-repo` (branch `actool`), remote repo `/Users/runner/work/mac/mac`. 145 local tests OK (11 optional skips without lzfse).

@@ -24,6 +24,8 @@ These results cover the BOM container, CAR metadata, arbitrary-depth B+ trees, r
 
 - Reproduce behavior from independently created inputs and observable outputs.
 - Do not copy, decompile, redistribute, or link private Apple implementation code.
+- Distribute only self-made fixtures: any `.car` under `fixtures/` is compiled from inputs authored by this project (see `fixtures/README.md`); third-party materials under `public-fixtures/` are limited to their upstream licenses (see `public-fixtures/README.md`).
+- `actool` and Xcode are trademarks of Apple Inc. This is an independent, unofficial compatibility project; it is not affiliated with, sponsored, or endorsed by Apple.
 - Record Xcode/macOS build identity with every oracle result.
 - Treat compatibility as a tested matrix, not an unqualified “100%” claim.
 - Keep parsers bounds-checked and fuzzable; treat catalogs/CAR files as untrusted.

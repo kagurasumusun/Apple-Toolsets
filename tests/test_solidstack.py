@@ -9,6 +9,11 @@ from actool_linux.solidstack import (
     parse_solidimagestack_layer_reserved,
 )
 
+# Interoperability test vectors: short structural records observed in public
+# SolidImageStack (layout 1018) renditions, used only for parser/builder
+# round-trip coverage. De minimis excerpts; no underlying fixture artwork is
+# distributed (see fixtures/README.md).
+
 LAYER_LIST_HEX = (
     '0300000000000000'
     '0000000000000000000000000001000000010000000000000000803f10000000010055000200b500110076c400000000'

@@ -13,5 +13,8 @@ for row in manifest.get("files", []):
         row["size"] = len(raw)
         row["sha256"] = hashlib.sha256(raw).hexdigest()
 
+# Drop entries whose files were removed from the tree.
+manifest["files"] = [row for row in manifest.get("files", []) if (root / row["path"]).is_file()]
+
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 print("Updated EVIDENCE_MANIFEST.json")

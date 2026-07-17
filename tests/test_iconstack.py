@@ -12,6 +12,13 @@ from actool_linux.iconstack import (
 )
 
 
+# Interoperability test vectors: short structural records (u32/float fields and
+# short length-prefixed identifier strings) captured while observing layout
+# 1019/1020/1021 (`IconImageStack`/`IconGroup`/`Named Gradient`) renditions in
+# the wild. They are de minimis excerpts used solely to verify the parser/builder
+# grammar round-trip; the underlying binary fixtures are not distributed (see
+# fixtures/README.md removal log and research/iconstack-*.json metadata scans).
+
 FIREFOX_ROOT_STYLE_HEX = (
     '05000000000000000000000000000000010000000002000000000000000100000000020000009a99193e'
     '0100000000020000000000003f0100000000020000000000003f0100000000'
