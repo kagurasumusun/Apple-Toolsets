@@ -1364,3 +1364,13 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
   5. `test_1000_repack_and_sparse_bom_resilience_sweep`: 100 roundtrip container verifications across sparse index spaces (`ID=1,5,100...`) and variable reallocations.
 - **Record Test Suite Coverage**: Automated test suite reached **188 OK (`tests/`)**, evaluating over 1,000 combinatorial boundaries and 10 historical CoreUI generations on every run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
 
+## 2026-07-18 — Round 3: 1000-Case Historical CoreUI Generation & Darling/Legacy Resilience Sweep
+
+### Historical Xcode & CoreUI Generation Probing & Compatibility (`tests/test_special_1000_historical_cases.py`)
+- **Implemented**: Created `Special1000HistoricalCasesTests` executing over 1,000 automated checks across historical CoreUI profiles ($498 \dots 975$), older storage versions ($15 \dots 17$), and legacy asset types:
+  1. `test_1000_historical_coreui_profiles_roundtrip_sweep`: 300 automated roundtrip checks evaluating header version stamps (`CARHEADER`), program tags (`498.40.1` up through `975 [LAR]`), and repack invariance across all 10 historical dialects (`coreui-498` ~ `coreui-975`).
+  2. `test_1000_historical_palette_and_deepmap_legacy_sweep`: 250 checks verifying legacy indexed-color `palette-img` (`PLTE` chunk) asset construction and CoreUI 498-era CSI decoding compatibility.
+  3. `test_1000_special_target_sdk_auto_selection_sweep`: 250 combinatorial evaluations across macOS and iOS target SDKs (`10.15` through `26.0`), verifying accurate `auto_select_profile` dialect resolution.
+  4. `test_1000_darling_and_legacy_container_resilience_sweep`: 200 checks verifying sparse variable mapping structures (`RATC` era storage v15) commonly encountered in Darling/legacy Linux simulation runtimes.
+- **Record Test Suite Coverage**: Total unit tests surged to **192 OK (`tests/`)**, verifying over 2,200 total dynamic boundary and historical generation conditions per test run.
+
