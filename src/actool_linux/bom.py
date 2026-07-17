@@ -36,6 +36,13 @@ class BOMStore:
 
     MAGIC = b"BOMStore"
     HEADER = struct.Struct(">8s6I")
+    
+    # Known CoreUI database names
+    DATABASE_NAMES = frozenset({
+        'imagedb', 'colordb', 'fontdb', 'fontsizedb',
+        'appearancedb', 'facetKeysdb', 'bitmapKeydb',
+        'zcbezeldb', 'zcglyphdb'
+    })
 
     def __init__(self, data: bytes | bytearray | memoryview):
         self._data = memoryview(data).cast("B")
@@ -127,3 +134,19 @@ class BOMStore:
         except KeyError as exc:
             raise BOMError(f"unknown named block: {name}") from exc
         return self.block(identifier)
+    
+    def get_databases(self) -> dict[str, int]:
+        """Return a mapping of known CoreUI database names to their block identifiers.
+        
+        CoreUI uses multiple specialized databases for different types of assets.
+        This method identifies which databases are present in this BOMStore.
+        """
+        return {
+            name: identifier
+            for name, identifier in self.variables.items()
+            if name in self.DATABASE_NAMES
+        }
+    
+    def has_database(self, name: str) -> bool:
+        """Check if a specific CoreUI database is present."""
+        return name in self.variables and name in self.DATABASE_NAMES
