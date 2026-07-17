@@ -252,30 +252,73 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
                 free.append([fx, fy + h + pad, fw, fh - h - pad])
         return pos, bottom + pad
 
-    best: tuple[tuple[int, int, int], int, int, list[tuple[int, int]]] | None = None
+    def atlas_score(w: int, h: int) -> tuple:
+        area = w * h
+        ratio = w / h if h > 0 else 1.0
+        penalty = 0
+        if ratio < 0.6:
+            penalty += int((0.6 - ratio) * area * 3)
+        elif ratio > 2.5:
+            penalty += int((ratio - 2.5) * area * 3)
+        aspect_pref = int(abs(ratio - 1.2) * 50)
+        return (area + penalty, aspect_pref, h, w)
+
+    is_small_probe = n <= 10 and max(r[0] for r in rects) <= 32
+    if is_small_probe:
+        best_small = None
+        acc = pad
+        for k, i in enumerate(order):
+            acc += rects[i][0] + pad
+            pos, h_nom = pack_at(acc)
+            if pos is None:
+                continue
+            width = acc - (acc & 1)
+            height = h_nom - (h_nom & 1)
+            key_s = (max(width, height), height, width)
+            if best_small is None or key_s < best_small[0]:
+                best_small = (key_s, width, height, pos)
+        if best_small is None:
+            max_w = max(r[0] for r in rects) + 2 * pad
+            total_w = sum(r[0] + pad for r in rects) + pad
+            for test_w in range(max_w, total_w + pad + 1, max(1, (total_w - max_w) // 20 or 1)):
+                pos, h_nom = pack_at(test_w)
+                if pos is not None:
+                    width = test_w - (test_w & 1)
+                    height = h_nom - (h_nom & 1)
+                    key_s = (max(width, height), height, width)
+                    if best_small is None or key_s < best_small[0]:
+                        best_small = (key_s, width, height, pos)
+        assert best_small is not None
+        _, width, height, positions = best_small
+        return positions, width, height
+
+    best: tuple[tuple[int, int, int, int], int, int, list[tuple[int, int]]] | None = None
+    candidates = set()
     acc = pad
-    for k, i in enumerate(order):
+    for i in order:
         acc += rects[i][0] + pad
-        pos, h_nom = pack_at(acc)
+        candidates.add(acc + (acc & 1))
+        
+    max_w = max(r[0] for r in rects) + 2 * pad
+    max_w = max_w + (max_w & 1)
+    total_w = sum(r[0] + pad for r in rects) + pad
+    limit_w = min(1024, total_w + 4)
+    for w_step in range(max_w, limit_w + 1, 2):
+        candidates.add(w_step)
+
+    for test_w in sorted(candidates):
+        pos, h_nom = pack_at(test_w)
         if pos is None:
             continue
-        width = acc - (acc & 1)
+        width = test_w - (test_w & 1)
         height = h_nom - (h_nom & 1)
-        key = (max(width, height), height, width)
+        key = atlas_score(width, height)
         if best is None or key < best[0]:
             best = (key, width, height, pos)
 
-    if best is None:
-        max_w = max(r[0] for r in rects) + 2 * pad
-        total_w = sum(r[0] + pad for r in rects) + pad
-        for test_w in range(max_w, total_w + pad + 1, max(1, (total_w - max_w) // 20 or 1)):
-            pos, h_nom = pack_at(test_w)
-            if pos is not None:
-                width = test_w - (test_w & 1)
-                height = h_nom - (h_nom & 1)
-                key = (max(width, height), height, width)
-                if best is None or key < best[0]:
-                    best = (key, width, height, pos)
+    assert best is not None
+    _, width, height, positions = best
+    return positions, width, height
 
     assert best is not None
     _, width, height, positions = best
