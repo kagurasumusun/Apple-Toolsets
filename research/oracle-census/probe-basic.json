@@ -17,5 +17,57 @@
         "struct:/renditions/('Variant', 181, 1, 0, 0, 0, 50255, 85, 0, 0, 0, 0, 0)"
       ]
     ]
-  ]
+  ],
+  "pair_detail": {
+    "basic/Assets.car": {
+      "class": "payload",
+      "diffs": [
+        "/facets/AlphaRamp32/kCRThemeIdentifierName: apple='51555' ours='4191'",
+        "/facets/GA16/kCRThemeIdentifierName: apple='8697' ours='33492'",
+        "/facets/Gray8/kCRThemeIdentifierName: apple='37665' ours='46855'",
+        "/facets/Solid64/kCRThemeIdentifierName: apple='26510' ours='54181'",
+        "/renditions/('AlphaRamp32', 181, 1, 0, 0, 0, 0, 85, 0, 0, 0, 0, 0)/payload_length: apple='1047' ours='4023'"
+      ]
+    },
+    "brand/Assets.car": {
+      "class": "payload",
+      "diffs": [
+        "/facets/App Icon - Large/Back/Content/kCRThemeIdentifierName: apple='9708' ours='29752'",
+        "/facets/App Icon - Large/Front/Content/kCRThemeIdentifierName: apple='42877' ours='44727'",
+        "/facets/App Icon - Small/kCRThemeIdentifierName: apple='52912' ours='49589'",
+        "/facets/App Icon - Small/Back/Content/kCRThemeIdentifierName: apple='23425' ours='32065'",
+        "/facets/App Icon - Small/Front/Content/kCRThemeIdentifierName: apple='27417' ours='44103'",
+        "/facets/App Icon - Small/Middle/Content/kCRThemeIdentifierName: apple='42071' ours='16967'",
+        "/facets/Top Shelf Image/kCRThemeIdentifierName: apple='29129' ours='32586'",
+        "/facets/Top Shelf Image Wide/kCRThemeIdentifierName: apple='54774' ours='18934'",
+        "/renditions/('App Icon - Small', 208, 1, 6, 0, 0, 0, 85, 0, 0, 0, 0, 0)/payload_length: apple='2845' ours='2830'",
+        "/renditions/('App Icon - Small', 209, 1, 6, 0, 0, 0, 85, 0, 0, 0, 0, 0)/payload_length: apple='9316' ours='8932'",
+        "/renditions/('Top Shelf Image Wide', 181, 1, 3, 0, 0, 0, 85, 0, 0, 0, 0, 0)/payload_length: apple='1404' ours='2435'",
+        "/renditions/('Top Shelf Image', 181, 1, 3, 0, 0, 0, 85, 0, 0, 0, 0, 0)/payload_length: apple='1236' ours='2057'"
+      ]
+    },
+    "colordata/Assets.car": {
+      "class": "hash16",
+      "diffs": [
+        "/facets/Blob/kCRThemeIdentifierName: apple='52391' ours='47652'",
+        "/facets/Tint/kCRThemeIdentifierName: apple='35121' ours='33386'"
+      ]
+    },
+    "scales/Assets.car": {
+      "class": "struct",
+      "kinds": [
+        "hash16",
+        "payload",
+        "struct:/renditions/('Variant', 181, 1, 0, 0, 0, 29613, 85, 0, 0, 0, 0, 0)",
+        "struct:/renditions/('Variant', 181, 1, 0, 0, 0, 50255, 85, 0, 0, 0, 0, 0)"
+      ],
+      "diffs": [
+        "/facets/Multi/kCRThemeIdentifierName: apple='15759' ours='43230'",
+        "/facets/Variant/kCRThemeIdentifierName: apple='9298' ours='6463'",
+        "/renditions/('Variant', 181, 1, 0, 0, 0, 29613, 85, 0, 0, 0, 0, 0): only in apple (\"{'facet_name': 'Variant', 'identifier': 9298, 'name': 'ja.png', 'size': (8, 8), 'scale': 1.0, 'pixel_format': 'ARGB', 'layout': 12, 'flags': 16, 'tlvs': [(1001,\")",
+        "/renditions/('Variant', 181, 1, 0, 0, 0, 50255, 85, 0, 0, 0, 0, 0): only in ours (\"{'facet_name': 'Variant', 'identifier': 6463, 'name': 'ja.png', 'size': (8, 8), 'scale': 1.0, 'pixel_format': 'ARGB', 'layout': 12, 'flags': 16, 'tlvs': [(1001,\")",
+        "/renditions/('ZZZZPackedAsset-1.1.0-gamut0', 181, 1, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0)/payload_length: apple='141' ours='155'"
+      ]
+    }
+  }
 }
