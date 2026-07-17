@@ -196,40 +196,12 @@ def _decoded_payload(rendition) -> dict[str, object] | None:
 def inspect(path: Path) -> dict[str, object]:
     store = BOMStore.from_path(path)
     car = CARFile(store)
-    
-    # Determine CoreUI profile based on version
-    coreui_version = car.header.core_ui_version
-    if coreui_version >= 975:
-        coreui_profile = "coreui-975"
-    elif coreui_version >= 918:
-        coreui_profile = "coreui-918"
-    elif coreui_version >= 850:
-        coreui_profile = "coreui-850"
-    elif coreui_version >= 800:
-        coreui_profile = "coreui-800"
-    elif coreui_version >= 700:
-        coreui_profile = "coreui-700"
-    elif coreui_version >= 498:
-        coreui_profile = "coreui-498"
-    elif coreui_version >= 450:
-        coreui_profile = "coreui-450"
-    elif coreui_version >= 400:
-        coreui_profile = "coreui-400"
-    else:
-        coreui_profile = "unknown"
-    
-    # Detect CoreUI databases
-    databases = store.get_databases()
-    
     return {
         'path': str(path),
         'size': path.stat().st_size,
         'bom_version': store.header.version,
         'block_count_hint': store.header.block_count_hint,
         'allocated_blocks': len(store.blocks),
-        'coreui_version': coreui_version,
-        'coreui_profile': coreui_profile,
-        'coreui_databases': databases,
         'car_header': {
             'byte_order': car.header.byte_order,
             'core_ui_version': car.header.core_ui_version,

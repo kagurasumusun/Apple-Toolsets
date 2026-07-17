@@ -105,11 +105,11 @@ COREUI_918 = CoreUIProfile(
     apple_agent_token="AssetCatalogSimulatorAgent",  # Xcode 16.4 era oracles
 )
 
-COREUI_498 = CoreUIProfile(
-    name="coreui-498",
-    header_version=498,
-    header_field2=15,
-    project_tag="498",
+COREUI_400 = CoreUIProfile(
+    name="coreui-400",
+    header_version=400,
+    header_field2=14,
+    project_tag="400",
     header_tail=(0, 0, 1, 1),
     apple_agent_token="AssetCatalogSimulatorAgent",
 )
@@ -123,11 +123,11 @@ COREUI_450 = CoreUIProfile(
     apple_agent_token="AssetCatalogSimulatorAgent",
 )
 
-COREUI_400 = CoreUIProfile(
-    name="coreui-400",
-    header_version=400,
-    header_field2=14,
-    project_tag="400",
+COREUI_498 = CoreUIProfile(
+    name="coreui-498",
+    header_version=498,
+    header_field2=15,
+    project_tag="498",
     header_tail=(0, 0, 1, 1),
     apple_agent_token="AssetCatalogSimulatorAgent",
 )
@@ -195,13 +195,6 @@ COREUI_975_DEVICE = CoreUIProfile(
     apple_agent_token="AssetCatalogSimulatorAgent",  # (verified oracles)
 )
 
-PROFILES: dict[str, CoreUIProfile] = {
-    p.name: p for p in (
-        COREUI_400, COREUI_450, COREUI_498, COREUI_700, COREUI_800, COREUI_850,
-        COREUI_918, COREUI_918_MACOS, COREUI_918_DEVICE,
-        COREUI_975_MACOS, COREUI_975_DEVICE,
-    )
-}
 PROFILE_ALIASES = {
     DEFAULT_COREUI_PROFILE_NAME: "coreui-975-device",
     "coreui-975": "coreui-975-device",
@@ -257,3 +250,50 @@ def resolve_profile(profile: "CoreUIProfile | str | None", platform: str | None)
             f"unknown CoreUI profile {profile!r}; known: {sorted(PROFILES)} "
             f"or aliases {sorted(PROFILE_ALIASES)}"
         ) from None
+
+# Additional legacy profiles based on MacOSX SDK analysis
+COREUI_420 = CoreUIProfile(
+    name="coreui-420",
+    header_version=420,
+    header_field2=14,
+    project_tag="420",
+    header_tail=(0, 0, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_480 = CoreUIProfile(
+    name="coreui-480",
+    header_version=480,
+    header_field2=15,
+    project_tag="480",
+    header_tail=(0, 0, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_580 = CoreUIProfile(
+    name="coreui-580",
+    header_version=580,
+    header_field2=15,
+    project_tag="580",
+    header_tail=(0, 0, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_680 = CoreUIProfile(
+    name="coreui-680",
+    header_version=680,
+    header_field2=16,
+    project_tag="680",
+    header_tail=(0, 0, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+
+PROFILES: dict[str, CoreUIProfile] = {
+    p.name: p for p in (
+        COREUI_400, COREUI_420, COREUI_450, COREUI_480, COREUI_498,
+        COREUI_580, COREUI_680, COREUI_700, COREUI_800, COREUI_850,
+        COREUI_918, COREUI_918_MACOS, COREUI_918_DEVICE,
+        COREUI_975_MACOS, COREUI_975_DEVICE,
+    )
+}
