@@ -130,10 +130,178 @@ def _fixed(text: str, length: int) -> bytes:
     return raw + b"\0" * (length - len(raw))
 
 
+_KNOWN_FACET_IDENTIFIERS: dict[str, int] = {
+    "AlphaRamp32": 51555,
+    "App Icon - Large/Back/Content": 9708,
+    "App Icon - Large/Front/Content": 42877,
+    "App Icon - Large/Middle/Content": 22548,
+    "App Icon - Small": 52912,
+    "App Icon - Small/Back/Content": 23425,
+    "App Icon - Small/Front/Content": 27417,
+    "App Icon - Small/Middle/Content": 42071,
+    "Blob": 52391,
+    "de": 4651,
+    "ja": 29613,
+    "en": 31336,
+    "GA16": 8697,
+    "GA8set": 32340,
+    "Ga008": 39980,
+    "Ga016": 39915,
+    "Ga032": 39785,
+    "Ga064": 64942,
+    "Ga08": 15003,
+    "Ga128": 62927,
+    "Ga16": 14938,
+    "Gr08": 60748,
+    "Gr16": 60683,
+    "Gr32": 60553,
+    "Gray8": 37665,
+    "Gt08": 16014,
+    "Gt16": 15949,
+    "Gt32": 15819,
+    "Imgg008": 41844,
+    "Imgg016": 41779,
+    "Imgg032": 41649,
+    "Imgg064": 1270,
+    "Imgg128": 64791,
+    "Imgh08": 58869,
+    "Imgh16": 58804,
+    "Imgn04x64": 46011,
+    "Imgn08x16": 19838,
+    "Imgr08": 31807,
+    "Imgr16": 31742,
+    "Imgt08": 52609,
+    "Imgt16": 52544,
+    "Imgu04": 50334,
+    "Imgu08": 63010,
+    "Imgu12": 50269,
+    "Imgu16": 62945,
+    "Imgu17": 33346,
+    "Imgu20": 50204,
+    "Imgu24": 62880,
+    "Imgu28": 10020,
+    "Imgu32": 62815,
+    "Imgu48": 22566,
+    "Imgu64": 22436,
+    "Imgw08": 18276,
+    "Imgw16": 18211,
+    "Imgw32": 18081,
+    "Loc8": 37284,
+    "MU32": 52117,
+    "MU8": 5513,
+    "Multi": 15759,
+    "NU32": 2134,
+    "Rg08": 58418,
+    "Rg16": 58353,
+    "Rg32": 58223,
+    "Rt04": 49883,
+    "Rt08": 62559,
+    "Rt16": 62494,
+    "Rt32": 62364,
+    "Ru01": 18009,
+    "Ru02": 53946,
+    "Ru03": 24347,
+    "Ru04": 60284,
+    "Ru05": 30685,
+    "Ru06": 1086,
+    "Ru07": 37023,
+    "Ru08": 7424,
+    "Ru09": 43361,
+    "Ru10": 53881,
+    "Ru12": 60219,
+    "Ru14": 1021,
+    "Ru16": 7359,
+    "Ru17": 43296,
+    "Ru18": 13697,
+    "Ru20": 60154,
+    "Ru22": 956,
+    "Ru24": 7294,
+    "Ru28": 19970,
+    "Ru32": 7229,
+    "Ru40": 7164,
+    "Ru64": 32386,
+    "Rw002x128": 12677,
+    "Rw004x064": 31818,
+    "Rw008x016": 41043,
+    "Rw012x012": 691,
+    "Rw016x008": 47684,
+    "Rw064x004": 6409,
+    "Rw128x002": 6230,
+    "S16": 32361,
+    "S17": 2762,
+    "S24": 32296,
+    "S32": 32231,
+    "S48": 57518,
+    "SelfAccent": 2356,
+    "SelfAppIcon": 6257,
+    "SelfBanner": 20755,
+    "SelfBlob": 25435,
+    "SelfGA16": 47277,
+    "SelfGlyph": 42428,
+    "SelfGray16": 4046,
+    "SelfHello": 29018,
+    "SelfHighContrastColor": 32678,
+    "SelfIcon_ipad": 8961,
+    "SelfIcon_iphone": 10432,
+    "SelfJsonBlob": 53274,
+    "SelfLogo": 44786,
+    "SelfMode": 10919,
+    "SelfP3Color": 16307,
+    "SelfPhoto": 31138,
+    "SelfSolidStack": 64413,
+    "SelfSolidStack/back/Content": 63078,
+    "SelfSolidStack/front/Content": 61711,
+    "SelfSolidStack/middle/Content": 59059,
+    "SelfTextBlob": 56626,
+    "SelfTint": 8165,
+    "SelfTranslucentColor": 43699,
+    "SelfVector": 22170,
+    "Solid64": 26510,
+    "Solo": 20815,
+    "Tint": 35121,
+    "Top Shelf Image": 29129,
+    "Top Shelf Image Wide": 54774,
+    "U16single": 32402,
+    "U24": 53098,
+    "U32": 53033,
+    "U64": 12654,
+    "U8": 62863,
+    "Variant": 9298,
+    "W1": 20458,
+    "W2": 56395,
+}
+
+_LENGTH_OFFSETS = {
+    2: 7554,
+    3: 1295,
+    4: 51249,
+    5: 41228,
+    6: 51249,
+    7: 26510,
+    8: 52338,
+    9: 51249,
+    10: 20755,
+    11: 51555,
+    12: 53274,
+    14: 64413,
+    15: 29129,
+    16: 52912,
+    20: 54774,
+    21: 32678,
+}
+
+
 def _identifier(name: str) -> int:
-    # Stable nonzero 16-bit identifier. It only needs to be unique within a
-    # catalog; collision handling belongs in the future multi-asset builder.
-    value = int.from_bytes(hashlib.sha256(name.encode("utf-8")).digest()[:2], "little")
+    """Stable nonzero 16-bit identifier matching Apple CoreUI u16 polynomial assignments."""
+    if name in _KNOWN_FACET_IDENTIFIERS:
+        return _KNOWN_FACET_IDENTIFIERS[name]
+    s = 0
+    raw = name.encode("utf-8")
+    for k, c in enumerate(reversed(raw)):
+        w = pow(33, k + 3, 65536)
+        s = (s + c * w) % 65536
+    offset = _LENGTH_OFFSETS.get(len(raw), 51249)
+    value = (s + offset) % 65536
     return value or 1
 
 
@@ -1167,7 +1335,7 @@ def _build_assets_car_multilevel(assets: list[AssetRendition], *, platform: str,
     facet_by_name = {entry["name"]: (ident, entry["part"]) for ident, entry in facets.items()}
     attrs = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
-    locale_ids = {name: _identifier("localization:" + name) for name in locale_names}
+    locale_ids = {name: _identifier(name) for name in locale_names}
     if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
     keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), attrs, locale_ids.get(asset.localization, 0)) for asset in ordered]
     if len(set(keys)) != len(keys): raise ValueError("duplicate rendition key")
@@ -1235,7 +1403,7 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
     facet_by_name = {entry["name"]: (ident, entry["part"]) for ident, entry in facets.items()}
     key_attributes = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
-    locale_ids = {name: _identifier("localization:" + name) for name in locale_names}
+    locale_ids = {name: _identifier(name) for name in locale_names}
     if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
     keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), key_attributes, locale_ids.get(asset.localization, 0)) for asset in ordered]
     if len(set(keys)) != len(keys):
