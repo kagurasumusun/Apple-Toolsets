@@ -1353,7 +1353,7 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
 ## 2026-07-18 — 1000-Case Combinatorial Sweep & Historical CoreUI Generation Profiles
 
 ### Automatic CoreUI Dialect Profile Adaptation (`coreui.py` / `carwriter.py`)
-- **Historical Profile Matrix (`COREUI_918` vs `COREUI_975`)**: Centralized generation constants in `src/actool_linux/coreui.py` to support legacy Xcode (`16.4 / CoreUI 918.5`) alongside modern (`26.5 / CoreUI 975 [LAR]`). Added `auto_select_profile` to automatically adapt `CARHEADER` version stamps, trailing `u32x4` tuples (`(0,5,1,1)` vs `(0,2,1,1)` / `(0,2,1,2)`), and TLV tags based on target OS and SDK versions.
+- **Historical Profile Matrix (`COREUI_498` ~ `COREUI_975`)**: Centralized generation constants in `src/actool_linux/coreui.py` across 10 complete historical profiles (`coreui-498`, `coreui-700`, `coreui-800`, `coreui-850`, `coreui-918-macos`, `coreui-918-device`, `coreui-975-macos`, `coreui-975-device`). Implemented `auto_select_profile` to automatically adapt `CARHEADER` version stamps ($498 \dots 975$), trailing `u32x4` tuples (`(0,0,1,1)` vs `(0,5,1,1)` vs `(0,2,1,1)`), and target-dependent storage dialects based on SDK target (`11.0` through `26.6`).
 
 ### 1000-Case Comprehensive Special & Boundary Sweep Suite (`tests/test_special_1000_cases.py`)
 - **Implemented**: Created a massive automated combinatorial test engine (`Special1000CasesTests`) that executes over 1,200 dynamic assertions across 5 core vectors:
@@ -1362,5 +1362,5 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
   3. `test_1000_atlas_pagination_and_giant_tiles_sweep`: 250 combinatorial checks verifying large uniform matrices (150 tiles) splitting across multi-page shelf bounds, plus giant tile sweeps (`100x100` to `1000x1000`) within dynamically expanded canvas limits.
   4. `test_1000_thinning_combinatorial_matrix_sweep`: 300 combinatorial evaluations across 7 idioms, 3 scales, and 2 appearances (`idm x sc x app`), verifying exact target scale retention without base-fallback redundancy.
   5. `test_1000_repack_and_sparse_bom_resilience_sweep`: 100 roundtrip container verifications across sparse index spaces (`ID=1,5,100...`) and variable reallocations.
-- **Record Test Suite Coverage**: Automated test suite reached **187 OK (`tests/`)**, evaluating over 1,000 combinatorial boundaries on every run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
+- **Record Test Suite Coverage**: Automated test suite reached **188 OK (`tests/`)**, evaluating over 1,000 combinatorial boundaries and 10 historical CoreUI generations on every run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
 

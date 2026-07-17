@@ -105,6 +105,60 @@ COREUI_918 = CoreUIProfile(
     apple_agent_token="AssetCatalogSimulatorAgent",  # Xcode 16.4 era oracles
 )
 
+COREUI_498 = CoreUIProfile(
+    name="coreui-498",
+    header_version=498,
+    header_field2=15,
+    project_tag="498",
+    header_tail=(0, 0, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_700 = CoreUIProfile(
+    name="coreui-700",
+    header_version=700,
+    header_field2=16,
+    project_tag="700",
+    header_tail=(0, 1, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_800 = CoreUIProfile(
+    name="coreui-800",
+    header_version=800,
+    header_field2=16,
+    project_tag="800",
+    header_tail=(0, 3, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_850 = CoreUIProfile(
+    name="coreui-850",
+    header_version=850,
+    header_field2=16,
+    project_tag="850",
+    header_tail=(0, 4, 1, 1),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
+COREUI_918_MACOS = CoreUIProfile(
+    name="coreui-918-macos",
+    header_version=918,
+    header_field2=17,
+    project_tag="918.5",
+    header_tail=(0, 5, 1, 1),
+    apple_agent_token="AssetCatalogAgent-AssetRuntime",
+)
+
+COREUI_918_DEVICE = CoreUIProfile(
+    name="coreui-918-device",
+    header_version=918,
+    header_field2=17,
+    project_tag="918.5",
+    header_tail=(0, 5, 1, 2),
+    apple_agent_token="AssetCatalogSimulatorAgent",
+)
+
 COREUI_975_MACOS = CoreUIProfile(
     name="coreui-975-macos",
     header_version=975,
@@ -124,12 +178,17 @@ COREUI_975_DEVICE = CoreUIProfile(
 )
 
 PROFILES: dict[str, CoreUIProfile] = {
-    p.name: p for p in (COREUI_918, COREUI_975_MACOS, COREUI_975_DEVICE)
+    p.name: p for p in (
+        COREUI_498, COREUI_700, COREUI_800, COREUI_850,
+        COREUI_918, COREUI_918_MACOS, COREUI_918_DEVICE,
+        COREUI_975_MACOS, COREUI_975_DEVICE,
+    )
 }
-# Convenience alias: the generic "975" profile resolves per platform.
-PROFILE_ALIASES = {DEFAULT_COREUI_PROFILE_NAME: "coreui-975-device"}
+PROFILE_ALIASES = {
+    DEFAULT_COREUI_PROFILE_NAME: "coreui-975-device",
+    "coreui-975": "coreui-975-device",
+}
 
-# Platforms whose oracles carry the AssetRuntime/[LAR] header dialect.
 MACOS_HEADER_PLATFORMS = frozenset({"macosx"})
 
 
@@ -138,6 +197,28 @@ def profile_for_platform(platform: str | None) -> CoreUIProfile:
     if (platform or "macosx").lower() in MACOS_HEADER_PLATFORMS:
         return COREUI_975_MACOS
     return COREUI_975_DEVICE
+
+
+def auto_select_profile(platform: str | None, target: str | float | None = None) -> CoreUIProfile:
+    """Select the historical or current CoreUI profile based on deployment target and platform."""
+    plat = (platform or "macosx").lower()
+    is_mac = plat in MACOS_HEADER_PLATFORMS
+    if target is None:
+        return COREUI_975_MACOS if is_mac else COREUI_975_DEVICE
+    try:
+        ver = float(str(target).split(".")[0])
+    except (ValueError, TypeError):
+        return COREUI_975_MACOS if is_mac else COREUI_975_DEVICE
+    if is_mac:
+        if ver <= 11.0: return COREUI_700
+        if ver <= 13.0: return COREUI_850
+        if ver <= 15.0: return COREUI_918_MACOS
+        return COREUI_975_MACOS
+    else:
+        if ver <= 13.0: return COREUI_700
+        if ver <= 15.0: return COREUI_850
+        if ver <= 16.0: return COREUI_918_DEVICE
+        return COREUI_975_DEVICE
 
 
 def resolve_profile(profile: "CoreUIProfile | str | None", platform: str | None) -> CoreUIProfile:

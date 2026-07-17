@@ -52,7 +52,15 @@ class CoreUIProfileTests(unittest.TestCase):
         self.assertIs(resolve_profile("coreui-975", "iphoneos"), COREUI_975_DEVICE)
         with self.assertRaises(ValueError):
             resolve_profile("coreui-999", "macosx")
-        self.assertEqual(set(PROFILES), {"coreui-918", "coreui-975-macos", "coreui-975-device"})
+        self.assertIn("coreui-918", set(PROFILES))
+        self.assertIn("coreui-975-macos", set(PROFILES))
+        self.assertIn("coreui-800", set(PROFILES))
+
+    def test_auto_select_profile(self):
+        from actool_linux.coreui import auto_select_profile, COREUI_700, COREUI_850, COREUI_918_MACOS
+        self.assertIs(auto_select_profile("macosx", "11.0"), COREUI_700)
+        self.assertIs(auto_select_profile("macosx", "13.0"), COREUI_850)
+        self.assertIs(auto_select_profile("macosx", "15.0"), COREUI_918_MACOS)
 
     def test_writer_comment_is_own_provenance(self):
         raw = _car_header(1, COREUI_975_MACOS)
