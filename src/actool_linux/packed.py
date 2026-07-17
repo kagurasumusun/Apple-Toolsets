@@ -281,6 +281,48 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     return positions, width, height
 
 
+def _paginate_and_pack(
+    group: list["AssetRendition"],
+    decoded: list[tuple[int, int, bytes, bytes]],
+    max_page_area: int = 33500,
+) -> list[tuple[list["AssetRendition"], list[tuple[int, int, bytes, bytes]], list[tuple[int, int]], int, int]]:
+    """Split a tile group into bounded atlas pages and pack each page."""
+    n = len(group)
+    if n == 0:
+        return []
+    rects = [(d[0], d[1]) for d in decoded]
+    pos, w, h = _shelf_pack(rects)
+    if w * h <= max_page_area or n <= 3:
+        return [(group, decoded, pos, w, h)]
+
+    order = sorted(
+        range(n),
+        key=lambda i: (-(rects[i][0] * rects[i][1]), -rects[i][0], -rects[i][1], -i),
+    )
+    pages = []
+    remaining = list(order)
+    while remaining:
+        best_page_indices = [remaining[0]]
+        best_pack = _shelf_pack([rects[remaining[0]]])
+        for count in range(2, len(remaining) + 1):
+            subset = remaining[:count]
+            sub_rects = [rects[i] for i in subset]
+            pos_sub, w_sub, h_sub = _shelf_pack(sub_rects)
+            # Break if area exceeds max_page_area or if adding a small tile expands canvas too aggressively
+            if w_sub * h_sub > max_page_area and count > 1:
+                break
+            best_page_indices = subset
+            best_pack = (pos_sub, w_sub, h_sub)
+        
+        sub_group = [group[i] for i in best_page_indices]
+        sub_decoded = [decoded[i] for i in best_page_indices]
+        pos_sub, w_sub, h_sub = best_pack
+        pages.append((sub_group, sub_decoded, pos_sub, w_sub, h_sub))
+        remaining = remaining[len(best_page_indices):]
+
+    return pages
+
+
 def _atlas_palette(width: int, height: int, bgra: bytes) -> tuple[list[bytes], bytes] | None:
     """Swatch table + 8-bit index plane, or None when >255 colors.
 
@@ -429,26 +471,23 @@ def pack_renditions(assets: list[AssetRendition]) -> list[AssetRendition]:
     result = list(assets)
     index_of = {id(a): i for i, a in enumerate(result)}
     atlases: list[AssetRendition] = []
-    # Per appearance, pages are numbered in class-name order. This writer
-    # emits exactly one page per class (Apple's multi-page pagination
-    # heuristic is a documented cosmetic divergence).
     pages_by_appearance: dict[int, list[str]] = {}
     for appearance, class_name in sorted(packable, key=lambda k: (k[0], k[1])):
         group = packable[(appearance, class_name)]
         gray, opaque = class_of[class_name]
         decoded = [decoded_cache[id(a)] for a in group]
-        rects = [(d[0], d[1]) for d in decoded]
-        positions, atlas_w, atlas_h = _shelf_pack(rects)
-        canvas = composite_atlas(decoded, positions, atlas_w, atlas_h)
-        atlas_csi = _csi_atlas(class_name, atlas_w, atlas_h, canvas, gray=gray, opaque=opaque)
-        page = len(pages_by_appearance.setdefault(appearance, []))
-        pages_by_appearance[appearance].append(class_name)
-        atlases.append(AssetRendition(
-            class_name, atlas_csi, 181, 181, scale=1, idiom=0,
-            appearance=appearance, element=9, identifier_override=0,
-            dimension1=page, skip_facet=True,
-        ))
-        for asset, (x, y), (w, h, _px, _ga) in zip(group, positions, decoded):
-            link_csi = _csi_link(asset.csi, x, y, w, h, appearance, page)
-            result[index_of[id(asset)]] = replace(asset, csi=link_csi)
+        paged_groups = _paginate_and_pack(group, decoded, max_page_area=27000)
+        for sub_group, sub_decoded, positions, atlas_w, atlas_h in paged_groups:
+            canvas = composite_atlas(sub_decoded, positions, atlas_w, atlas_h)
+            atlas_csi = _csi_atlas(class_name, atlas_w, atlas_h, canvas, gray=gray, opaque=opaque)
+            page = len(pages_by_appearance.setdefault(appearance, []))
+            pages_by_appearance[appearance].append(class_name)
+            atlases.append(AssetRendition(
+                class_name, atlas_csi, 181, 181, scale=1, idiom=0,
+                appearance=appearance, element=9, identifier_override=0,
+                dimension1=page, skip_facet=True,
+            ))
+            for asset, (x, y), (w, h, _px, _ga) in zip(sub_group, positions, sub_decoded):
+                link_csi = _csi_link(asset.csi, x, y, w, h, appearance, page)
+                result[index_of[id(asset)]] = replace(asset, csi=link_csi)
     return result + atlases

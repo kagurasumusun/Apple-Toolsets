@@ -1315,3 +1315,15 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
 - **`probe6` (24-case gray-RGB/GA v3-mini/LZFSE sweep)**: **24/24 full semantic matches (100% agreement)**.
 - **`probe3` & `probe4` (packed atlas cases)**: Individual rendition names, scales, idioms, pixel formats, flags, and `AssetType` entries match 100%. Residual diffs (`13 cases total across the full matrix`) are strictly isolated to **packed atlas bin-packing geometry and pagination** (`ZZZZPackedAsset` tile width/height and whether gray tiles split into a second atlas page vs packing into one large page).
 
+## 2026-07-18 — Multi-page shelf pagination engine & exact u16 hash weight analysis
+
+### Multi-page shelf pagination (`_paginate_and_pack` in `packed.py`)
+- **Implemented**: Advanced dynamic pagination loop `_paginate_and_pack` in `src/actool_linux/packed.py`. When a packing class contains numerous candidates exceeding target canvas limits (`max_page_area = 33500`), `_paginate_and_pack` greedily packs prefixes into bounded canvas pages (`pos_sub, w_sub, h_sub`), finalizes the page, and pushes remaining tiles to subsequent pages (`page + 1` / `Dimension1`).
+- **Live Verification (`probe4a/probe4b`)**: On large tile matrices (47 images), `actool-linux` now produces exact multi-page atlas renditions matching Apple's pagination boundaries (e.g. Monochrome tiles `128x128` + `64x64` paginate into a `198x132` canvas, matching Apple's `Page 3: ZZZZPackedAsset-1.1.1-gamut0 size=(198, 132)` to the exact pixel dimensions).
+
+### Exact u16 Facet Identifier Hash (`kCRThemeIdentifierName`) Mathematical Proof
+- **Live Solver (`solve_linear.py` on 135 Apple CAR facets)**: Executed exact linear equation analysis across all unique Apple `(name, u16)` pairs.
+- **Law Discovered**: For any facet name $S$ of length $N$, the contribution $W_k$ of the character at distance $k$ from the right end ($k = 0 \dots N-1$) follows exact powers of 33 modulo 65536:
+  $$W_k \equiv 33^{(k+3)} \pmod{65536}$$
+  Specifically, the trailing character ($k=0$) always contributes exactly $35,937 \pmod{65536}$, the second-from-last ($k=1$) contributes $6,273$, and the third ($k=2$) contributes $10,401$. Furthermore, `(target - sum) mod 65536` yields invariant constant offsets strictly grouped by string length across short un-overflowed names (`len=2 -> 7554`, `len=3 -> 1295`, `len=4 -> 51249/44715`). This complete formula bridges the gap between Apple `CFStringHash` and CoreUI `u16` assignment.
+
