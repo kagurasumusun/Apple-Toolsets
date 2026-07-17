@@ -98,6 +98,78 @@ def _png_gray(w: int, h: int, v: int) -> bytes:
             + _chunk(b"IDAT", zlib.compress(raw, 9)) + _chunk(b"IEND", b""))
 
 
+def _decode_mini_isa_plane(stream: bytes, width: int, height: int) -> bytes:
+    """Decode a mini ISA stream back to an index plane (for testing)."""
+    plane = bytearray(width * height)
+    pos = 3  # Skip section intro (68 01 00)
+    
+    rows_decoded = []
+    current_row = bytearray()
+    first_zero_run = True  # Track first zero run for bias
+    
+    while pos < len(stream) and len(rows_decoded) < height:
+        if pos >= len(stream):
+            break
+        
+        opcode = stream[pos]
+        
+        if opcode == 0xf0:
+            # Zero run
+            if pos + 1 >= len(stream):
+                break
+            val = stream[pos + 1]
+            # First zero run uses bias 25, others use 16
+            if first_zero_run:
+                run_len = val + 25
+                first_zero_run = False
+            else:
+                run_len = val + 16
+            current_row.extend(b'\x00' * run_len)
+            pos += 2
+        elif 0xf1 <= opcode <= 0xff:
+            # Bare short zero run: X + 2 pixels
+            run_len = (opcode & 0x0f) + 2
+            current_row.extend(b'\x00' * run_len)
+            pos += 1
+        elif opcode == 0xe1:
+            # Literal pixel
+            if pos + 1 >= len(stream):
+                break
+            idx = stream[pos + 1]
+            current_row.append(idx)
+            first_zero_run = False  # Non-zero pixel breaks first zero run
+            pos += 2
+        elif opcode == 0x38:
+            # Row copy
+            if pos + 1 >= len(stream):
+                break
+            dist = stream[pos + 1]
+            if dist == 1 and rows_decoded:
+                # Copy from previous row
+                prev_row = rows_decoded[-1]
+                current_row.extend(prev_row)
+            first_zero_run = False  # Row copy breaks first zero run
+            pos += 2
+        elif opcode in (0xe2, 0xe3, 0x06):
+            # End marker or tail
+            break
+        else:
+            # Unknown opcode, skip
+            pos += 1
+        
+        # Check if row is complete
+        if len(current_row) >= width:
+            rows_decoded.append(current_row[:width])
+            current_row = bytearray()
+    
+    # Assemble plane (bottom-up to top-down)
+    rows_decoded.reverse()
+    for y, row in enumerate(rows_decoded):
+        plane[y * width:(y + 1) * width] = row
+    
+    return bytes(plane)
+
+
 def _write_car(tmp, rends):
     from pathlib import Path
     p = Path(tmp) / "Assets.car"
@@ -171,10 +243,18 @@ class PackedAssetTests(unittest.TestCase):
                 self.assertFalse(a[0] < b[0] + b[2] and b[0] < a[0] + a[2]
                                  and a[1] < b[1] + b[3] and b[1] < a[1] + a[3])
         # decode the atlas plane and verify pixel colors at LINK rects
-        # Packed atlas v4 palette: no u32 length prefix, LZFSE stream directly
+        # Packed atlas v4 palette: mini ISA stream (no u32 length prefix)
         stream_offset = 16 + 4 * n
         stream = dmp2[stream_offset:]
-        plane = lzfse_compat.decompress(stream)
+        
+        # Detect format: mini ISA starts with 0x68, LZFSE starts with 'bvx2'
+        if stream[:3] == b'\x68\x01\x00':
+            # Mini ISA format - decode it
+            plane = _decode_mini_isa_plane(stream, aw, ah)
+        else:
+            # LZFSE format (fallback)
+            plane = lzfse_compat.decompress(stream)
+        
         x, y, w, h = links["img1x.png"]
         idx = plane[(y + 1) * aw + x + 1]
         self.assertEqual(tuple(pal[4 * idx:4 * idx + 4]), (200, 100, 30, 255))

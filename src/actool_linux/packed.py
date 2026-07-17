@@ -394,15 +394,16 @@ def _atlas_palette(width: int, height: int, bgra: bytes) -> tuple[list[bytes], b
 def _atlas_mini_isa(width: int, height: int, plane: bytes, nswatches: int) -> bytes | None:
     """Encode atlas index plane as multi-swatch mini ISA stream.
 
-    Produces a compact row-based RLE using the well-understood opcodes:
-    - 68 01 NN: section intro
+    Produces a compact row-based RLE using well-understood opcodes:
+    - 68 01 00: section intro
     - f0 V: zero run (first_bias=25, cont_bias=16)
-    - e1 XX: single literal pixel
-    - 38 LL: row-copy (dist=W, len=LL pixels)
-    - e2 00 00 / e1 00 / e3 00 00 00: end marker
+    - fX: bare short zero run (X+2 pixels, for runs 3-15)
+    - e1 XX: single literal pixel (palette index)
+    - 38 01: row-copy (copy from 1 row back)
+    - e2 00 00 / e1 00 / e3 00 00 00: end marker (by npix mod 4)
     - 06 00*7: tail
 
-    Returns None if the stream cannot be encoded (e.g. too many swatches).
+    Returns None if the stream cannot be encoded.
     """
     if nswatches > 255:
         return None
@@ -411,91 +412,82 @@ def _atlas_mini_isa(width: int, height: int, plane: bytes, nswatches: int) -> by
     out = bytearray()
     out += b"\x68\x01\x00"  # section intro
 
-    # Process rows bottom-up
+    # Collect rows (bottom-up)
     rows = []
     for y in range(height):
-        row_start = y * width
-        rows.append(plane[row_start:row_start + width])
-
-    # Reverse for bottom-up
+        rows.append(plane[y * width:(y + 1) * width])
     rows.reverse()
 
-    first_zero_run = True
+    first_zero = True
     for row_idx, row in enumerate(rows):
-        # Check if this row is identical to the previous row (row-copy)
+        # Row-copy optimization: identical to previous row
         if row_idx > 0 and row == rows[row_idx - 1]:
-            out += b"\x38\x01"  # copy from 1 row back (dist=width, len=1 row)
+            out += b"\x38\x01"
             continue
 
-        # Encode the row: transparent runs + literal pixels
-        i = 0
-        while i < width:
-            if row[i] == 0:
-                # Count zero run
-                run_start = i
-                while i < width and row[i] == 0:
-                    i += 1
-                run_len = i - run_start
-                # Encode zero run
-                _emit_zero_run(out, run_len, first=first_zero_run)
-                first_zero_run = False
+        # Encode row content
+        j = 0
+        while j < width:
+            if row[j] == 0:
+                # Count transparent run
+                start = j
+                while j < width and row[j] == 0:
+                    j += 1
+                run_len = j - start
+                _encode_zero_run(out, run_len, first_zero)
+                if first_zero and run_len > 0:
+                    first_zero = False
             else:
-                # Non-zero pixel: emit as literal
-                out += bytes((0xe1, row[i]))
-                i += 1
-                first_zero_run = False
+                # Non-zero pixel: literal
+                out += bytes((0xe1, row[j]))
+                j += 1
+                first_zero = False
 
-    # End marker based on pixel count mod 4
+    # End marker by pixel count mod 4
     end_markers = {0: b"\xe2\x00\x00", 1: b"\xe3\x00\x00\x00",
                    2: b"\xe2\x00\x00", 3: b"\xe1\x00"}
     out += end_markers[npix & 3]
-    out += b"\x06" + b"\x00" * 7  # V3_MINI_TAIL
+    out += b"\x06" + b"\x00" * 7  # tail
 
     return bytes(out)
 
 
-def _emit_zero_run(out: bytearray, length: int, first: bool = False) -> None:
-    """Emit f0 V zero run tokens."""
-    first_bias = 25 if first else 16
-    cont_bias = 16
-    rem = length
-
-    if rem <= 0:
+def _encode_zero_run(out: bytearray, length: int, is_first: bool) -> None:
+    """Emit f0/fX tokens for a transparent pixel run."""
+    if length <= 0:
         return
 
-    # First token with first_bias
-    if rem > first_bias + 255:
-        # Multiple tokens needed
-        out += bytes((0xf0, 255))
-        rem -= 255 + first_bias
-        first = False
-    elif rem > first_bias:
-        out += bytes((0xf0, rem - first_bias))
-        rem = 0
-    elif rem > 0 and not first:
-        # Small run that doesn't fit the bias
-        out += bytes((0xf0, 0))  # minimum continuation run
-        rem -= cont_bias
-        # This shouldn't happen for small runs; handle gracefully
-        if rem < 0:
-            rem = 0
+    first_bias = 25 if is_first else 16
+    cont_bias = 16
 
-    # Continuation tokens
-    while rem > cont_bias + 255:
-        out += bytes((0xf0, 255))
-        rem -= 255 + cont_bias
+    # First token (only if is_first)
+    if is_first and length >= first_bias:
+        val = min(length - first_bias, 255)
+        out += bytes((0xf0, val))
+        length -= (val + first_bias)
+        return _encode_zero_run_cont(out, length, cont_bias)
+    
+    # All continuation tokens
+    _encode_zero_run_cont(out, length, cont_bias)
 
-    if rem > cont_bias:
-        out += bytes((0xf0, rem - cont_bias))
-        rem = 0
-    elif rem > 0:
-        # Bare short token fX covering X+2
-        if rem >= 3:
-            out.append(0xf0 | (rem - 2))
-        elif rem > 0:
-            # Very small remainder: use f0 00 (minimum continuation)
-            # and accept slight over-encoding (decoder should handle)
-            out += bytes((0xf0, 0))
+
+def _encode_zero_run_cont(out: bytearray, length: int, bias: int) -> None:
+    """Emit continuation zero run tokens (bias=16)."""
+    while length > 0:
+        if length >= bias:
+            val = min(length - bias, 255)
+            out += bytes((0xf0, val))
+            length -= (val + bias)
+        elif length >= 3:
+            # Bare short: fX where X = length - 2 (covers 3-17 pixels)
+            out.append(0xf0 | (length - 2))
+            length = 0
+        else:
+            # Very short (1-2 pixels): emit as individual zero literals
+            # to avoid ambiguity with f0 opcode
+            for _ in range(length):
+                out += bytes((0xe1, 0))  # Literal zero
+            length = 0
 
 
 def _atlas_dmp2(width: int, height: int, bgra: bytes, gray: bool) -> bytes:
@@ -516,7 +508,13 @@ def _atlas_dmp2(width: int, height: int, bgra: bytes, gray: bool) -> bytes:
     paletted = _atlas_palette(width, height, bgra)
     if paletted is not None:
         swatches, plane = paletted
-        # Use LZFSE compression for the index plane (no u32 length prefix)
+        # Try mini ISA encoder first (much more compact for atlas patterns)
+        mini_stream = _atlas_mini_isa(width, height, plane, len(swatches))
+        if mini_stream is not None:
+            return (b"dmp2" + bytes((4, 1, 10, 4))
+                    + struct.pack("<HHHH", width, height, len(swatches), 4)
+                    + b"".join(swatches) + mini_stream)
+        # Fallback: LZFSE compression for complex palettes
         stream = lzfse_compat.compress(plane)
         return (b"dmp2" + bytes((4, 1, 10, 4))
                 + struct.pack("<HHHH", width, height, len(swatches), 4)
