@@ -38,6 +38,17 @@ python -m unittest discover -s tests -v
 actool --version
 ```
 
+### Repository layout
+
+- `src/actool_linux/` — the clean-room implementation (CAR writer, CoreUI dialects, dmp2/mini encoders, packer, CLI).
+- `tests/` — offline unit tests (`python3 -m unittest discover -s tests`).
+- `tools/` — probe/diff/matrix tooling, mini-stream workbench (`tools/mini-workbench/`), evidence-manifest upkeep (`update_manifest.py`, `verify_handoff.py`).
+- `fixtures/`, `public-fixtures/` — reference CAR files, including public third-party fixtures.
+- `research/` — recorded evidence: probe JSON outputs, oracle scans, runtime screenshots, corrupt-CAR diagnostics.
+- `docs/` — dated session memos and historical handoff notes.
+
+Continuous integration (`.github/workflows/ci.yml`) runs the unit tests on Python 3.11/3.13 plus the evidence-manifest and CLI smoke verification on every push. An optional, dispatch-only `oracle` job on `macos-latest` re-runs the Apple-`actool` comparison matrix and uploads the diff report.
+
 ## Oracle run (authorized Mac)
 
 ```sh

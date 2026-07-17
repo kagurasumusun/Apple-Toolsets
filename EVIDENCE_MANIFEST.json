@@ -13,33 +13,23 @@
     },
     {
       "path": "ENGINEERING_LOG.md",
-      "sha256": "639b1e5eef695ea0e3663994432ddc1f9d31e1aa4684678acbae73d461462c8c",
-      "size": 48545
+      "sha256": "91cf0ebd0f2548089f4c57ff72f3ff4d9fac10f411d3459b582ccb3cad299d17",
+      "size": 98357
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "e6cdbb14b35fa0bd7d95c4d9147af2bea93a87cd14e637824329bd47c35f1e44",
-      "size": 16478
+      "sha256": "190ef3a0b36e04acc879625eedef4deef1ac28a84e89e7007f9dff9e4a1be949",
+      "size": 25527
     },
     {
       "path": "PROJECT_STATE.json",
-      "sha256": "e83b0de6790f74d3a6f28b0ff490faa2779f5d871f968ec0fcd0f1be77304486",
-      "size": 8683
+      "sha256": "56fbe2acf7bb02f0c5d95ce152d9b254c3105b90a86b101532b9d02d2d316ad6",
+      "size": 24651
     },
     {
       "path": "README.md",
-      "sha256": "f5a270ffc3effc02fe817af8823ac7fca86d2de63961a0651258882797da3ab8",
-      "size": 8396
-    },
-    {
-      "path": "SESSION_HANDOFF_COMPLETE.md",
-      "sha256": "70a2051e599c8112075d86d34ebaed0a0172bcf2489ce43f448cf41f291ce439",
-      "size": 15116
-    },
-    {
-      "path": "USED_SCRIPTS.md",
-      "sha256": "072bf90a8d9b1d230f8989e430045427c6f69d922fa0ba0b08d65a09043a1f44",
-      "size": 3226
+      "sha256": "56e9ea9fcf1ef094931559dbb2abe86e2923ffec6f57487d7e9e5d960d16f096",
+      "size": 10009
     },
     {
       "path": "VERIFICATION.md",
@@ -47,94 +37,14 @@
       "size": 8279
     },
     {
-      "path": "apple-corrupt-output.car",
-      "sha256": "e17b2c4f0951b2d0706f8e67660b93f1e6a4e956de9b443b3d2154b3978567f8",
-      "size": 25967
+      "path": "docs/SESSION_HANDOFF_COMPLETE.md",
+      "sha256": "42c03706b6ab6aa569763fb2ed66b7732cd075bab930b033b8f7255488ebb843",
+      "size": 15521
     },
     {
-      "path": "cbck-threshold-26.5-ios.json",
-      "sha256": "ec3f66729a66979b35b09f75ba13e29397ae12bede2c491c4d4baa71431e8561",
-      "size": 11223
-    },
-    {
-      "path": "cbck-threshold-all-unique.json",
-      "sha256": "3e27eeb5e69e0e64bfe5bb0e77c008743a976718c12c3e2590f4d28ff83d5e94",
-      "size": 72078
-    },
-    {
-      "path": "compositor-oracle.json",
-      "sha256": "3b2df22f10268cc94735da18b1931a057bbf72e1776b1d902e61b9e8c93b71b2",
-      "size": 1753
-    },
-    {
-      "path": "corrupt-diagnostic.json",
-      "sha256": "4aa92bb50b19644d7ecce9a405135d03db079d3aab704b5a1460a896523770be",
-      "size": 13235
-    },
-    {
-      "path": "diagnostic-probe-xcode26.5.json",
-      "sha256": "da48591191724d1e7cae7df40632662eeede220ae323dcaa3a30619db7c91352",
-      "size": 21101
-    },
-    {
-      "path": "diagnostic-schema3.json",
-      "sha256": "2ec625626d3e12e8788abdf7b20bdb16576babd90dacc81b6f6f76d1392d331a",
-      "size": 32135
-    },
-    {
-      "path": "image-stack-info.json",
-      "sha256": "dd3ab8e15cd1a153f8ad4ff0187ed271aa7a6d6d67d31ca984c291c5607d4daa",
-      "size": 1822
-    },
-    {
-      "path": "invalid-color-info.json",
-      "sha256": "b803506f4bcb08d87d24d17f2e252ae3b479383089e0dc52fb54b88b3a30c723",
-      "size": 1153
-    },
-    {
-      "path": "layer-stack-fixtures.json",
-      "sha256": "9571ef485a878983a290e626f5eb2d5972ba3f5e328a2c8beba6e2cbf15b3ec7",
-      "size": 117537
-    },
-    {
-      "path": "missing-color-info.json",
-      "sha256": "cd1c9eccdc16925e4cdf82e0c89e40e18c1ae811bb89684632d71b4a912cfc1b",
-      "size": 1153
-    },
-    {
-      "path": "multi-entry-info.json",
-      "sha256": "3a4e95b8813b774d8d808c1ab2fb1997897cb84fc9e03a7dc0aa1fda068d51f0",
-      "size": 2362
-    },
-    {
-      "path": "multipage-info.json",
-      "sha256": "e4079968d4ff61082e45cb40cec0107ea8d90541c1c26bd76ff4b1babca4e3ec",
-      "size": 3082
-    },
-    {
-      "path": "option-cross-26.5.json",
-      "sha256": "1f9378da7cc138fd2afd0cdca0550327cd4efa47a992977c77a4e18a591a3c7f",
-      "size": 177929
-    },
-    {
-      "path": "option-cross-all-unique.json",
-      "sha256": "640ce83a80f328b022432e6940540c5921bc55ef518087b551026d27b410acb9",
-      "size": 1245888
-    },
-    {
-      "path": "option-cross-local.json",
-      "sha256": "ab896a56602bd50485c6fe644bb0c075758c4af4f79924bbb06dcb1018a9eb8c",
-      "size": 170357
-    },
-    {
-      "path": "palette-fixture-apps.json",
-      "sha256": "e1234a1e76f904de5be139e70bef3a6486f103c921817dc3dccef9ac6707e74f",
-      "size": 58905
-    },
-    {
-      "path": "palette-fixture-scan.json",
-      "sha256": "90f5ed76505fe682961e9acaa693afb9a73a45657e25b96e1d7c4fc8679941f3",
-      "size": 49897
+      "path": "docs/USED_SCRIPTS.md",
+      "sha256": "072bf90a8d9b1d230f8989e430045427c6f69d922fa0ba0b08d65a09043a1f44",
+      "size": 3226
     },
     {
       "path": "pyproject.toml",
@@ -142,74 +52,174 @@
       "size": 793
     },
     {
-      "path": "runtime-264.json",
+      "path": "research/apple-corrupt-output.car",
+      "sha256": "e17b2c4f0951b2d0706f8e67660b93f1e6a4e956de9b443b3d2154b3978567f8",
+      "size": 25967
+    },
+    {
+      "path": "research/cbck-threshold-26.5-ios.json",
+      "sha256": "ec3f66729a66979b35b09f75ba13e29397ae12bede2c491c4d4baa71431e8561",
+      "size": 11223
+    },
+    {
+      "path": "research/cbck-threshold-all-unique.json",
+      "sha256": "3e27eeb5e69e0e64bfe5bb0e77c008743a976718c12c3e2590f4d28ff83d5e94",
+      "size": 72078
+    },
+    {
+      "path": "research/compositor-oracle.json",
+      "sha256": "3b2df22f10268cc94735da18b1931a057bbf72e1776b1d902e61b9e8c93b71b2",
+      "size": 1753
+    },
+    {
+      "path": "research/corrupt-diagnostic.json",
+      "sha256": "4aa92bb50b19644d7ecce9a405135d03db079d3aab704b5a1460a896523770be",
+      "size": 13235
+    },
+    {
+      "path": "research/diagnostic-probe-xcode26.5.json",
+      "sha256": "da48591191724d1e7cae7df40632662eeede220ae323dcaa3a30619db7c91352",
+      "size": 21101
+    },
+    {
+      "path": "research/diagnostic-schema3.json",
+      "sha256": "2ec625626d3e12e8788abdf7b20bdb16576babd90dacc81b6f6f76d1392d331a",
+      "size": 32135
+    },
+    {
+      "path": "research/image-stack-info.json",
+      "sha256": "dd3ab8e15cd1a153f8ad4ff0187ed271aa7a6d6d67d31ca984c291c5607d4daa",
+      "size": 1822
+    },
+    {
+      "path": "research/invalid-color-info.json",
+      "sha256": "b803506f4bcb08d87d24d17f2e252ae3b479383089e0dc52fb54b88b3a30c723",
+      "size": 1153
+    },
+    {
+      "path": "research/layer-stack-fixtures.json",
+      "sha256": "9571ef485a878983a290e626f5eb2d5972ba3f5e328a2c8beba6e2cbf15b3ec7",
+      "size": 117537
+    },
+    {
+      "path": "research/missing-color-info.json",
+      "sha256": "cd1c9eccdc16925e4cdf82e0c89e40e18c1ae811bb89684632d71b4a912cfc1b",
+      "size": 1153
+    },
+    {
+      "path": "research/multi-entry-info.json",
+      "sha256": "3a4e95b8813b774d8d808c1ab2fb1997897cb84fc9e03a7dc0aa1fda068d51f0",
+      "size": 2362
+    },
+    {
+      "path": "research/multipage-info.json",
+      "sha256": "e4079968d4ff61082e45cb40cec0107ea8d90541c1c26bd76ff4b1babca4e3ec",
+      "size": 3082
+    },
+    {
+      "path": "research/option-cross-26.5.json",
+      "sha256": "1f9378da7cc138fd2afd0cdca0550327cd4efa47a992977c77a4e18a591a3c7f",
+      "size": 177929
+    },
+    {
+      "path": "research/option-cross-all-unique.json",
+      "sha256": "640ce83a80f328b022432e6940540c5921bc55ef518087b551026d27b410acb9",
+      "size": 1245888
+    },
+    {
+      "path": "research/option-cross-local.json",
+      "sha256": "ab896a56602bd50485c6fe644bb0c075758c4af4f79924bbb06dcb1018a9eb8c",
+      "size": 170357
+    },
+    {
+      "path": "research/palette-fixture-apps.json",
+      "sha256": "e1234a1e76f904de5be139e70bef3a6486f103c921817dc3dccef9ac6707e74f",
+      "size": 58905
+    },
+    {
+      "path": "research/palette-fixture-scan.json",
+      "sha256": "90f5ed76505fe682961e9acaa693afb9a73a45657e25b96e1d7c4fc8679941f3",
+      "size": 49897
+    },
+    {
+      "path": "research/runtime-264.json",
       "sha256": "6ef73948518a630901a4ae62004d420a6dfae15b57b57c71c3d06ae63b686d27",
       "size": 9210
     },
     {
-      "path": "runtime-consumer-matrix-verified.json",
+      "path": "research/runtime-consumer-matrix-verified.json",
       "sha256": "c30614b02e132f50c31d876d148502e9db1dfa3560fd9aacb59c74c4fa732d99",
       "size": 61104
     },
     {
-      "path": "runtime-consumer-matrix.json",
+      "path": "research/runtime-consumer-matrix.json",
       "sha256": "c4161f170c9e623f7e72f9c073317f3160c0b737e092b5ed07eed7b2f702bd5d",
       "size": 59264
     },
     {
-      "path": "runtime-edge.json",
+      "path": "research/runtime-edge.json",
       "sha256": "42ae195faa405ccb31c5bd779dec0d56d5c082ba7cdd3c454b8a4191b72ec274",
       "size": 20052
     },
     {
-      "path": "runtime-fixed.json",
+      "path": "research/runtime-fixed.json",
       "sha256": "8b68a85e5de75ce448a622e03475f4bc74a8912bc3df44c93ada7c28a9cd8d7d",
       "size": 23421
     },
     {
-      "path": "runtime-screenshots-verified/visionOS-26.2.png",
+      "path": "research/runtime-screenshots-verified/visionOS-26.2.png",
       "sha256": "5ae4d9e1b4c139e51766694b41f78aa5fbc044da4cb6d837182564fea1b1b643",
       "size": 6004314
     },
     {
-      "path": "runtime-screenshots-verified/visionOS-26.4.png",
+      "path": "research/runtime-screenshots-verified/visionOS-26.4.png",
       "sha256": "5ae4d9e1b4c139e51766694b41f78aa5fbc044da4cb6d837182564fea1b1b643",
       "size": 6004314
     },
     {
-      "path": "runtime-screenshots-verified/visionOS-26.5.png",
+      "path": "research/runtime-screenshots-verified/visionOS-26.5.png",
       "sha256": "5ae4d9e1b4c139e51766694b41f78aa5fbc044da4cb6d837182564fea1b1b643",
       "size": 6004314
     },
     {
-      "path": "runtime-screenshots-verified/watchOS-26.2.png",
+      "path": "research/runtime-screenshots-verified/watchOS-26.2.png",
       "sha256": "db69f8e5fefd95d7bd1eea486fed35f4ed393e410fcf3000a69ce0ce5767dc3b",
       "size": 7863
     },
     {
-      "path": "runtime-screenshots-verified/watchOS-26.4.png",
+      "path": "research/runtime-screenshots-verified/watchOS-26.4.png",
       "sha256": "b16fd102ff4c05d14a26d7d06eda635bcad675d637f8ad4362bd45947f655879",
       "size": 7375
     },
     {
-      "path": "runtime-screenshots-verified/watchOS-26.5.png",
+      "path": "research/runtime-screenshots-verified/watchOS-26.5.png",
       "sha256": "e71a83de2cfe2e4170b6e8a743d8d0ee8549eea52f2d99b4f3ee8631baa5e1cd",
       "size": 7060
     },
     {
-      "path": "runtime-tv262.json",
+      "path": "research/runtime-tv262.json",
       "sha256": "4fe20f8eaadff3ff13d7f51b94aa613145eb8d73ecaa5e00370aa4ec7c73a50a",
       "size": 4652
     },
     {
-      "path": "runtime-watch2.json",
+      "path": "research/runtime-watch2.json",
       "sha256": "b673620b0e64f750c3310c206114f5fa23db5aa45f608cfd635e7e4017b14065",
       "size": 14646
     },
     {
-      "path": "simulator-runtime-inventory.json",
+      "path": "research/simulator-runtime-inventory.json",
       "sha256": "4869f472bf1cbd89ff6534bbf3f1a99b0937808b7466d5a279afe2fb1c4bbd9f",
       "size": 974
+    },
+    {
+      "path": "research/xcode-actool-version-matrix.json",
+      "sha256": "ad475c6b2fac21123a9cb5904ad9dfe99573ffce7bb13d30f1631a4ed0789dab",
+      "size": 4978
+    },
+    {
+      "path": "research/xcode-version-extended.json",
+      "sha256": "794fd8eea6837eb519e4f1c3348028f84a1e04e6f28279b6999b0bc6b24a5f5f",
+      "size": 13601
     },
     {
       "path": "src/actool_linux/__init__.py",
@@ -218,13 +228,13 @@
     },
     {
       "path": "src/actool_linux/appicons.py",
-      "sha256": "9fc789b02a46ae1bdf22ade487200ecd99b95402e8128ac0f7e8be22fcf43b1f",
-      "size": 1642
+      "sha256": "7948bbf3b3deafe66fd19c2a5e085f20add1df55e5724782e1f25408054d230b",
+      "size": 4561
     },
     {
       "path": "src/actool_linux/atlas.py",
-      "sha256": "59465b8c9656cb53fedf665bb2fb58ccfaf73d5c05ce8ce21ae583b6726383b4",
-      "size": 6290
+      "sha256": "9a351b322bdd766e1234c0a9ed85c1642ca9f401a7f2695d623cec9941245c6c",
+      "size": 17205
     },
     {
       "path": "src/actool_linux/bom.py",
@@ -238,38 +248,38 @@
     },
     {
       "path": "src/actool_linux/capabilities.py",
-      "sha256": "2782ebdb38c07a46396a27449d654a7e9856051376f6e5d92f7dc055c0bb1128",
-      "size": 2552
+      "sha256": "6f8b2b8a52f4a3f0521ec7d4c628b0ff6dcd7d6cfe55b256259bc9e7e911ffa2",
+      "size": 2966
     },
     {
       "path": "src/actool_linux/car.py",
-      "sha256": "1710d47a1774c833ae5ddbc285d42f429bbf60bc10b69ef48bb7d2218d589575",
-      "size": 7086
+      "sha256": "b6c8844bb102e28e88abd127b010976f6a5aa0b77571bf794afa1de503b20f78",
+      "size": 8059
     },
     {
       "path": "src/actool_linux/carinfo.py",
-      "sha256": "f28fc7444057168da82d405fc82df11ece419d99bc9fde7f4241435755132d89",
-      "size": 3044
+      "sha256": "25903633dc981ab55cb72306ee106dd39c13c62f8d966753504621de979cd78c",
+      "size": 11615
     },
     {
       "path": "src/actool_linux/carwriter.py",
-      "sha256": "b6a370133db43e61dcf91f99e647d07bf8a75cafae55e18bc0d84183bf3eeb7e",
-      "size": 58082
+      "sha256": "8c7f728493788ae589bfd14f11e7150eaf7db7df6baa29faf777afa93b3e4561",
+      "size": 91968
     },
     {
       "path": "src/actool_linux/cbck.py",
-      "sha256": "87d1c4c515a4a4e22bd26eaa876ece72fac8e67feca818fbdf43afa5d6fd4623",
-      "size": 2360
+      "sha256": "dfbc0546ccc2b87195ac8c80e6842e76c505256c5d9bc010fa0dc9567efd3229",
+      "size": 2232
     },
     {
       "path": "src/actool_linux/cli.py",
-      "sha256": "27fba188a9c434f49c840df1032488ffea88d7da7010a4d71daef37b214b74e8",
-      "size": 7557
+      "sha256": "a46bb5c35e7221e676e8887cc74d032eb3c59ff3d6ec86daaefb024a825aa77d",
+      "size": 7778
     },
     {
       "path": "src/actool_linux/compiler.py",
-      "sha256": "faaee900798e9dcb45cb3aa3ab181f21121ed11d2c9bf5834f5ae75419bda35e",
-      "size": 21112
+      "sha256": "6a4b57b8804b476ecc290f1d8b228a4d2d79b687c9d3cf5098a096e5d831004c",
+      "size": 39468
     },
     {
       "path": "src/actool_linux/csi.py",
@@ -278,13 +288,13 @@
     },
     {
       "path": "src/actool_linux/diagnostics.py",
-      "sha256": "01667f6f949588f48c1bef530465adcc736bedb2c2022869b7df8a381d533040",
-      "size": 3477
+      "sha256": "6d4327fa83abc883bfeb43925a8b680bac8039ed23857ede1d6833786221b420",
+      "size": 3650
     },
     {
       "path": "src/actool_linux/model.py",
-      "sha256": "dfb85f7930a0e35922425fa332ddb632bea027a6a43e370d87dff1346d52103d",
-      "size": 3362
+      "sha256": "a86535478b91894347d5ad8390c3910103828e008ef61b0d7aa27ad31b5f321f",
+      "size": 3604
     },
     {
       "path": "src/actool_linux/pdfcar.py",
@@ -298,8 +308,8 @@
     },
     {
       "path": "src/actool_linux/thinning.py",
-      "sha256": "2b09dc208260ba79ed5b12bacb51cf261cdda546318bb569f428127296f019a0",
-      "size": 3174
+      "sha256": "9f094da4b350a4b69f34b511b9d1d5ddc3211733f73c40e0d8c6634dd9952dec",
+      "size": 3347
     },
     {
       "path": "src/actool_linux/tree.py",
@@ -308,13 +318,13 @@
     },
     {
       "path": "tests/test_appicons.py",
-      "sha256": "589d80628e71f298ac0cc9e8da15663ef7c1a3adc571657908ed98d12dcf1a03",
-      "size": 722
+      "sha256": "47341f8f687181158e31ab5c8b64e270c6f6f3d0a066510f28c397d705f83f2c",
+      "size": 1419
     },
     {
       "path": "tests/test_atlas.py",
-      "sha256": "31966cc5052213464fbba0469fe86eba2b74e16beb713d2146be7db6f517e80e",
-      "size": 2545
+      "sha256": "fc7628263cf8191c260344ec0839bbb3cd7a2bd792795226287c643eeca8ca9b",
+      "size": 4532
     },
     {
       "path": "tests/test_bom.py",
@@ -333,13 +343,13 @@
     },
     {
       "path": "tests/test_carwriter.py",
-      "sha256": "d5d80a6938776c5a179376e469f73e75177b1a224baf62c76e4bd66bb617261b",
-      "size": 18677
+      "sha256": "13c5fcb22e1516fcd63c8b06de68055c8a46d1edc9779a14abee999ac9ee7914",
+      "size": 21255
     },
     {
       "path": "tests/test_catalog.py",
-      "sha256": "10db06c838654bf55bbb89a79f52deff7e2a7c471410ce68f5f0043fb88cb117",
-      "size": 12599
+      "sha256": "bd75a10e4ad9533e17e0012050c52a3f9b823329f82101a299b164b5284b95d8",
+      "size": 23365
     },
     {
       "path": "tests/test_cbck.py",
@@ -358,8 +368,8 @@
     },
     {
       "path": "tests/test_diagnostic_contracts.py",
-      "sha256": "312c2ce7d8d5236c65fdf38ca44ef93374e9cb908561a7154085b00fa00595c6",
-      "size": 5353
+      "sha256": "d7c3e49c63a0d43c8526f30accb967965ed246040c043fdc468605b5f32886e0",
+      "size": 5793
     },
     {
       "path": "tests/test_diagnostics.py",
@@ -493,8 +503,8 @@
     },
     {
       "path": "tools/verify_handoff.py",
-      "sha256": "a0b7ff190a43ceeee2050deee21ad3bd3ed124b9cd0c8e2dcae6bc9c2d718e4d",
-      "size": 1440
+      "sha256": "8fc129b60c3f815dcbf7cef1887498323285e4b9b04aa700a84c4177e7cef80b",
+      "size": 1463
     },
     {
       "path": "tools/xcode_matrix.py",
@@ -505,16 +515,6 @@
       "path": "tools/xcode_version_probe.py",
       "sha256": "edb2e8d9a0b91eba7a125f6e5f904cfba9f19becc07eb7e5d7639599226ba31b",
       "size": 928
-    },
-    {
-      "path": "xcode-actool-version-matrix.json",
-      "sha256": "ad475c6b2fac21123a9cb5904ad9dfe99573ffce7bb13d30f1631a4ed0789dab",
-      "size": 4978
-    },
-    {
-      "path": "xcode-version-extended.json",
-      "sha256": "794fd8eea6837eb519e4f1c3348028f84a1e04e6f28279b6999b0bc6b24a5f5f",
-      "size": 13601
     }
   ],
   "generated_date": "2026-07-13",

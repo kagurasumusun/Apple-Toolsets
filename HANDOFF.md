@@ -1,10 +1,18 @@
 # actool-linux Engineering Handoff
 
-> Canonical full handoff: `SESSION_HANDOFF_COMPLETE.md`. Machine-verifiable hashes: `EVIDENCE_MANIFEST.json`; run `python3 tools/verify_handoff.py`.
+> Canonical full handoff: `docs/SESSION_HANDOFF_COMPLETE.md`. Machine-verifiable hashes: `EVIDENCE_MANIFEST.json`; run `python3 tools/verify_handoff.py`.
 
-Last updated: 2026-07-16 (Etc/GMT-9)
+Last updated: 2026-07-17 (Etc/GMT-9)
 
-## Latest status (2026-07-16)
+## Latest status (2026-07-17)
+
+- **Repository reorganization.** Root now holds only project docs/state (`README.md`, `HANDOFF.md`, `ENGINEERING_LOG.md`, `MINI_ISA_NOTES.md`, `VERIFICATION.md`, `PROJECT_STATE.json`, `EVIDENCE_MANIFEST.json`). Loose probe artifacts moved to `research/` (JSON scans/dumps, runtime screenshots, corrupt-CAR evidence), one-off analysis scripts to `tools/`, dated session memos to `docs/`. `EVIDENCE_MANIFEST.json` remapped + rehashed; `python3 tools/verify_handoff.py` passes (102 entries).
+- **GitHub Actions CI (`.github/workflows/ci.yml`).** Replaces the two stale manual upterm debug workflows (`main.yml`, `macos14.yml`).
+  - `unit-tests`: ubuntu-latest × Python 3.11/3.13, `pip install -e '.[all]'` (lzfse C extension + cairosvg), `python -m unittest discover -s tests -v` — locally verified 172 tests, 0 skips with deps installed.
+  - `verify`: `tools/verify_handoff.py` + clean-room compile of the generated probe suite (`make_probe_suite.py` → `run_ours_matrix.py`) + every generated CAR and every fixture CAR must parse through `actool_linux.carinfo` — locally verified.
+  - `oracle-matrix` (dispatch-only, macos-latest): compiles the probe suite with real `xcrun actool` and with actool-linux, diffs via `tools/diff_cars.py`, uploads an `oracle-report` artifact. Tracking job: reports mismatch counts, does not fail the build (hosted-runner Xcode version may differ from the probed 26.5 baseline).
+
+## Status (2026-07-16)
 
 - Workspace moves: local repo is `/home/user/mac-repo` (branch `actool`), remote repo `/Users/runner/work/mac/mac`. 145 local tests OK (11 optional skips without lzfse).
 - Xcode-26.5/CoreUI-975 dialect measured from Apple oracles: `CoreUI-975 [LAR]` + `AssetCatalogAgent-AssetRuntime` on macosx, `CoreUI-975` + `AssetCatalogSimulatorAgent` + tail `(0,2,1,2)` on iphoneos/appletvos; header stamps + KEYFORMAT tuples + MLEC/dmp2/TLV ids centralized in `src/actool_linux/coreui.py` (`CoreUIProfile`, selectable via `--coreui-profile`; legacy `coreui-918` profile = Xcode 16.4).
