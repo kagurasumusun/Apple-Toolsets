@@ -1400,3 +1400,13 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
   4. `test_1000_multivariate_thinning_and_complex_catalog_bounds_sweep`: 200 combinatorial checks across complex multi-platform/multi-scale (`watch, tv, xros, mac, ios`) catalog thinning boundaries.
 - **Record Test Suite Coverage**: Automated test suite reached **204 OK (`tests/`)**, evaluating over 5,200 total dynamic boundary and historical generation conditions per run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
 
+## 2026-07-18 — Round 7: 1000-Case CoreUI Tart/Lume Virtual Runtime & Legacy Eras Sweep
+
+### CoreUI Legacy Eras & Virtual Runtime Parity (`test_special_1000_coreui_tart_and_legacy_parity_sweep.py`)
+- **Implemented**: Created `Special1000CoreUITartAndLegacyParitySweepTests` executing over 1,000 deep assertions across `tart`/`lume` virtual runtime simulation layers, `CoreUI-498` (`IBCocoaTouchImageCatalogTool-10.0`) real-world corpus alignment (`timac-demo-assets.car`), and multivariate thinning:
+  1. `test_1000_coreui_tart_virtual_runtime_header_and_storage_sweep`: 300 automated checks across simulated virtual runtime eras guaranteeing exact storage v15..v17 alignment and `auto_select_profile` resolution.
+  2. `test_1000_coreui_legacy_palette_img_plte_chunk_and_layout_sweep`: 250 checks across legacy `palette-img` (`PLTE` chunk) generation under strict CoreUI-498/700 constraints, verifying that legacy parsers decode indexed images without layout or boundary errors.
+  3. `test_1000_ultralong_multibyte_and_emoji_path_overflow_sweep`: 250 checks evaluating deep polynomial hash stability across 250-byte CJK and emoji boundaries.
+  4. `test_1000_multivariate_thinning_combinatorial_scale_and_subtype_sweep`: 200 combinatorial evaluations across multivariate thinning and repack boundaries.
+- **Record Test Suite Coverage**: Total unit tests reached **208 OK (`tests/`)**, evaluating over 6,200 total combinatorial assertions and CoreUI historical profiles per run across both local Linux and remote macOS 26.4 / Xcode 26.5 runners.
+
