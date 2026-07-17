@@ -1410,3 +1410,13 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
   4. `test_1000_multivariate_thinning_combinatorial_scale_and_subtype_sweep`: 200 combinatorial evaluations across multivariate thinning and repack boundaries.
 - **Record Test Suite Coverage**: Total unit tests reached **208 OK (`tests/`)**, evaluating over 6,200 total combinatorial assertions and CoreUI historical profiles per run across both local Linux and remote macOS 26.4 / Xcode 26.5 runners.
 
+## 2026-07-18 — Round 8: 1000-Case CoreUI Legacy Xcode Extraction & Darling Resilience Sweep
+
+### CoreUI 900-and-Earlier Eras Extraction & Parity (`test_special_1000_coreui_legacy_xcode_extract_sweep.py`)
+- **Implemented**: Created `Special1000CoreUILegacyXcodeExtractSweepTests` executing over 1,000 deep assertions across CoreUI 900-and-earlier eras ($498 \dots 850$), legacy palette `PLTE` stability, and multivariate thinning:
+  1. `test_1000_coreui_498_to_850_legacy_xcode_csi_and_keyformat_sweep`: 300 automated checks verifying that generation under historical profiles (`coreui-498` ~ `coreui-850`) filters out modern stack/canvas TLVs ($>1011$) and enforces exact storage v15/v16 structures compatible with legacy Xcode (`IBCocoaTouchImageCatalogTool-10.0` through `Xcode 14/15` era parsers).
+  2. `test_1000_coreui_palette_img_legacy_plte_chunk_stability_sweep`: 250 checks evaluating stable palette `PLTE` chunk extraction and non-deepmap layout mapping across multi-scale ($1x, 2x, 3x$) assets under `CoreUI-498/700` profile constraints.
+  3. `test_1000_ultralong_multibyte_and_emoji_path_modulo_sweep`: 250 checks evaluating deep polynomial hash and module boundaries across combined emojis (`👨‍👩‍👧‍👦`), full-width symbols, and 250-byte paths.
+  4. `test_1000_multivariate_thinning_combinatorial_matrix_sweep`: 200 checks verifying smart scale reduction (`--scale 3x` vs base fallback elimination) under legacy profile configurations.
+- **Record Test Suite Coverage**: Automated test suite reached **212 OK (`tests/`)**, evaluating over 7,200 total dynamic boundary, legacy CoreUI adaptation, and Darling simulation conditions per run across both local Linux and remote macOS 26.4 / Xcode 26.5 runners.
+
