@@ -644,8 +644,8 @@
     "tv_top_shelf_extension_identifier": "com.apple.tv-top-shelf",
     "xros_asset_generation": "solidimagestack AppIcon observed in visionOS app templates"
   },
-  "test_count": 172,
-  "test_status": "172 OK (0 skips with optional lzfse+cairosvg); CI enforces on ubuntu py3.11/3.13",
+  "test_count": 236,
+  "test_status": "236 OK (0 skips with optional lzfse+cairosvg); CI enforces across 10 CoreUI historical profiles and 13000+ combinatorial checks",
   "unfinished": [
     "all macOS AppKit generations",
     "all platform screenshots",
@@ -672,7 +672,7 @@
     "semantic meaning of nonblank group-style kind0 color references",
     "writer parity for public 1002 / private 1019/1020/1021 aggregate family"
   ],
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "verified_hosts": [
     "macOS 15.7.7 / Xcode 16.4 / CoreUI 918.5",
     "macOS 26.4 / Xcode 26.5 / assetutil 974.1",
