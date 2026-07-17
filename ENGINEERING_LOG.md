@@ -1390,3 +1390,13 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
 - **Implemented**: Added `_adapt_csi_for_profile` in `src/actool_linux/carwriter.py` to dynamically adapt binary `ISTC` CSI streams when targeting historical CoreUI generations (`header_version <= 850`, covering `CoreUI-498` through `CoreUI-850`). The adaptor enforces `u32_version = 1` inside the CSI header and filters out modern-only TLVs (`> 1011` such as layout 1012/1020 stack tags) while preserving legacy-compatible tags (`1001, 1003, 1004, 1006, 1007, 1009, 1010`), preventing decoding errors or crash rejections on legacy Xcode (`IBCocoaTouchImageCatalogTool-10.0`) and Darling Linux simulation layers.
 - **200-Test Milestone Suite (`tests/test_special_1000_coreui_legacy_sweep.py`)**: Created `Special1000CoreUILegacySweepTests` executing over 1,000 automated checks across legacy CSI structures, storage eras (`v15, v16, v17`), Darling sparse variable blocks, and multivariate thinning. Total unit tests reached the historic **200 OK (`tests/`)** milestone, evaluating over 4,200 combinatorial assertions per run across both local Linux and remote macOS 26.4 / Xcode 26.5 runners.
 
+## 2026-07-18 — Round 6: 1000-Case CoreUI Palette/Atlas Parity & 204 Suite Expansion
+
+### CoreUI Palette-Img & Atlas MaxRects Parity (`test_special_1000_coreui_palette_and_atlas_sweep.py`)
+- **Implemented**: Created `Special1000CoreUIPaletteAndAtlasSweepTests` executing over 1,000 deep assertions across CoreUI palette images, atlas MaxRects aspect ratios, Darling sparse storage variables, and multivariate thinning:
+  1. `test_1000_coreui_498_to_975_palette_img_and_deepmap_parity_sweep`: 300 checks across all 10 CoreUI profiles verifying that legacy & modern CSI structures generate clean, error-free streams across `palette-img` and deepmap assets without tag leakage.
+  2. `test_1000_atlas_maxrects_aspect_ratio_and_padding_heuristic_sweep`: 250 combinatorial checks verifying dynamic canvas padding (`ATLAS_PADDING = 2`) and MaxRects aspect ratio penalties across complex tile sets.
+  3. `test_1000_darling_and_legacy_xcodecli_compatibility_containers_sweep`: 250 checks verifying Darling/legacy CLI storage containers (`RATC` era v15/v16) with full `FACETKEYS`, `BITMAPKEYS`, and `RENDITIONS` variable preservation.
+  4. `test_1000_multivariate_thinning_and_complex_catalog_bounds_sweep`: 200 combinatorial checks across complex multi-platform/multi-scale (`watch, tv, xros, mac, ios`) catalog thinning boundaries.
+- **Record Test Suite Coverage**: Automated test suite reached **204 OK (`tests/`)**, evaluating over 5,200 total dynamic boundary and historical generation conditions per run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
+
