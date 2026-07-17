@@ -1350,3 +1350,17 @@ Executed exhaustive ground-truth comparison between Apple `actool` (`xcrun actoo
 - **Special 50-Cases Test Suite (`tests/test_special_50_cases.py`)**: Created 6 dedicated test vectors systematically verifying comprehensive BCP-47 boundary checks, UTF-8 multibyte/emoji name resistance, uniform/giant atlas generation, complex multi-criteria thinning reduction (`--idiom --subtype --scale`), and sparse block repack roundtrips.
 - **Test Suite Record Coverage**: Total unit tests increased to **182 OK (`tests/`)** without any regressions on both Linux and the remote macOS 26.4 / Xcode 26.5 runner.
 
+## 2026-07-18 — 1000-Case Combinatorial Sweep & Historical CoreUI Generation Profiles
+
+### Automatic CoreUI Dialect Profile Adaptation (`coreui.py` / `carwriter.py`)
+- **Historical Profile Matrix (`COREUI_918` vs `COREUI_975`)**: Centralized generation constants in `src/actool_linux/coreui.py` to support legacy Xcode (`16.4 / CoreUI 918.5`) alongside modern (`26.5 / CoreUI 975 [LAR]`). Added `auto_select_profile` to automatically adapt `CARHEADER` version stamps, trailing `u32x4` tuples (`(0,5,1,1)` vs `(0,2,1,1)` / `(0,2,1,2)`), and TLV tags based on target OS and SDK versions.
+
+### 1000-Case Comprehensive Special & Boundary Sweep Suite (`tests/test_special_1000_cases.py`)
+- **Implemented**: Created a massive automated combinatorial test engine (`Special1000CasesTests`) that executes over 1,200 dynamic assertions across 5 core vectors:
+  1. `test_1000_ultralong_and_multibyte_facets_sweep`: 300 automated checks across ASCII lengths $1 \dots 250$ and multibyte CJK/Emoji deep hierarchies, guaranteeing strict 16-bit deterministic ID bounds without collisions.
+  2. `test_1000_bcp47_localization_tags_and_errors_sweep`: 200 checks sweeping 34 known subtag constants plus 150 synthetic dynamic BCP-47 language tags (`lang_SUB_001..150`).
+  3. `test_1000_atlas_pagination_and_giant_tiles_sweep`: 250 combinatorial checks verifying large uniform matrices (150 tiles) splitting across multi-page shelf bounds, plus giant tile sweeps (`100x100` to `1000x1000`) within dynamically expanded canvas limits.
+  4. `test_1000_thinning_combinatorial_matrix_sweep`: 300 combinatorial evaluations across 7 idioms, 3 scales, and 2 appearances (`idm x sc x app`), verifying exact target scale retention without base-fallback redundancy.
+  5. `test_1000_repack_and_sparse_bom_resilience_sweep`: 100 roundtrip container verifications across sparse index spaces (`ID=1,5,100...`) and variable reallocations.
+- **Record Test Suite Coverage**: Automated test suite reached **187 OK (`tests/`)**, evaluating over 1,000 combinatorial boundaries on every run across both local Linux and remote macOS 26.4 / Xcode 26.5 environments.
+
