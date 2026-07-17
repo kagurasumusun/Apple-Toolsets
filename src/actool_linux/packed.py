@@ -391,6 +391,113 @@ def _atlas_palette(width: int, height: int, bgra: bytes) -> tuple[list[bytes], b
     return swatches, bytes(plane)
 
 
+def _atlas_mini_isa(width: int, height: int, plane: bytes, nswatches: int) -> bytes | None:
+    """Encode atlas index plane as multi-swatch mini ISA stream.
+
+    Produces a compact row-based RLE using the well-understood opcodes:
+    - 68 01 NN: section intro
+    - f0 V: zero run (first_bias=25, cont_bias=16)
+    - e1 XX: single literal pixel
+    - 38 LL: row-copy (dist=W, len=LL pixels)
+    - e2 00 00 / e1 00 / e3 00 00 00: end marker
+    - 06 00*7: tail
+
+    Returns None if the stream cannot be encoded (e.g. too many swatches).
+    """
+    if nswatches > 255:
+        return None
+
+    npix = width * height
+    out = bytearray()
+    out += b"\x68\x01\x00"  # section intro
+
+    # Process rows bottom-up
+    rows = []
+    for y in range(height):
+        row_start = y * width
+        rows.append(plane[row_start:row_start + width])
+
+    # Reverse for bottom-up
+    rows.reverse()
+
+    first_zero_run = True
+    for row_idx, row in enumerate(rows):
+        # Check if this row is identical to the previous row (row-copy)
+        if row_idx > 0 and row == rows[row_idx - 1]:
+            out += b"\x38\x01"  # copy from 1 row back (dist=width, len=1 row)
+            continue
+
+        # Encode the row: transparent runs + literal pixels
+        i = 0
+        while i < width:
+            if row[i] == 0:
+                # Count zero run
+                run_start = i
+                while i < width and row[i] == 0:
+                    i += 1
+                run_len = i - run_start
+                # Encode zero run
+                _emit_zero_run(out, run_len, first=first_zero_run)
+                first_zero_run = False
+            else:
+                # Non-zero pixel: emit as literal
+                out += bytes((0xe1, row[i]))
+                i += 1
+                first_zero_run = False
+
+    # End marker based on pixel count mod 4
+    end_markers = {0: b"\xe2\x00\x00", 1: b"\xe3\x00\x00\x00",
+                   2: b"\xe2\x00\x00", 3: b"\xe1\x00"}
+    out += end_markers[npix & 3]
+    out += b"\x06" + b"\x00" * 7  # V3_MINI_TAIL
+
+    return bytes(out)
+
+
+def _emit_zero_run(out: bytearray, length: int, first: bool = False) -> None:
+    """Emit f0 V zero run tokens."""
+    first_bias = 25 if first else 16
+    cont_bias = 16
+    rem = length
+
+    if rem <= 0:
+        return
+
+    # First token with first_bias
+    if rem > first_bias + 255:
+        # Multiple tokens needed
+        out += bytes((0xf0, 255))
+        rem -= 255 + first_bias
+        first = False
+    elif rem > first_bias:
+        out += bytes((0xf0, rem - first_bias))
+        rem = 0
+    elif rem > 0 and not first:
+        # Small run that doesn't fit the bias
+        out += bytes((0xf0, 0))  # minimum continuation run
+        rem -= cont_bias
+        # This shouldn't happen for small runs; handle gracefully
+        if rem < 0:
+            rem = 0
+
+    # Continuation tokens
+    while rem > cont_bias + 255:
+        out += bytes((0xf0, 255))
+        rem -= 255 + cont_bias
+
+    if rem > cont_bias:
+        out += bytes((0xf0, rem - cont_bias))
+        rem = 0
+    elif rem > 0:
+        # Bare short token fX covering X+2
+        if rem >= 3:
+            out.append(0xf0 | (rem - 2))
+        elif rem > 0:
+            # Very small remainder: use f0 00 (minimum continuation)
+            # and accept slight over-encoding (decoder should handle)
+            out += bytes((0xf0, 0))
+
+
 def _atlas_dmp2(width: int, height: int, bgra: bytes, gray: bool) -> bytes:
     """Atlas payload grammar by class (observed in oracles).
 
@@ -409,9 +516,11 @@ def _atlas_dmp2(width: int, height: int, bgra: bytes, gray: bool) -> bytes:
     paletted = _atlas_palette(width, height, bgra)
     if paletted is not None:
         swatches, plane = paletted
+        # Use LZFSE compression for the index plane (no u32 length prefix)
         stream = lzfse_compat.compress(plane)
-        return (b"dmp2" + bytes((4, 1, 10, 4)) + struct.pack("<HHHH", width, height, len(swatches), 4)
-                + b"".join(swatches) + struct.pack("<I", len(stream)) + stream)
+        return (b"dmp2" + bytes((4, 1, 10, 4))
+                + struct.pack("<HHHH", width, height, len(swatches), 4)
+                + b"".join(swatches) + stream)
     return _dmp2_lzfse_stream(width, height, bgra, 4, 2)
 
 

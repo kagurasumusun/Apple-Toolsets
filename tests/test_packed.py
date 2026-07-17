@@ -13,6 +13,75 @@ from actool_linux import lzfse_compat
 from actool_linux.packed import pack_renditions, is_pack_candidate, _shelf_pack
 
 
+def _decode_mini_isa_plane(stream: bytes, width: int, height: int) -> bytes:
+    """Decode a simple multi-swatch mini ISA stream back to an index plane.
+    
+    Handles the basic opcodes: f0 (zero runs), e1 (literal), 38 (row-copy).
+    """
+    plane = bytearray(width * height)
+    pos = 0
+    
+    # Skip section intro
+    if stream[pos:pos+3] == b"\x68\x01\x00":
+        pos += 3
+    
+    row = height - 1  # Start from bottom
+    col = 0
+    
+    while pos < len(stream) and row >= 0:
+        if pos + 2 > len(stream):
+            break
+            
+        opcode = stream[pos]
+        
+        if opcode == 0xf0:  # Zero run
+            val = stream[pos + 1]
+            if col == 0 and row == height - 1:
+                # First run: bias 25
+                run_len = val + 25
+            else:
+                # Continuation: bias 16
+                run_len = val + 16
+            # Fill with zeros
+            for _ in range(run_len):
+                if row >= 0 and col < width:
+                    plane[row * width + col] = 0
+                    col += 1
+                    if col >= width:
+                        col = 0
+                        row -= 1
+            pos += 2
+            
+        elif opcode == 0xe1:  # Single literal
+            idx = stream[pos + 1]
+            if row >= 0 and col < width:
+                plane[row * width + col] = idx
+                col += 1
+                if col >= width:
+                    col = 0
+                    row -= 1
+            pos += 2
+            
+        elif opcode == 0x38:  # Row copy
+            # Copy from 1 row back
+            src_row = row + 1
+            if src_row < height:
+                for c in range(width):
+                    plane[row * width + c] = plane[src_row * width + c]
+            row -= 1
+            pos += 2
+            
+        elif opcode in (0xe2, 0xe3):  # End markers
+            break
+        elif opcode == 0x06:  # Tail
+            break
+        else:
+            # Unknown opcode, skip
+            pos += 1
+    
+    return bytes(plane)
+
+
 def _chunk(kind: bytes, payload: bytes) -> bytes:
     return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
 
@@ -102,8 +171,10 @@ class PackedAssetTests(unittest.TestCase):
                 self.assertFalse(a[0] < b[0] + b[2] and b[0] < a[0] + a[2]
                                  and a[1] < b[1] + b[3] and b[1] < a[1] + a[3])
         # decode the atlas plane and verify pixel colors at LINK rects
-        (slen,) = struct.unpack_from("<I", dmp2, 16 + 4 * n)
-        plane = lzfse_compat.decompress(dmp2[20 + 4 * n:20 + 4 * n + slen])
+        # Packed atlas v4 palette: no u32 length prefix, LZFSE stream directly
+        stream_offset = 16 + 4 * n
+        stream = dmp2[stream_offset:]
+        plane = lzfse_compat.decompress(stream)
         x, y, w, h = links["img1x.png"]
         idx = plane[(y + 1) * aw + x + 1]
         self.assertEqual(tuple(pal[4 * idx:4 * idx + 4]), (200, 100, 30, 255))
