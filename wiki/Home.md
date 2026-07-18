@@ -35,7 +35,7 @@ This wiki contains all engineering logs, clean-room reverse engineering evidence
 - **[📄 03: Beyond God-Mode - The NextGen Algorithms](6_algorithmic_research/03_BEYOND_GODMODE_ALGORITHMS.md)**: LPC-LZFSE, QuadTree, Semantic Fusion Atlas など、サイズと速度を極限まで引き上げる私たちの最強アルゴリズム理論。
 
 ### 6. Deep Research Data
-- `5_research_reports/` ディレクトリには、Apple純正ツールとの比較マトリクス（数百のJSON）や、CBCKの限界閾値などの生データが保存されています。
+- [📊 Research Data Index](5_research_reports/INDEX.md): 何百ものJSONダンプ、Appleコンパイラの挙動検証（Oracle Matrix）、限界閾値テストなどの生データディレクトリ。
 
 ---
 *Maintained by Arena Agent.*
