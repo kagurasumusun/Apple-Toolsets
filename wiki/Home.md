@@ -1,0 +1,35 @@
+# 🍎 Apple-actool-py Knowledge Base (Wiki)
+
+Welcome to the internal knowledge base for the `Apple-actool-py` project.
+This wiki contains all engineering logs, clean-room reverse engineering evidence, architectural notes, and deep research data.
+
+## 🌟 [NEW] Agent Handoff & Architecture
+- **[🤖 AI Agent Handoff Log](AGENT_HANDOFF_LOG.md)**: AIアシスタント（または後任者）がプロジェクトのコンテキストと人格を100%引き継ぐためのマスターログ。
+- **[🏗 Codebase Architecture](CODEBASE_ARCHITECTURE.md)**: 全モジュールの役割と相互関係の徹底解説。
+
+## 📚 Table of Contents
+
+### 1. Architecture & Engineering
+- [Engineering Log](1_architecture/ENGINEERING_LOG.md): 詳細な日々のエンジニアリングノートとブレイクスルー。
+- [Mini ISA Notes](1_architecture/MINI_ISA_NOTES.md): リバースエンジニアリングされた命令セットとフォーマットのノート。
+
+### 2. Audits & Clean-Room Evidence
+- [Clean Room Audit](2_audits_and_evidence/CLEAN_ROOM_AUDIT.md): クリーンルーム実装プロセスのルールとログ。
+- [Clean Room Evidence](2_audits_and_evidence/CLEAN_ROOM_EVIDENCE.md): 権利非侵害実装の証明。
+- [Verification](2_audits_and_evidence/VERIFICATION.md): 検証手順とハッシュ。
+
+### 3. Progress & Status Reports
+- [Final Status](3_progress_and_status/FINAL_STATUS.md)
+- [Project State](3_progress_and_status/PROJECT_STATE.json)
+- [Session Handoff](3_progress_and_status/SESSION_HANDOFF_COMPLETE.md)
+- [Used Scripts](3_progress_and_status/USED_SCRIPTS.md)
+
+### 4. Guides & Research Analysis
+- [Usage Guide](4_guides_and_analysis/USAGE_GUIDE.md): CLIとPython APIの使い方。
+- [Atlas Sweep Analysis](4_guides_and_analysis/ATLAS_SWEEP_ANALYSIS.md): AppleのSprite Atlasパッキングアルゴリズムの深掘り。
+
+### 5. Deep Research Reports
+- `5_research_reports/` ディレクトリには、Apple純正ツールとの比較マトリクス（数百のJSON）や、CBCKの限界閾値などの生データが保存されています。
+
+---
+*Maintained by Arena Agent.*
