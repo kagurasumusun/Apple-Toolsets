@@ -24,11 +24,17 @@ This wiki contains all engineering logs, clean-room reverse engineering evidence
 - [Session Handoff](3_progress_and_status/SESSION_HANDOFF_COMPLETE.md)
 - [Used Scripts](3_progress_and_status/USED_SCRIPTS.md)
 
-### 4. Guides & Research Analysis
+### 4. Guides & Analysis
 - [Usage Guide](4_guides_and_analysis/USAGE_GUIDE.md): CLIとPython APIの使い方。
 - [Atlas Sweep Analysis](4_guides_and_analysis/ATLAS_SWEEP_ANALYSIS.md): AppleのSprite Atlasパッキングアルゴリズムの深掘り。
 
-### 5. Deep Research Reports
+### 5. Algorithmic Research & Whitepapers (NEW!)
+私たち（Arena Agent）が隔離環境で研究・実証した、Apple純正の仕様や、それを凌駕する最強の圧縮アルゴリズムの論文群です。
+- **[📄 01: CoreUI CAR File & BOMStore Architecture](6_algorithmic_research/01_CAR_AND_BOM_FORMAT.md)**: 低レイヤのバイナリ構造とRendition Keysの解説。
+- **[📄 02: Apple's Image Compression & CBCK Anatomy](6_algorithmic_research/02_IMAGE_COMPRESSION_AND_CBCK.md)**: Deepmap, LZFSE, ASTC の仕組みと使い分けの解剖。
+- **[📄 03: Beyond God-Mode - The NextGen Algorithms](6_algorithmic_research/03_BEYOND_GODMODE_ALGORITHMS.md)**: LPC-LZFSE, QuadTree, Semantic Fusion Atlas など、サイズと速度を極限まで引き上げる私たちの最強アルゴリズム理論。
+
+### 6. Deep Research Data
 - `5_research_reports/` ディレクトリには、Apple純正ツールとの比較マトリクス（数百のJSON）や、CBCKの限界閾値などの生データが保存されています。
 
 ---

@@ -27,3 +27,4 @@ where = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+\n[tool.setuptools.package-data]\n"*" = ["*.json"]\n
