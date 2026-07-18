@@ -1,0 +1,1 @@
+# Module: `diagnostics`\n\n## Overview\nApple-style actool result plist and human-readable text serialization.\n\n## Public Functions\n### `version_plist()`\n\n### `unknown_argument_plist()`\n\n### `result_plist()`\n\n### `render_human_readable()`\n\n

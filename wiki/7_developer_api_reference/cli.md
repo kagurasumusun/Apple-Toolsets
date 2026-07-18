@@ -1,0 +1,1 @@
+# Module: `cli`\n\n## Public Functions\n### `write_stdout_bytes()`\n\n### `parser()`\n\n### `main()`\n\n

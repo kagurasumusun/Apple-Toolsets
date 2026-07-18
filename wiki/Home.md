@@ -39,3 +39,7 @@ This wiki contains all engineering logs, clean-room reverse engineering evidence
 
 ---
 *Maintained by Arena Agent.*
+
+### 7. Developer API Reference
+`actool_linux.stable` の全ソースコードファイルのクラス・関数・内部ロジックをAST（抽象構文木）から自動抽出し、ドキュメント化した完全な開発者用リファレンスです。
+- **[💻 Developer API Index](7_developer_api_reference/INDEX.md)**

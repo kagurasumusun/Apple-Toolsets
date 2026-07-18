@@ -1,0 +1,5 @@
+# Module: `atlas`\n\n## Overview\nPacked CoreUI atlas metadata and deterministic shelf packer.\n\n## Classes\n### `AtlasKeyToken`\n\n### `AtlasLink`\n\n### `AtlasNameList`\n\n### `AtlasTrim`\n\n## Public Functions\n### `parse_atlas_link()`\nParse CoreUI TLV 1010 (INLK), supporting both observed public variants.\n\n### `build_atlas_link()`\n\n### `parse_atlas_name_list()`\n\n### `parse_atlas_trim()`\n\n### `packed_atlas_renditions()`\nReturn atlas renditions without wrapping them in a CAR.\n\n### `packed_watch_complication_renditions()`\nApproximate the public .complicationset packed-page output observed from Apple.
+
+The current public oracle shows one explicit packed page named
+``ZZZZPackedAsset-2.1.0-gamut0`` and explicit `KLNI` links carrying
+tokens `(1,9)`, `(2,181)`, `(12,scale)`, `(15,5)`.\n\n### `build_packed_atlas_car()`\nShelf-pack PNGs into bounded pages using configurable heuristics.\n\n
