@@ -18,7 +18,7 @@ class FacetHashLookupTable:
 
     def _load_table(self):
         """Load the lookup table from the JSON file."""
-        table_file = Path(__file__).parent.parent.parent / 'facet_hash_lookup_table.json'
+        table_file = Path(__file__).resolve().parent.parent / 'data' / 'facet_hash_lookup_table.json'
         if table_file.exists():
             with open(table_file, 'r') as f:
                 data = json.load(f)
@@ -72,8 +72,8 @@ def build_lookup_table(patterns_file: str, output_file: str):
 
 if __name__ == '__main__':
     # Build the lookup table
-    patterns_file = Path(__file__).parent.parent.parent / 'facet_hash_patterns_extended.json'
-    output_file = Path(__file__).parent.parent.parent / 'facet_hash_lookup_table.json'
+    patterns_file = Path(__file__).resolve().parent.parent / 'data' / 'facet_hash_patterns_extended.json'
+    output_file = Path(__file__).resolve().parent.parent / 'data' / 'facet_hash_lookup_table.json'
 
     if patterns_file.exists():
         build_lookup_table(str(patterns_file), str(output_file))
