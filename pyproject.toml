@@ -23,7 +23,7 @@ actool-car-repack = "actool_linux.repack:main"
 actool-pdf-car = "actool_linux.pdfcar:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
