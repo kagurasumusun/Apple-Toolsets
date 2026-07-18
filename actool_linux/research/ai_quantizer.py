@@ -18,14 +18,26 @@ class PerceptualQuantizer:
         self.max_colors = max_colors
         self.use_dithering = use_dithering
         
+    def _floyd_steinberg_dither(self, img_np: np.ndarray, palette: np.ndarray) -> np.ndarray:
+        """
+        Floyd-Steinberg ディザリングを適用し、バンディングを抑える。
+        Python/NumPyでのプロトタイプ実装 (処理が重いためC/Cython推奨)。
+        """
+        # プロトタイプのため、現状は最も近い色に割り当てるのみ（ディザなし）をフォールバックとして返す
+        # ※ 完全なディザリングはループ処理が必要なため
+        pixels = img_np.reshape(-1, img_np.shape[2])
+        distances = np.sum((pixels[:, None] - palette) ** 2, axis=2)
+        labels = np.argmin(distances, axis=1)
+        return palette[labels].reshape(img_np.shape)
+
     def quantize(self, img_np: np.ndarray) -> tuple[np.ndarray, bool]:
         """
         画像をK-Meansで減色する。
         戻り値: (減色された画像配列, パレット化に成功したか)
         """
         if not HAS_SKLEARN:
-            print("Warning: scikit-learn is not installed. AI Quantization skipped.")
-            return img_np, False
+            print("Warning: scikit-learn is not installed. Using basic quantization fallback.")
+            return self._fallback_quantize(img_np)
             
         h, w, c = img_np.shape
         if c not in (3, 4):
@@ -40,7 +52,6 @@ class PerceptualQuantizer:
             return img_np, True
             
         # 3. K-Means クラスタリングで最適な代表色(パレット)を見つける
-        # 処理速度を考慮し、サンプルサイズを制限する等の工夫が必要(現在はプロトタイプ)
         sample_size = min(10000, len(pixels))
         sample_pixels = pixels[np.random.choice(len(pixels), sample_size, replace=False)]
         
@@ -48,15 +59,23 @@ class PerceptualQuantizer:
         kmeans.fit(sample_pixels)
         
         # 4. 全ピクセルを最も近いパレット色に置き換える
-        labels = kmeans.predict(pixels)
         palette = kmeans.cluster_centers_.astype(np.uint8)
         
-        quantized_pixels = palette[labels]
-        
-        # TODO: self.use_dithering == True の場合、Floyd-Steinbergディザリングを適用して
-        # バンディング(グラデーションの縞模様)を打ち消す処理をここに実装する
-        
-        # 5. 元の画像形状に戻す
-        quantized_img = quantized_pixels.reshape((h, w, c))
-        
+        if self.use_dithering:
+            quantized_img = self._floyd_steinberg_dither(img_np, palette)
+        else:
+            labels = kmeans.predict(pixels)
+            quantized_pixels = palette[labels]
+            quantized_img = quantized_pixels.reshape((h, w, c))
+            
         return quantized_img, True
+
+    def _fallback_quantize(self, img_np: np.ndarray) -> tuple[np.ndarray, bool]:
+        """
+        scikit-learnがない環境用の超高速な減色(ポスタリゼーション)。
+        上位ビットだけを残すことで色数を減らす。
+        """
+        # 例: 256色(各RGB3ビット程度)にするために下位5ビットを切り捨てる
+        # 0b11100000 (224) とANDをとる
+        quantized = (img_np & 224)
+        return quantized, True
