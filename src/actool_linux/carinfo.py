@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+from typing import Any
 
 from .atlas import parse_atlas_link, parse_atlas_name_list, parse_atlas_trim
 from .bom import BOMError, BOMStore
@@ -82,16 +83,17 @@ def _decoded_tlvs(rendition) -> list[dict[str, object]]:
                     ]
                 elif layout == 1019:
                     styles = parse_iconstack_root_style_list(tlv.value)
-                    references = []
+                    references_list: list[Any] = []
                     try:
-                        references = parse_solidimagestack_layer_list(next(x.value for x in rendition.csi.tlvs if x.tag == 1012)).layers
+                        parsed_list = parse_solidimagestack_layer_list(next(x.value for x in rendition.csi.tlvs if x.tag == 1012))
+                        references_list = list(parsed_list.layers)
                     except Exception:
-                        references = []
+                        references_list = []
                     decoded = []
                     for index, entry in enumerate(styles.entries):
                         row = entry.__dict__ | {'inferred_kind_name': entry.inferred_kind_name}
-                        if index < len(references):
-                            pairs = dict(references[index].referenced_key.attribute_value_pairs)
+                        if index < len(references_list):
+                            pairs = dict(references_list[index].referenced_key.attribute_value_pairs)
                             refpart = pairs.get(2)
                             if refpart is not None:
                                 row['inferred_role_for_referenced_part'] = entry.inferred_role_for_referenced_part(refpart)
@@ -124,8 +126,8 @@ def _decoded_tlvs(rendition) -> list[dict[str, object]]:
                     reserved = parse_solidimagestack_layer_reserved(tlv.value)
                     item['stack_reserved'] = [entry.raw.hex() for entry in reserved.entries]
             elif tlv.tag == 1014:
-                aux = parse_texture_auxiliary_flag(tlv.value)
-                item['texture_auxiliary_flag'] = {'values': list(aux.values), 'raw_hex': aux.raw.hex()}
+                aux_flag = parse_texture_auxiliary_flag(tlv.value)
+                item['texture_auxiliary_flag'] = {'values': list(aux_flag.values), 'raw_hex': aux_flag.raw.hex()}
         except Exception as exc:
             item['decode_error'] = str(exc)
         rows.append(item)
@@ -169,7 +171,7 @@ def _decoded_payload(rendition) -> dict[str, object] | None:
         wrapper = parse_theme_pixel_rendition(rendition.csi.rendition_data)
     except Exception:
         return None
-    result = {
+    result: dict[str, object] = {
         'wrapper_version': wrapper.version,
         'compression_type': wrapper.compression_type,
         'raw_payload_length': len(wrapper.raw_data),

@@ -78,7 +78,8 @@ def read_leaf_entries(store: BOMStore, name: str) -> list[TreeEntry]:
                 if len(result) >= descriptor.path_count + 1:
                     raise BOMError(f"tree {name!r} contains more leaves than its path count")
                 try:
-                    key = bytes(store.block(key_id)); value = bytes(store.block(value_id))
+                    key = bytes(store.block(key_id))
+                    value = bytes(store.block(value_id))
                 except (KeyError, IndexError, ValueError) as exc:
                     raise BOMError(f"tree {name!r} leaf references a missing key/value block") from exc
                 result.append(TreeEntry(key_id, value_id, key, value))

@@ -38,7 +38,6 @@ def _bit_width(palette_count: int) -> int:
     return 12
 
 
-
 def parse_theme_pixel_rendition(raw: bytes | bytearray | memoryview) -> ThemePixelRendition:
     data = bytes(raw)
     if len(data) < 16:
@@ -53,7 +52,6 @@ def parse_theme_pixel_rendition(raw: bytes | bytearray | memoryview) -> ThemePix
     if raw_length > len(data) - 16:
         raise PaletteImageError("theme pixel rendition raw payload is truncated")
     return ThemePixelRendition(version, compression_type, data[16:16 + raw_length])
-
 
 
 def _unpack_row_indices(data: bytes, width: int, bits_per_index: int) -> bytes:
@@ -71,7 +69,6 @@ def _unpack_row_indices(data: bytes, width: int, bits_per_index: int) -> bytes:
     return bytes(out)
 
 
-
 def _pack_row_indices(indices: bytes, width: int, bits_per_index: int) -> bytes:
     row_bytes = (width * bits_per_index + 7) // 8
     if len(indices) % width:
@@ -87,7 +84,6 @@ def _pack_row_indices(indices: bytes, width: int, bits_per_index: int) -> bytes:
             buf |= int(value) << shift
         out += buf.to_bytes(row_bytes, "big")
     return bytes(out)
-
 
 
 def decode_quantized_image_payload(raw_data: bytes, *, width: int, height: int, pixel_format: str = "ARGB") -> QuantizedImageData:
@@ -121,7 +117,6 @@ def decode_quantized_image_payload(raw_data: bytes, *, width: int, height: int, 
     return QuantizedImageData(version, palette, _unpack_row_indices(index_plane, width, bits), bits)
 
 
-
 def encode_quantized_image_payload(palette_argb: bytes, indices: bytes, *, width: int, height: int, version: int = 1) -> bytes:
     from . import lzfse_compat
     if version not in (0, 1):
@@ -137,7 +132,6 @@ def encode_quantized_image_payload(palette_argb: bytes, indices: bytes, *, width
     packed_indices = _pack_row_indices(indices, width, bits)
     payload = struct.pack("<2IH", MAGIC, version, palette_count) + bytes(palette_argb) + packed_indices
     return lzfse_compat.compress(payload)
-
 
 
 def build_palette_img_wrapper(palette_argb: bytes, indices: bytes, *, width: int, height: int, version: int = 1) -> bytes:

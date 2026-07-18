@@ -1,7 +1,8 @@
 """Packed CoreUI atlas metadata and deterministic shelf packer."""
 from __future__ import annotations
 from dataclasses import dataclass
-import struct, zlib
+import struct
+import zlib
 
 from .carwriter import AssetRendition, _csi_png_deepmap, _fixed, _identifier, build_assets_car
 
@@ -10,6 +11,7 @@ from .carwriter import AssetRendition, _csi_png_deepmap, _fixed, _identifier, bu
 class AtlasKeyToken:
     attribute: int
     value: int
+
 
 @dataclass(frozen=True)
 class AtlasLink:
@@ -99,22 +101,24 @@ def build_atlas_link(link: AtlasLink) -> bytes:
 
 
 def _linked_csi(filename: str, link: AtlasLink, scale: int, *, trim_tlv: bytes | None = None, source_size: tuple[int, int] | None = None) -> bytes:
-    h = bytearray(184); h[:4] = b"ISTC"
+    h = bytearray(184)
+    h[:4] = b"ISTC"
     struct.pack_into("<5I", h, 4, 1, 16, link.width, link.height, scale * 100)
     h[24:28] = b" 8AG"  # little-endian GA8
-    struct.pack_into("<I2H", h, 32, 0, 1003, 0); h[40:168] = _fixed(filename, 128)
+    struct.pack_into("<I2H", h, 32, 0, 1003, 0)
+    h[40:168] = _fixed(filename, 128)
     source_width, source_height = source_size or (link.width, link.height)
     parts = [
-        struct.pack("<2I5I",1001,20,1,0,0,source_width,source_height),
-        struct.pack("<2I7I",1003,28,1,0,0,0,0,link.width,link.height),
-        struct.pack("<2I",1010,len(build_atlas_link(link))) + build_atlas_link(link),
-        struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),
-        struct.pack("<2II",1006,4,1),
+        struct.pack("<2I5I", 1001, 20, 1, 0, 0, source_width, source_height),
+        struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, link.width, link.height),
+        struct.pack("<2I", 1010, len(build_atlas_link(link))) + build_atlas_link(link),
+        struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"),
+        struct.pack("<2II", 1006, 4, 1),
     ]
     if trim_tlv is not None:
         parts.append(trim_tlv)
     tlvs = b"".join(parts)
-    struct.pack_into("<4I",h,168,len(tlvs),1,0,0)
+    struct.pack_into("<4I", h, 168, len(tlvs), 1, 0, 0)
     return bytes(h)+tlvs
 
 
@@ -147,7 +151,8 @@ def _atlas_name_list_tlv(names: list[str]) -> bytes:
 
 
 def _atlas_metadata_csi(names: list[str], *, scale: int = 1) -> bytes:
-    h = bytearray(184); h[:4] = b"ISTC"
+    h = bytearray(184)
+    h[:4] = b"ISTC"
     struct.pack_into("<5I", h, 4, 1, 0, 0, 0, scale * 100)
     struct.pack_into("<I2H", h, 32, 0, 1005, 0)
     h[40:168] = _fixed("CoreStructuredImage", 128)
@@ -161,20 +166,22 @@ def _atlas_metadata_csi(names: list[str], *, scale: int = 1) -> bytes:
 
 
 def _png_rgba(width: int, height: int, pixels: bytes) -> bytes:
-    def chunk(t: bytes,d: bytes): return struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d)&0xffffffff)
-    rows=b"".join(b"\0"+pixels[y*width*4:(y+1)*width*4] for y in range(height))
-    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,6,0,0,0))+chunk(b"IDAT",zlib.compress(rows,9))+chunk(b"IEND",b"")
+    def chunk(t: bytes, d: bytes): return struct.pack(">I", len(d))+t+d+struct.pack(">I", zlib.crc32(t+d) & 0xffffffff)
+    rows = b"".join(b"\0"+pixels[y*width*4:(y+1)*width*4] for y in range(height))
+    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))+chunk(b"IDAT", zlib.compress(rows, 9))+chunk(b"IEND", b"")
 
 
 def _alpha_bbox(width: int, height: int, rgba: bytes) -> tuple[int, int, int, int]:
-    xs=[]; ys=[]
+    xs = []
+    ys = []
     if len(rgba) != width * height * 4:
         raise ValueError("rgba buffer length does not match atlas dimensions")
     for y in range(height):
         row = rgba[y*width*4:(y+1)*width*4]
         for x in range(width):
             if row[x*4+3]:
-                xs.append(x); ys.append(y)
+                xs.append(x)
+                ys.append(y)
     if not xs:
         return (0, 0, width, height)
     return (min(xs), min(ys), max(xs)+1, max(ys)+1)
@@ -220,20 +227,26 @@ def packed_atlas_renditions(
 ) -> list[AssetRendition]:
     """Return atlas renditions without wrapping them in a CAR."""
     from .carwriter import _decode_png_8bit
-    if not images: raise ValueError("atlas needs at least one image")
+    if not images:
+        raise ValueError("atlas needs at least one image")
     if style not in ("generic", "explicit"):
         raise ValueError("unsupported atlas style")
     if not 0 <= deployment_token <= 65535:
         raise ValueError("invalid atlas deployment token")
-    decoded=[]
-    for name,data in images.items():
-        w,h,ct,pix,_=_decode_png_8bit(data)
-        if ct==6: rgba=pix
-        elif ct==4: rgba=b"".join(bytes((g,g,g,a)) for g,a in zip(pix[::2],pix[1::2]))
-        elif ct==2: rgba=b"".join(bytes((r,g,b,255)) for r,g,b in zip(pix[::3],pix[1::3],pix[2::3]))
-        else: raise ValueError("indexed atlas input is not enabled")
-        if w>max_width or h>max_height: raise ValueError("atlas item exceeds page bounds")
-        decoded.append((name,w,h,rgba))
+    decoded = []
+    for name, data in images.items():
+        w, h, ct, pix, _ = _decode_png_8bit(data)
+        if ct == 6:
+            rgba = pix
+        elif ct == 4:
+            rgba = b"".join(bytes((g, g, g, a)) for g, a in zip(pix[::2], pix[1::2]))
+        elif ct == 2:
+            rgba = b"".join(bytes((r, g, b, 255)) for r, g, b in zip(pix[::3], pix[1::3], pix[2::3]))
+        else:
+            raise ValueError("indexed atlas input is not enabled")
+        if w > max_width or h > max_height:
+            raise ValueError("atlas item exceeds page bounds")
+        decoded.append((name, w, h, rgba))
 
     if sort_by == "name":
         decoded.sort(key=lambda x: x[0])
@@ -249,59 +262,78 @@ def packed_atlas_renditions(
         raise ValueError(f"unsupported atlas sorting heuristic: {sort_by}")
 
     # Each placement carries a 1-based page dimension used by INLK tokens.
-    x=y=row_h=0; page=1; placements=[]
-    for name,w,h,pix in decoded:
-        if x and x+w>max_width: x=0; y+=row_h; row_h=0
-        if y+h>max_height:
-            page+=1; x=y=row_h=0
-        placements.append((page,name,x,y,w,h,pix)); x+=w; row_h=max(row_h,h)
+    x = y = row_h = 0
+    page = 1
+    placements = []
+    for name, w, h, pix in decoded:
+        if x and x+w > max_width:
+            x = 0
+            y += row_h
+            row_h = 0
+        if y+h > max_height:
+            page += 1
+            x = y = row_h = 0
+        placements.append((page, name, x, y, w, h, pix, (0, 0, 0, 0), w, h))
+        x += w
+        row_h = max(row_h, h)
 
     if style == "explicit":
         if page != 1:
             raise ValueError("explicit atlas style currently supports one page")
-        placements=[]
-        x=2; top=2
-        for name,w,h,pix in decoded:
+        placements = []
+        x = 2
+        top = 2
+        for name, w, h, pix in decoded:
             bbox = _alpha_bbox(w, h, pix)
             cw, ch, cpix = _crop_rgba(w, h, pix, bbox)
-            placements.append((1,name,x,top,cw,ch,cpix,bbox,w,h))
+            placements.append((1, name, x, top, cw, ch, cpix, bbox, w, h))
             x += cw + 2
-        aw = max(px+w for _,_,px,_,w,_,_,_,_,_ in placements) + 1
-        ah = max(py+h for _,_,_,py,_,h,_,_,_,_ in placements) + 2
-        canvas=bytearray(aw*ah*4)
-        for _,_,px,py,w,h,pix,_,_,_ in placements:
-            for row in range(h): canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4]=pix[row*w*4:(row+1)*w*4]
-        page_name="ZZZZExplicitlyPackedAsset-1.0.0-gamut0"
-        page_png=_png_rgba(aw,ah,bytes(canvas)); page_csi=bytearray(_csi_png_deepmap(page_png,page_name,scale=scale))
-        struct.pack_into("<H",page_csi,36,1004); struct.pack_into("<I",page_csi,8,0)
-        names=[name for _,name,_,_,_,_,_,_,_,_ in placements]
+        aw = max(px+w for _, _, px, _, w, _, _, _, _, _ in placements) + 1
+        ah = max(py+h for _, _, _, py, _, h, _, _, _, _ in placements) + 2
+        canvas = bytearray(aw*ah*4)
+        for _, _, px, py, w, h, pix, _, _, _ in placements:
+            for row in range(h):
+                canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4] = pix[row*w*4:(row+1)*w*4]
+        page_name = "ZZZZExplicitlyPackedAsset-1.0.0-gamut0"
+        page_png = _png_rgba(aw, ah, bytes(canvas))
+        page_csi = bytearray(_csi_png_deepmap(page_png, page_name, scale=scale))
+        struct.pack_into("<H", page_csi, 36, 1004)
+        struct.pack_into("<I", page_csi, 8, 0)
+        names = [name for _, name, _, _, _, _, _, _, _, _ in placements]
         parent_identifier = _identifier(atlas_name)
-        records=[
-            AssetRendition(atlas_name, _atlas_metadata_csi(names, scale=scale), 127, 181, scale=scale, element=9, identifier_override=parent_identifier),
+        records = [
+            AssetRendition(atlas_name, _atlas_metadata_csi(names, scale=scale), 127, 181,
+                           scale=scale, element=9, identifier_override=parent_identifier),
             AssetRendition(atlas_name, bytes(page_csi), 181, scale=scale, element=9, identifier_override=parent_identifier),
         ]
-        for _page_dimension,name,px,py,w,h,_pix,bbox,ow,oh in placements:
-            tokens=(AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(12,scale),AtlasKeyToken(17,parent_identifier))
-            link=AtlasLink(px,py,w,h,tokens,variant="explicit",header_u16=12,header_u32=20)
-            trim_tlv = None if bbox == (0,0,ow,oh) else _explicit_trim_tlv(ow, oh, bbox)
-            records.append(AssetRendition(name,_linked_csi(name+".png",link,scale,trim_tlv=trim_tlv,source_size=(ow, oh)),181,scale=scale))
+        for _page_dimension, name, px, py, w, h, _pix, bbox, ow, oh in placements:
+            tokens = (AtlasKeyToken(1, 9), AtlasKeyToken(2, 181), AtlasKeyToken(12, scale), AtlasKeyToken(17, parent_identifier))
+            link = AtlasLink(px, py, w, h, tokens, variant="explicit", header_u16=12, header_u32=20)
+            trim_tlv = None if bbox == (0, 0, ow, oh) else _explicit_trim_tlv(ow, oh, bbox)
+            records.append(AssetRendition(name, _linked_csi(name+".png", link, scale, trim_tlv=trim_tlv, source_size=(ow, oh)), 181, scale=scale))
         return records
 
-    records=[]
-    for page_dimension in range(1,page+1):
-        page_items=[p for p in placements if p[0]==page_dimension]
-        aw=max(px+w for _,_,px,_,w,_,_ in page_items); ah=max(py+h for _,_,_,py,_,h,_ in page_items)
-        canvas=bytearray(aw*ah*4)
-        for _,_,px,py,w,h,pix in page_items:
-            for row in range(h): canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4]=pix[row*w*4:(row+1)*w*4]
-        page_name=f"ZZZZPackedAsset-1.0.{page_dimension}-gamut0"
-        page_png=_png_rgba(aw,ah,bytes(canvas)); page_csi=bytearray(_csi_png_deepmap(page_png,page_name,scale=scale))
-        struct.pack_into("<H",page_csi,36,1004); struct.pack_into("<I",page_csi,8,0)
-        records.append(AssetRendition(page_name,bytes(page_csi),181,scale=scale,element=9,identifier_override=0,dimension1=page_dimension,atlas_linked=True,deployment_target=deployment_token))
-    for page_dimension,name,px,py,w,h,_ in placements:
-        tokens=(AtlasKeyToken(24,0),AtlasKeyToken(1,9),AtlasKeyToken(2,181),AtlasKeyToken(8,page_dimension),AtlasKeyToken(12,scale),AtlasKeyToken(25,deployment_token))
-        link=AtlasLink(px,py,w,h,tokens)
-        records.append(AssetRendition(name,_linked_csi(name+".png",link,scale),181,scale=scale,atlas_linked=True,deployment_target=deployment_token))
+    records = []
+    for page_dimension in range(1, page+1):
+        page_items = [p for p in placements if p[0] == page_dimension]
+        aw = max(px+w for _, _, px, _, w, _, _, _, _, _ in page_items)
+        ah = max(py+h for _, _, _, py, _, h, _, _, _, _ in page_items)
+        canvas = bytearray(aw*ah*4)
+        for _, _, px, py, w, h, pix, _, _, _ in page_items:
+            for row in range(h):
+                canvas[((py+row)*aw+px)*4:((py+row)*aw+px+w)*4] = pix[row*w*4:(row+1)*w*4]
+        page_name = f"ZZZZPackedAsset-1.0.{page_dimension}-gamut0"
+        page_png = _png_rgba(aw, ah, bytes(canvas))
+        page_csi = bytearray(_csi_png_deepmap(page_png, page_name, scale=scale))
+        struct.pack_into("<H", page_csi, 36, 1004)
+        struct.pack_into("<I", page_csi, 8, 0)
+        records.append(AssetRendition(page_name, bytes(page_csi), 181, scale=scale, element=9, identifier_override=0,
+                       dimension1=page_dimension, atlas_linked=True, deployment_target=deployment_token))
+    for page_dimension, name, px, py, w, h, _, _, _, _ in placements:
+        tokens_page = (AtlasKeyToken(24, 0), AtlasKeyToken(1, 9), AtlasKeyToken(2, 181), AtlasKeyToken(8, page_dimension), AtlasKeyToken(12, scale), AtlasKeyToken(25, deployment_token))
+        link = AtlasLink(px, py, w, h, tokens_page)
+        records.append(AssetRendition(name, _linked_csi(name+".png", link, scale), 181,
+                       scale=scale, atlas_linked=True, deployment_target=deployment_token))
     return records
 
 

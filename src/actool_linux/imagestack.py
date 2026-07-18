@@ -140,7 +140,7 @@ def _premultiplied_bgra_from_pngs(pngs: Sequence[bytes]) -> tuple[int, int, byte
             canvas = [0] * (w * h * 4)
         elif (w, h) != (width, height):
             raise ValueError(f"layer canvas mismatch: {w}x{h} != {width}x{height}")
-        for i in range(width * height):
+        for i in range((width or 0) * (height or 0)):
             sb, sg, sr, sa = pixels[4 * i: 4 * i + 4]
             db, dg, dr, da = canvas[4 * i: 4 * i + 4]
             # source-over with premultiplied components (0..255 ints).

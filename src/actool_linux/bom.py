@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import struct
-from typing import BinaryIO
 
 
 class BOMError(ValueError):
@@ -36,7 +35,7 @@ class BOMStore:
 
     MAGIC = b"BOMStore"
     HEADER = struct.Struct(">8s6I")
-    
+
     # Known CoreUI database names
     DATABASE_NAMES = frozenset({
         'imagedb', 'colordb', 'fontdb', 'fontsizedb',
@@ -134,10 +133,10 @@ class BOMStore:
         except KeyError as exc:
             raise BOMError(f"unknown named block: {name}") from exc
         return self.block(identifier)
-    
+
     def get_databases(self) -> dict[str, int]:
         """Return a mapping of known CoreUI database names to their block identifiers.
-        
+
         CoreUI uses multiple specialized databases for different types of assets.
         This method identifies which databases are present in this BOMStore.
         """
@@ -146,7 +145,7 @@ class BOMStore:
             for name, identifier in self.variables.items()
             if name in self.DATABASE_NAMES
         }
-    
+
     def has_database(self, name: str) -> bool:
         """Check if a specific CoreUI database is present."""
         return name in self.variables and name in self.DATABASE_NAMES

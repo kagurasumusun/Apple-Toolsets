@@ -88,14 +88,16 @@ def compile_brand_assets(asset: Asset, assets: list[Asset], options: CompileOpti
         resolved = _resolve_image_stack_layers(stack_asset, assets)
         if len(resolved) < 2:
             continue
-        layers = [StackLayerImage(str(layer["layer_name"]), str(layer["filename"]), (layer["base"] / str(layer["filename"])).read_bytes())
+        layers = [StackLayerImage(str(layer.get("layer_name", "")), str(layer.get("filename", "")), (Path(str(layer.get("base", ""))) / str(layer.get("filename", ""))).read_bytes())  # type: ignore
                   for layer in reversed(resolved)]
         marketing = str(entry.get("size", "")) == "1280x768"
         scale = int(str(resolved[0].get("scale", "1x"))[0]) if str(resolved[0].get("scale", "1x"))[0] in "123" else 1
         if marketing:
-            renditions.extend(imagestack_renditions(stack_asset.name, layers, root_idiom=6, child_idiom=6, flattened_idiom=6, scale=scale, root_identifier=primary_id))
+            renditions.extend(imagestack_renditions(stack_asset.name, layers, root_idiom=6,
+                              child_idiom=6, flattened_idiom=6, scale=scale, root_identifier=primary_id))
         else:
-            renditions.extend(imagestack_renditions(stack_asset.name, layers, root_idiom=0, child_idiom=3, flattened_idiom=3, scale=scale, root_identifier=primary_id))
+            renditions.extend(imagestack_renditions(stack_asset.name, layers, root_idiom=0,
+                              child_idiom=3, flattened_idiom=3, scale=scale, root_identifier=primary_id))
     for _entry, image_asset in shelves:
         chosen = next((e for e in image_asset.entries
                        if isinstance(e.get("filename"), str) and str(e.get("idiom", "tv")) == "tv"
@@ -156,11 +158,11 @@ def _partial_info(catalogs: Iterable[Catalog], options: CompileOptions) -> dict[
     names = {asset.name for catalog in catalogs for asset in catalog.assets}
     platform = (options.platform or "").lower()
     if options.app_icon and options.app_icon in names and platform in ("iphoneos", "iphonesimulator", "ios"):
-        primary = {
+        primary_dict = {
             "CFBundleIconFiles": ["AppIcon60x60"],
             "CFBundleIconName": options.app_icon,
         }
-        result["CFBundleIcons"] = {"CFBundlePrimaryIcon": primary}
+        result["CFBundleIcons"] = {"CFBundlePrimaryIcon": primary_dict}
         result["CFBundleIcons~ipad"] = {
             "CFBundlePrimaryIcon": {
                 "CFBundleIconFiles": ["AppIcon60x60", "AppIcon76x76"],
@@ -186,7 +188,7 @@ def _partial_info(catalogs: Iterable[Catalog], options: CompileOptions) -> dict[
                     elif role == "top-shelf-image-wide":
                         shelf_wide = stem
                 if primary is not None:
-                    result["CFBundleIcons"] = {"CFBundlePrimaryIcon": primary}
+                    result["CFBundleIcons"] = {"CFBundlePrimaryIcon": primary_dict}
                 tv: dict[str, str] = {}
                 if shelf is not None:
                     tv["TVTopShelfPrimaryImage"] = shelf
@@ -209,7 +211,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
         if diagnostic.path is not None and diagnostic.path.name == "Contents.json" and diagnostic.message.startswith("cannot read Contents.json:"):
             normalized.append(Diagnostic("notice", f'The Contents.json describing the "{diagnostic.path.parent.name}" is not valid JSON.'))
         elif diagnostic.path is not None and diagnostic.path.name == "Contents.json" and diagnostic.message == "Contents.json root must be an object":
-            normalized.append(Diagnostic("notice", f'The Contents.json describing "{diagnostic.path.parent.name}" must start with a top level dictionary.'))
+            normalized.append(Diagnostic(
+                "notice", f'The Contents.json describing "{diagnostic.path.parent.name}" must start with a top level dictionary.'))
         elif diagnostic.message in ("'images' must be an array", "'images' contains a non-object entry", "Contents.json has no complete info dictionary"):
             # Xcode silently ignores these schema defects in image sets.
             continue
@@ -223,7 +226,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
         missing = [path for path in inputs if not path.exists()]
         if missing:
             diagnostics = [d for d in diagnostics if d.path not in missing]
-            diagnostics.extend(Diagnostic("notice", f'Failed to read file attributes for "{path}"', failure_reason="No such file or directory") for path in missing)
+            diagnostics.extend(Diagnostic(
+                "notice", f'Failed to read file attributes for "{path}"', failure_reason="No such file or directory") for path in missing)
             if not options.minimum_deployment_target:
                 diagnostics.append(Diagnostic("notice", 'Compiling requires passing "--minimum-deployment-target [value]".'))
             if not options.platform:
@@ -255,8 +259,9 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
         asset.kind == "launch-image" and asset.name == options.launch_image
         for catalog in catalogs for asset in catalog.assets
     )
-    if (options.platform or "").lower() in ("appletvos","appletvsimulator","xros","xrsimulator") and options.filter_for_device_model and options.filter_for_device_os_version:
-        diagnostics.append(Diagnostic("notice", f"Could not get trait set for device {options.filter_for_device_model} with version {options.filter_for_device_os_version}"))
+    if (options.platform or "").lower() in ("appletvos", "appletvsimulator", "xros", "xrsimulator") and options.filter_for_device_model and options.filter_for_device_os_version:
+        diagnostics.append(Diagnostic(
+            "notice", f"Could not get trait set for device {options.filter_for_device_model} with version {options.filter_for_device_os_version}"))
 
     deferred_partial_info: Path | None = None
     if not any(item.severity == "error" for item in diagnostics):
@@ -274,18 +279,24 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
         occupied_slots: set[tuple[object, ...]] = set()
         app_icon_emitted: set[str] = set()
         app_icon_had_applicable_slot: set[str] = set()
-        known_idioms = {"universal","iphone","ipad","tv","watch","mac","vision","car","marketing"}
+        known_idioms = {"universal", "iphone", "ipad", "tv", "watch", "mac", "vision", "car", "marketing"}
 
         def color_component(components: dict[str, object], name: str, default: float = 0.0) -> float:
             value = components.get(name)
-            if value is None: return default
-            if isinstance(value, int): return value / 255.0
-            if isinstance(value, float): return value
+            if value is None:
+                return default
+            if isinstance(value, int):
+                return value / 255.0
+            if isinstance(value, float):
+                return value
             text = str(value).strip()
-            if not text: return default
+            if not text:
+                return default
             if "." not in text and "e" not in text.lower():
-                try: return int(text, 0) / 255.0
-                except ValueError: pass
+                try:
+                    return int(text, 0) / 255.0
+                except ValueError:
+                    pass
             return float(text)
 
         def layer_depth(entry: dict[str, object], fallback: int) -> int:
@@ -316,8 +327,10 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 if not isinstance(item, dict):
                     continue
                 kind, value = item.get("appearance"), item.get("value")
-                if kind == "luminosity" and value == "dark": result = "dark"
-                elif kind == "contrast" and value == "high": result = "high-contrast"
+                if kind == "luminosity" and value == "dark":
+                    result = "dark"
+                elif kind == "contrast" and value == "high":
+                    result = "high-contrast"
             return result
 
         atlas_member_dirs = {asset.directory for asset in assets if asset.directory.parent.suffix == ".spriteatlas"}
@@ -327,9 +340,11 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                 members = [candidate for candidate in assets if candidate.kind == "image" and candidate.directory.parent == asset.directory]
                 images: dict[str, bytes] = {}
                 for member in members:
-                    selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str) and (member.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "1x"), None)
+                    selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str) and (
+                        member.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "1x"), None)
                     if selected is None:
-                        selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str) and (member.directory / str(entry["filename"])).is_file()), None)
+                        selected = next((entry for entry in member.entries if isinstance(entry.get("filename"), str)
+                                        and (member.directory / str(entry["filename"])).is_file()), None)
                     if selected is None:
                         continue
                     source = member.directory / str(selected["filename"])
@@ -356,12 +371,15 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     role = str(ref.get("role", ""))
                     if not isinstance(dirname, str) or not role:
                         continue
-                    image_asset = next((candidate for candidate in assets if candidate.kind == "image" and candidate.directory == asset.directory / dirname), None)
+                    image_asset = next((candidate for candidate in assets if candidate.kind ==
+                                       "image" and candidate.directory == asset.directory / dirname), None)
                     if image_asset is None:
                         continue
-                    selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str) and (image_asset.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "2x"), None)
+                    selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str) and (
+                        image_asset.directory / str(entry["filename"])).is_file() and str(entry.get("scale", "1x")) == "2x"), None)
                     if selected is None:
-                        selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str) and (image_asset.directory / str(entry["filename"])).is_file()), None)
+                        selected = next((entry for entry in image_asset.entries if isinstance(entry.get("filename"), str)
+                                        and (image_asset.directory / str(entry["filename"])).is_file()), None)
                     if selected is None:
                         continue
                     source = image_asset.directory / str(selected["filename"])
@@ -401,7 +419,7 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                         try:
                             renditions.extend(imagestack_renditions(
                                 asset.name,
-                                [StackLayerImage(layer["layer_name"], layer["filename"], (layer["base"] / layer["filename"]).read_bytes())
+                                [StackLayerImage(str(layer.get("layer_name", "")), str(layer.get("filename", "")), (Path(str(layer.get("base", ""))) / str(layer.get("filename", ""))).read_bytes())  # type: ignore
                                  for layer in reversed(applicable)],
                                 root_idiom=0, child_idiom=0, flattened_idiom=0,
                                 scale=int(str(applicable[0].get("scale", "1x"))[0]) if str(applicable[0].get("scale", "1x"))[0] in "123" else 1))
@@ -422,17 +440,21 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     if not isinstance(dirname, str):
                         continue
                     layer_dir = asset.directory / dirname
-                    layer_asset = next((candidate for candidate in assets if candidate.kind == "image-stack-layer" and candidate.directory == layer_dir), None)
+                    layer_asset = next((candidate for candidate in assets if candidate.kind ==
+                                       "image-stack-layer" and candidate.directory == layer_dir), None)
                     if layer_asset is None:
                         continue
-                    selected = next((entry for entry in layer_asset.entries if isinstance(entry.get("filename"), str) and (layer_dir / str(entry["filename"])).is_file()), None)
+                    selected = next((entry for entry in layer_asset.entries if isinstance(
+                        entry.get("filename"), str) and (layer_dir / str(entry["filename"])).is_file()), None)
                     selected_base = layer_dir
                     selected_props: dict[str, object] = dict(layer_asset.properties)
                     if selected is None:
-                        nested_image = next((candidate for candidate in assets if candidate.kind == "image" and candidate.directory.parent == layer_dir), None)
+                        nested_image = next((candidate for candidate in assets if candidate.kind ==
+                                            "image" and candidate.directory.parent == layer_dir), None)
                         if nested_image is None:
                             continue
-                        selected = next((entry for entry in nested_image.entries if isinstance(entry.get("filename"), str) and (nested_image.directory / str(entry["filename"])).is_file()), None)
+                        selected = next((entry for entry in nested_image.entries if isinstance(entry.get("filename"), str)
+                                        and (nested_image.directory / str(entry["filename"])).is_file()), None)
                         if selected is None:
                             continue
                         selected_base = nested_image.directory
@@ -492,10 +514,13 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                         continue
                     app_icon_had_applicable_slot.add(asset.name)
                     try:
-                        source_png = source.read_bytes(); actual = png_dimensions(source_png)
-                        declared = str(icon_entry.get("size", "")); scale_text = str(icon_entry.get("scale", "1x"))
+                        source_png = source.read_bytes()
+                        actual = png_dimensions(source_png)
+                        declared = str(icon_entry.get("size", ""))
+                        scale_text = str(icon_entry.get("scale", "1x"))
                         if declared:
-                            points = declared.split("x", 1); scale = int(scale_text[:-1]) if scale_text.endswith("x") else 1
+                            points = declared.split("x", 1)
+                            scale = int(scale_text[:-1]) if scale_text.endswith("x") else 1
                             expected = (round(float(points[0]) * scale), round(float(points[1]) * scale))
                             if actual != expected:
                                 continue
@@ -509,11 +534,12 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     _, _, _, _, source_png, filename = max(candidates, key=lambda row: row[:4] + (row[5],))
                     try:
                         renditions.extend(app_icon_renditions(asset.name, source_png, filename,
-                                                             platform=options.platform or "iphoneos"))
+                                                              platform=options.platform or "iphoneos"))
                         for sidecar_name, width, height in app_icon_sidecar_specs(options.platform or "iphoneos"):
                             sidecar = options.output / sidecar_name
                             sidecar.parent.mkdir(parents=True, exist_ok=True)
-                            sidecar.write_bytes(resize_png(source_png, width, height)); outputs.append(sidecar)
+                            sidecar.write_bytes(resize_png(source_png, width, height))
+                            outputs.append(sidecar)
                         app_icon_emitted.add(asset.name)
                     except ValueError as exc:
                         diagnostics.append(Diagnostic("error", f"invalid AppIcon: {exc}", asset.directory))
@@ -560,7 +586,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                         if color_space not in ("srgb", "display-p3"):
                             raise ValueError("only sRGB and Display P3 colors are enabled")
                         components = color["components"]
-                        if not isinstance(components, dict): raise ValueError("color components must be a dictionary")
+                        if not isinstance(components, dict):
+                            raise ValueError("color components must be a dictionary")
                         values = [color_component(components, name, 0.0) for name in ("red", "green", "blue")]
                         values.append(color_component(components, "alpha", 1.0))
                         renditions.append(color_rendition(asset.name, *values, color_space=color_space,
@@ -578,7 +605,8 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     continue
 
                 if asset.kind == "launch-image":
-                    if options.launch_image != asset.name: continue
+                    if options.launch_image != asset.name:
+                        continue
                     version = str(entry.get("minimum-system-version", "7.0"))
                     version_tag = "".join(ch for ch in version if ch.isdigit()).ljust(3, "0")
                     scale_suffix = "" if scale_text == "1x" else f"@{scale_text}"
@@ -586,8 +614,10 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                     launch_path = options.output / f"{asset.name}-{version_tag}{scale_suffix}{idiom_suffix}.png"
                     if launch_path not in outputs:
                         launch_path.parent.mkdir(parents=True, exist_ok=True)
-                        launch_path.write_bytes(source.read_bytes()); outputs.append(launch_path)
-                    occupied_slots.add(slot); continue
+                        launch_path.write_bytes(source.read_bytes())
+                        outputs.append(launch_path)
+                    occupied_slots.add(slot)
+                    continue
 
                 try:
                     if asset.kind == "data":
@@ -618,27 +648,30 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
                         diagnostics.append(Diagnostic("error", f"asset encoder limitation: {exc}", asset.directory))
 
         if options.app_icon and options.app_icon in app_icon_had_applicable_slot and options.app_icon not in app_icon_emitted:
-            diagnostics.append(Diagnostic("error", f'The stickers icon set, app icon set, or icon stack named "{options.app_icon}" did not have any applicable content.'))
+            diagnostics.append(Diagnostic(
+                "error", f'The stickers icon set, app icon set, or icon stack named "{options.app_icon}" did not have any applicable content.'))
 
         if renditions and not any(item.severity == "error" for item in diagnostics):
             thinning_arguments = ""
             if len(options.target_devices) == 1:
                 from .thinning import ThinningOptions, thin_renditions
-                device_idioms = {"iphone":"iphone","ipad":"ipad","tv":"tv","watch":"watch","mac":"mac","vision":"vision"}
+                device_idioms = {"iphone": "iphone", "ipad": "ipad", "tv": "tv", "watch": "watch", "mac": "mac", "vision": "vision"}
                 thinning = ThinningOptions(idiom=device_idioms[options.target_devices[0]])
                 thinned = thin_renditions(renditions, thinning)
                 # Apple records the thinning arguments only when thinning
                 # actually discarded renditions (verified against oracles).
                 thinning_arguments = thinning.metadata_arguments() if len(thinned) != len(renditions) else ""
                 renditions = thinned
-            if options.filter_for_device_model: thinning_arguments += (" " if thinning_arguments else "") + "model " + options.filter_for_device_model
-            if options.filter_for_device_os_version: thinning_arguments += (" " if thinning_arguments else "") + "os-version " + options.filter_for_device_os_version
+            if options.filter_for_device_model:
+                thinning_arguments += (" " if thinning_arguments else "") + "model " + options.filter_for_device_model
+            if options.filter_for_device_os_version:
+                thinning_arguments += (" " if thinning_arguments else "") + "os-version " + options.filter_for_device_os_version
             car_path = options.output / "Assets.car"
             car_path.parent.mkdir(parents=True, exist_ok=True)
             car_path.write_bytes(build_assets_car(renditions, platform=options.platform or "macosx",
-                                                   target=options.minimum_deployment_target or "13.0",
-                                                   thinning_arguments=thinning_arguments,
-                                                   coreui_profile=options.coreui_profile))
+                                                  target=options.minimum_deployment_target or "13.0",
+                                                  thinning_arguments=thinning_arguments,
+                                                  coreui_profile=options.coreui_profile))
             outputs.append(car_path)
         if distill_failed:
             # Apple leaves a structurally incomplete CAR on this failure path.
@@ -646,8 +679,10 @@ def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResu
             # output-file contract and nonzero exit status.
             car_path = options.output / "Assets.car"
             car_path.parent.mkdir(parents=True, exist_ok=True)
-            car_path.write_bytes(build_assets_car([data_rendition("__actool_distill_failure__", b"", "public.data")], platform=options.platform or "macosx", target=options.minimum_deployment_target or "13.0", coreui_profile=options.coreui_profile))
-            if car_path not in outputs: outputs.append(car_path)
+            car_path.write_bytes(build_assets_car([data_rendition("__actool_distill_failure__", b"", "public.data")],
+                                 platform=options.platform or "macosx", target=options.minimum_deployment_target or "13.0", coreui_profile=options.coreui_profile))
+            if car_path not in outputs:
+                outputs.append(car_path)
     if deferred_partial_info is not None:
         if missing_app_icon and missing_launch_image:
             outputs.insert(0, deferred_partial_info)

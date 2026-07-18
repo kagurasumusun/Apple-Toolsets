@@ -42,7 +42,7 @@ DMP2_FIELD2 = 10
 # MLEC payload wrapper.
 # ---------------------------------------------------------------------------
 MLEC_CODEC_DMP2 = 11        # payload embeds a dmp2 stream
-MLEC_CODEC_LZFSE_CHUNKS = 4 # KCBC chunks of raw LZFSE (CBCK bitmap)
+MLEC_CODEC_LZFSE_CHUNKS = 4  # KCBC chunks of raw LZFSE (CBCK bitmap)
 MLEC_MODE_DEFAULT = 0
 MLEC_MODE_OPAQUE_UNIFORM = 2  # uniform + fully opaque deepmaps
 MLEC_MODE_CHUNKED = 3
@@ -221,14 +221,20 @@ def auto_select_profile(platform: str | None, target: str | float | None = None)
     except (ValueError, TypeError):
         return COREUI_975_MACOS if is_mac else COREUI_975_DEVICE
     if is_mac:
-        if ver <= 11.0: return COREUI_700
-        if ver <= 13.0: return COREUI_850
-        if ver <= 15.0: return COREUI_918_MACOS
+        if ver <= 11.0:
+            return COREUI_700
+        if ver <= 13.0:
+            return COREUI_850
+        if ver <= 15.0:
+            return COREUI_918_MACOS
         return COREUI_975_MACOS
     else:
-        if ver <= 13.0: return COREUI_700
-        if ver <= 15.0: return COREUI_850
-        if ver <= 16.0: return COREUI_918_DEVICE
+        if ver <= 13.0:
+            return COREUI_700
+        if ver <= 15.0:
+            return COREUI_850
+        if ver <= 16.0:
+            return COREUI_918_DEVICE
         return COREUI_975_DEVICE
 
 
@@ -250,6 +256,7 @@ def resolve_profile(profile: "CoreUIProfile | str | None", platform: str | None)
             f"unknown CoreUI profile {profile!r}; known: {sorted(PROFILES)} "
             f"or aliases {sorted(PROFILE_ALIASES)}"
         ) from None
+
 
 # Additional legacy profiles based on MacOSX SDK analysis
 COREUI_420 = CoreUIProfile(

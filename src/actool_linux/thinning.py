@@ -39,10 +39,14 @@ class ThinningOptions:
     def metadata_arguments(self) -> str:
         fields: list[str] = []
         idiom_id = self.idiom_id()
-        if idiom_id is not None: fields += ["idiom", str(idiom_id)]
-        if self.scale is not None: fields += ["scale", str(self.scale)]
-        if self.appearance is not None: fields += ["appearance", str(self.appearance)]
-        if self.localization is not None: fields += ["localization", self.localization]
+        if idiom_id is not None:
+            fields += ["idiom", str(idiom_id)]
+        if self.scale is not None:
+            fields += ["scale", str(self.scale)]
+        if self.appearance is not None:
+            fields += ["appearance", str(self.appearance)]
+        if self.localization is not None:
+            fields += ["localization", self.localization]
         return " ".join(fields)
 
 
@@ -63,20 +67,26 @@ def thin_renditions(assets: list[AssetRendition], options: ThinningOptions) -> l
     for asset in assets:
         if idiom is not None:
             allowed = {idiom}
-            if options.keep_fallbacks: allowed.add(0)
+            if options.keep_fallbacks:
+                allowed.add(0)
             # Marketing (App Store) content is device-independent: Apple
             # retains idiom 6 renditions under --target-device thinning.
             allowed.add(6)
-            if asset.idiom not in allowed: continue
+            if asset.idiom not in allowed:
+                continue
         if options.scale is not None and asset.part != 42 and asset.scale != options.scale:
             continue
         if options.appearance is not None:
             allowed_appearances = {options.appearance}
-            if options.keep_fallbacks: allowed_appearances.add(0)
-            if asset.appearance not in allowed_appearances: continue
+            if options.keep_fallbacks:
+                allowed_appearances.add(0)
+            if asset.appearance not in allowed_appearances:
+                continue
         if options.localization is not None:
             allowed_locales = {options.localization}
-            if options.keep_fallbacks: allowed_locales.add(None)
-            if asset.localization not in allowed_locales: continue
+            if options.keep_fallbacks:
+                allowed_locales.add(None)  # type: ignore
+            if asset.localization not in allowed_locales:
+                continue
         selected.append(asset)
     return selected

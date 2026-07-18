@@ -12,6 +12,7 @@ ACTOOL_BUNDLE_VERSIONS = {
     "26.4.1": "24765", "26.5": "24765", "26.6": "24765",
 }
 
+
 def version_plist(bundle_version: str | None = None, short_version: str = "26.5") -> bytes:
     if bundle_version is None:
         try:

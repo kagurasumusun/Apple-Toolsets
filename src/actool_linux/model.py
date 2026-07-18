@@ -95,7 +95,8 @@ def load_catalog(path: Path) -> Catalog:
         info = raw.get("info")
         if not isinstance(info, dict) or "version" not in info or "author" not in info:
             diagnostics.append(Diagnostic("warning", "Contents.json has no complete info dictionary", contents))
-        entries_key = {"color": "colors", "data": "data", "symbol": "symbols", "image-stack": "layers", "brand-assets": "assets", "complication-set": "assets"}.get(kind, "images")
+        entries_key = {"color": "colors", "data": "data", "symbol": "symbols", "image-stack": "layers",
+                       "brand-assets": "assets", "complication-set": "assets"}.get(kind, "images")
         entries = raw.get(entries_key, [])
         if not isinstance(entries, list):
             diagnostics.append(Diagnostic("error", f"'{entries_key}' must be an array", contents))

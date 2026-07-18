@@ -4,9 +4,7 @@ This module provides support for CoreUI version-specific features,
 target-specific functionality, and legacy compatibility modes.
 """
 
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
-import struct
+from typing import List, Tuple
 
 
 # ============================================================================
@@ -15,7 +13,7 @@ import struct
 
 class CoreUIVersionFeatures:
     """Features specific to different CoreUI versions."""
-    
+
     # Version-specific feature flags and parameters
     VERSION_FEATURES = {
         # CoreUI 400-498 (MacOSX 10.5-10.6 era)
@@ -52,7 +50,7 @@ class CoreUIVersionFeatures:
             'key_format_version': 2,
             'max_facet_name_length': 128,
         },
-        
+
         # CoreUI 580-680 (MacOSX 10.8-10.9 era)
         580: {
             'max_image_size': 4096,
@@ -78,7 +76,7 @@ class CoreUIVersionFeatures:
             'max_facet_name_length': 256,
             'supports_extended_metadata': True,
         },
-        
+
         # CoreUI 700-850 (MacOSX 10.10-10.11 era)
         700: {
             'max_image_size': 8192,
@@ -120,7 +118,7 @@ class CoreUIVersionFeatures:
             'supports_multiple_databases': True,
             'supports_zero_code': True,
         },
-        
+
         # CoreUI 918+ (MacOSX 10.12+ era)
         918: {
             'max_image_size': 32768,
@@ -155,7 +153,7 @@ class CoreUIVersionFeatures:
             'supports_icon_stacks': True,
         },
     }
-    
+
     @classmethod
     def get_features(cls, version: int) -> dict:
         """Get features for a specific CoreUI version."""
@@ -163,19 +161,19 @@ class CoreUIVersionFeatures:
         available_versions = sorted(cls.VERSION_FEATURES.keys())
         target_version = max(v for v in available_versions if v <= version)
         return cls.VERSION_FEATURES[target_version]
-    
+
     @classmethod
     def is_feature_supported(cls, version: int, feature: str) -> bool:
         """Check if a feature is supported in a specific version."""
         features = cls.get_features(version)
         return features.get(feature, False)
-    
+
     @classmethod
     def get_max_image_size(cls, version: int) -> int:
         """Get maximum supported image size for a version."""
         features = cls.get_features(version)
         return features.get('max_image_size', 2048)
-    
+
     @classmethod
     def get_supported_compressions(cls, version: int) -> List[str]:
         """Get supported compression methods for a version."""
@@ -189,7 +187,7 @@ class CoreUIVersionFeatures:
 
 class TargetSpecificFeatures:
     """Features specific to different target platforms."""
-    
+
     # Platform-specific parameters
     PLATFORM_FEATURES = {
         'macosx': {
@@ -238,18 +236,18 @@ class TargetSpecificFeatures:
             'max_atlas_size': 8192,
         },
     }
-    
+
     @classmethod
     def get_features(cls, platform: str) -> dict:
         """Get features for a specific platform."""
         return cls.PLATFORM_FEATURES.get(platform, cls.PLATFORM_FEATURES['macosx'])
-    
+
     @classmethod
     def get_supported_scales(cls, platform: str) -> List[int]:
         """Get supported scales for a platform."""
         features = cls.get_features(platform)
         return features.get('supported_scales', [1, 2])
-    
+
     @classmethod
     def get_max_atlas_size(cls, platform: str) -> int:
         """Get maximum atlas size for a platform."""
@@ -263,64 +261,64 @@ class TargetSpecificFeatures:
 
 class LegacyCompatibilityMode:
     """Compatibility mode for legacy CoreUI versions."""
-    
+
     def __init__(self, target_version: int, target_platform: str = 'macosx'):
         self.target_version = target_version
         self.target_platform = target_platform
         self.version_features = CoreUIVersionFeatures.get_features(target_version)
         self.platform_features = TargetSpecificFeatures.get_features(target_platform)
-    
+
     def validate_image_size(self, width: int, height: int) -> Tuple[bool, str]:
         """Validate that image size is compatible with target version."""
         max_size = self.version_features.get('max_image_size', 2048)
         if width > max_size or height > max_size:
             return False, f"Image size {width}x{height} exceeds maximum {max_size}x{max_size} for CoreUI {self.target_version}"
         return True, ""
-    
+
     def validate_compression(self, compression: str) -> Tuple[bool, str]:
         """Validate that compression method is compatible with target version."""
         supported = self.version_features.get('supported_compressions', ['raw'])
         if compression not in supported:
             return False, f"Compression '{compression}' not supported in CoreUI {self.target_version}. Supported: {supported}"
         return True, ""
-    
+
     def validate_facet_name(self, name: str) -> Tuple[bool, str]:
         """Validate that facet name is compatible with target version."""
         max_length = self.version_features.get('max_facet_name_length', 64)
         if len(name) > max_length:
             return False, f"Facet name length {len(name)} exceeds maximum {max_length} for CoreUI {self.target_version}"
         return True, ""
-    
+
     def validate_scale(self, scale: int) -> Tuple[bool, str]:
         """Validate that scale is compatible with target platform."""
         supported_scales = self.platform_features.get('supported_scales', [1, 2])
         if scale not in supported_scales:
             return False, f"Scale {scale} not supported on {self.target_platform}. Supported: {supported_scales}"
         return True, ""
-    
-    def validate_all(self, width: int, height: int, compression: str, 
+
+    def validate_all(self, width: int, height: int, compression: str,
                      facet_name: str, scale: int) -> Tuple[bool, List[str]]:
         """Validate all parameters against target version and platform."""
         errors = []
-        
+
         valid, msg = self.validate_image_size(width, height)
         if not valid:
             errors.append(msg)
-        
+
         valid, msg = self.validate_compression(compression)
         if not valid:
             errors.append(msg)
-        
+
         valid, msg = self.validate_facet_name(facet_name)
         if not valid:
             errors.append(msg)
-        
+
         valid, msg = self.validate_scale(scale)
         if not valid:
             errors.append(msg)
-        
+
         return len(errors) == 0, errors
-    
+
     def get_recommended_compression(self) -> str:
         """Get recommended compression for target version."""
         supported = self.version_features.get('supported_compressions', ['raw'])
@@ -329,7 +327,7 @@ class LegacyCompatibilityMode:
             if pref in supported:
                 return pref
         return supported[0] if supported else 'raw'
-    
+
     def get_recommended_atlas_size(self) -> int:
         """Get recommended atlas size for target platform."""
         max_size = self.platform_features.get('max_atlas_size', 4096)

@@ -38,19 +38,19 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--warnings", action="store_true", default=True)
     p.add_argument("--errors", action="store_true", default=True)
     p.add_argument("--notices", action="store_true", default=True)
-    p.add_argument("--target-device", action="append", choices=("iphone","ipad","tv","watch","mac","vision"), default=[])
+    p.add_argument("--target-device", action="append", choices=("iphone", "ipad", "tv", "watch", "mac", "vision"), default=[])
     p.add_argument("--filter-for-device-model")
     p.add_argument("--filter-for-device-os-version")
     p.add_argument("--product-type")
     p.add_argument("--development-region")
     p.add_argument("--compress-pngs", action="store_true", default=True)
-    p.add_argument("--enable-on-demand-resources", choices=("yes","no"), default="no")
+    p.add_argument("--enable-on-demand-resources", choices=("yes", "no"), default="no")
     p.add_argument("--print-contents", action="store_true")
-    p.add_argument("--output-format", choices=("human-readable-text","xml1"), default="xml1")
+    p.add_argument("--output-format", choices=("human-readable-text", "xml1"), default="xml1")
     p.add_argument("--version", action="store_true")
     p.add_argument("--coreui-profile", default=None,
                    help="CoreUI output dialect (coreui-975-macos, coreui-975-device, coreui-918; default: per-platform 975)")
-    p.add_argument("--compatibility-xcode-version", choices=("16.0","16.1","16.2","16.3","16.4","26.0.1","26.1.1","26.2","26.3","26.4.1","26.5","26.6"), default="26.5")
+    p.add_argument("--compatibility-xcode-version", choices=("16.0", "16.1", "16.2", "16.3", "16.4", "26.0.1", "26.1.1", "26.2", "26.3", "26.4.1", "26.5", "26.6"), default="26.5")
     p.add_argument("--capabilities", action="store_true")
     return p
 
@@ -128,7 +128,9 @@ def main(argv: list[str] | None = None) -> int:
         enable_on_demand_resources=ns.enable_on_demand_resources == "yes",
     ))
     if any(d.message == "Distill failed for unknown reasons." for d in result.diagnostics):
-        import datetime, os, threading
+        import datetime
+        import os
+        import threading
         source = next((asset.directory / str(entry["filename"]) for catalog in result.catalogs for asset in catalog.assets for entry in asset.entries if isinstance(entry.get("filename"), str) and str(entry["filename"]).lower().endswith(".png")), None)
         if source is not None:
             for _ in range(4):
@@ -140,7 +142,8 @@ def main(argv: list[str] | None = None) -> int:
         enabled = {
             "warning": ns.warnings, "error": ns.errors, "notice": ns.notices,
         }.get(diagnostic.severity, True)
-        if enabled: visible.append(diagnostic)
+        if enabled:
+            visible.append(diagnostic)
     if ns.output_format == "xml1":
         from .diagnostics import result_plist
         include_results = bool(resolved_inputs) and any(path.exists() for path in resolved_inputs) and not (ns.app_icon and ns.output_partial_info_plist is None)
@@ -152,7 +155,8 @@ def main(argv: list[str] | None = None) -> int:
         if out_text:
             print(out_text)
         if ns.print_contents:
-            for output in result.outputs: print(output)
+            for output in result.outputs:
+                print(output)
     return 0 if result.ok else 1
 
 

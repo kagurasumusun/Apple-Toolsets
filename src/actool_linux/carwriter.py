@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 from pathlib import Path
 import struct
 import zlib
@@ -84,6 +83,7 @@ def _select_key_attributes(assets, platform: str = "macosx") -> tuple[int, ...]:
     if any(a.idiom or a.subtype for a in seq):
         return IOS_ATTRIBUTES
     return KEY_ATTRIBUTES
+
 
 BITMAP_VALUE = bytes.fromhex(
     "01000000000000002400000008000000ffffffff01000000ffffffffffffffff"
@@ -362,7 +362,7 @@ def _identifier(name: str) -> int:
     for k, c in enumerate(reversed(raw)):
         w = pow(33, k + 3, 65536)
         s = (s + c * w) % 65536
-    
+
     # Offset depends on length and character composition
     # For len=3, uppercase strings use offset 206, lowercase/digit use 1295
     # For len=4+, the offset varies significantly; use known values when available
@@ -371,7 +371,7 @@ def _identifier(name: str) -> int:
         offset = 206
     else:
         offset = _LENGTH_OFFSETS.get(length, 51249)
-    
+
     value = (s + offset) % 65536
     return value or 1
 
@@ -435,24 +435,6 @@ DEPLOYMENT_PLATFORM_TOKENS = {
     "watchos": "watchos", "watchsimulator": "watchos",
     "xros": "xros", "xrsimulator": "xros", "visionos": "xros",
 }
-
-
-def _adapt_csi_for_profile(csi: bytes, profile: "CoreUIProfile") -> bytes:
-    if profile.header_version >= 900 or len(csi) < 184 or not csi.startswith(b"ISTC"):
-        return csi
-    tlv_length, one, zero, payload_length = struct.unpack_from("<4I", csi, 168)
-    head_tlvs = csi[184:184 + tlv_length]
-    payload = csi[184 + tlv_length:]
-    rebuilt_tlvs = bytearray()
-    cursor = 0
-    while cursor + 8 <= len(head_tlvs):
-        tag, length = struct.unpack_from("<2I", head_tlvs, cursor)
-        if tag in (1001, 1003, 1004, 1006, 1007, 1009, 1010):
-            rebuilt_tlvs += head_tlvs[cursor:cursor + 8 + length]
-        cursor += 8 + length
-    out = bytearray(csi[:184])
-    struct.pack_into("<4I", out, 168, len(rebuilt_tlvs), 1, 0, len(payload))
-    return bytes(out) + bytes(rebuilt_tlvs) + payload
 
 
 def _adapt_csi_for_profile(csi: bytes, profile: "CoreUIProfile") -> bytes:
@@ -676,7 +658,10 @@ def _csi_heif(data: bytes, filename: str, scale: int = 1) -> bytes:
 
 
 def _paeth(a: int, b: int, c: int) -> int:
-    p = a + b - c; pa = abs(p - a); pb = abs(p - b); pc = abs(p - c)
+    p = a + b - c
+    pa = abs(p - a)
+    pb = abs(p - b)
+    pc = abs(p - c)
     return a if pa <= pb and pa <= pc else b if pb <= pc else c
 
 
@@ -715,31 +700,50 @@ def _decode_indexed_png_for_palette_img(data: bytes) -> tuple[int, int, bytes, b
     """Return width, height, ARGB palette bytes, and one-byte-per-pixel indices."""
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("input is not a PNG stream")
-    cursor = 8; ihdr = None; idat = bytearray(); palette = None; transparency = b""
+    cursor = 8
+    ihdr = None
+    idat = bytearray()
+    palette = None
+    transparency = b""
     while cursor + 12 <= len(data):
-        length = int.from_bytes(data[cursor:cursor + 4], "big"); kind = data[cursor + 4:cursor + 8]; end = cursor + 12 + length
-        if end > len(data): raise ValueError("PNG chunk is truncated")
-        payload = data[cursor + 8:cursor + 8 + length]; expected = int.from_bytes(data[cursor + 8 + length:end], "big")
-        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected: raise ValueError("PNG chunk CRC mismatch")
-        if kind == b"IHDR": ihdr = payload
-        elif kind == b"PLTE": palette = payload
-        elif kind == b"tRNS": transparency = payload
-        elif kind == b"IDAT": idat += payload
-        elif kind == b"IEND": break
+        length = int.from_bytes(data[cursor:cursor + 4], "big")
+        kind = data[cursor + 4:cursor + 8]
+        end = cursor + 12 + length
+        if end > len(data):
+            raise ValueError("PNG chunk is truncated")
+        payload = data[cursor + 8:cursor + 8 + length]
+        expected = int.from_bytes(data[cursor + 8 + length:end], "big")
+        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected:
+            raise ValueError("PNG chunk CRC mismatch")
+        if kind == b"IHDR":
+            ihdr = payload
+        elif kind == b"PLTE":
+            palette = payload
+        elif kind == b"tRNS":
+            transparency = payload
+        elif kind == b"IDAT":
+            idat += payload
+        elif kind == b"IEND":
+            break
         cursor = end
-    if ihdr is None or len(ihdr) != 13: raise ValueError("PNG has no valid IHDR")
+    if ihdr is None or len(ihdr) != 13:
+        raise ValueError("PNG has no valid IHDR")
     width, height, depth, color_type, compression, filtering, interlace = struct.unpack(">IIBBBBB", ihdr)
-    if not width or not height or width > 16384 or height > 16384: raise ValueError("PNG dimensions are invalid or exceed safety limit")
+    if not width or not height or width > 16384 or height > 16384:
+        raise ValueError("PNG dimensions are invalid or exceed safety limit")
     if color_type != 3 or depth not in (1, 2, 4, 8) or compression != 0 or filtering != 0 or interlace not in (0, 1):
         raise ValueError("palette-img encoder accepts indexed PNG at depth 1/2/4/8, with optional Adam7 interlace")
-    try: raw = zlib.decompress(bytes(idat))
-    except zlib.error as exc: raise ValueError(f"invalid PNG deflate stream: {exc}") from exc
+    try:
+        raw = zlib.decompress(bytes(idat))
+    except zlib.error as exc:
+        raise ValueError(f"invalid PNG deflate stream: {exc}") from exc
     if palette is None or not palette or len(palette) % 3 or len(palette) > 768:
         raise ValueError("indexed PNG has invalid or missing PLTE")
     entries = len(palette) // 3
     palette_argb = bytearray()
     for index in range(entries):
-        r, g, b = palette[index * 3:index * 3 + 3]; alpha = transparency[index] if index < len(transparency) else 255
+        r, g, b = palette[index * 3:index * 3 + 3]
+        alpha = transparency[index] if index < len(transparency) else 255
         palette_argb += bytes((alpha, r, g, b))
     if interlace == 0:
         stride = (width * depth + 7) // 8
@@ -748,10 +752,11 @@ def _decode_indexed_png_for_palette_img(data: bytes) -> tuple[int, int, bytes, b
         for row in rows:
             for x in range(width):
                 index = _packed_sample(row, x, depth)
-                if index >= entries: raise ValueError("indexed PNG references palette entry outside PLTE")
+                if index >= entries:
+                    raise ValueError("indexed PNG references palette entry outside PLTE")
                 indices.append(index)
         return width, height, bytes(palette_argb), bytes(indices)
-    passes = ((0,0,8,8),(4,0,8,8),(0,4,4,8),(2,0,4,4),(0,2,2,4),(1,0,2,2),(0,1,1,2))
+    passes = ((0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2))
     decoded = bytearray(width * height)
     pos = 0
     for x0, y0, dx, dy in passes:
@@ -761,7 +766,8 @@ def _decode_indexed_png_for_palette_img(data: bytes) -> tuple[int, int, bytes, b
             continue
         row_bytes = (pw * depth + 7) // 8
         pass_len = ph * (row_bytes + 1)
-        if pos + pass_len > len(raw): raise ValueError("Adam7 PNG pass is truncated")
+        if pos + pass_len > len(raw):
+            raise ValueError("Adam7 PNG pass is truncated")
         rows = _unfilter_png_rows(raw[pos:pos + pass_len], row_bytes, ph, 1)
         pos += pass_len
         for py, row in enumerate(rows):
@@ -769,30 +775,48 @@ def _decode_indexed_png_for_palette_img(data: bytes) -> tuple[int, int, bytes, b
             for px in range(pw):
                 x = x0 + px * dx
                 index = _packed_sample(row, px, depth)
-                if index >= entries: raise ValueError("indexed PNG references palette entry outside PLTE")
+                if index >= entries:
+                    raise ValueError("indexed PNG references palette entry outside PLTE")
                 decoded[y * width + x] = index
-    if pos != len(raw): raise ValueError("Adam7 PNG has trailing decompressed data")
+    if pos != len(raw):
+        raise ValueError("Adam7 PNG has trailing decompressed data")
     return width, height, bytes(palette_argb), bytes(decoded)
 
 
 def _decode_png_8bit(data: bytes) -> tuple[int, int, int, bytes, tuple[bytes, bytes] | None]:
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("input is not a PNG stream")
-    cursor = 8; ihdr = None; idat = bytearray(); palette = None; transparency = b""
+    cursor = 8
+    ihdr = None
+    idat = bytearray()
+    palette = None
+    transparency = b""
     while cursor + 12 <= len(data):
-        length = int.from_bytes(data[cursor:cursor + 4], "big"); kind = data[cursor + 4:cursor + 8]; end = cursor + 12 + length
-        if end > len(data): raise ValueError("PNG chunk is truncated")
-        payload = data[cursor + 8:cursor + 8 + length]; expected = int.from_bytes(data[cursor + 8 + length:end], "big")
-        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected: raise ValueError("PNG chunk CRC mismatch")
-        if kind == b"IHDR": ihdr = payload
-        elif kind == b"PLTE": palette = payload
-        elif kind == b"tRNS": transparency = payload
-        elif kind == b"IDAT": idat += payload
-        elif kind == b"IEND": break
+        length = int.from_bytes(data[cursor:cursor + 4], "big")
+        kind = data[cursor + 4:cursor + 8]
+        end = cursor + 12 + length
+        if end > len(data):
+            raise ValueError("PNG chunk is truncated")
+        payload = data[cursor + 8:cursor + 8 + length]
+        expected = int.from_bytes(data[cursor + 8 + length:end], "big")
+        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected:
+            raise ValueError("PNG chunk CRC mismatch")
+        if kind == b"IHDR":
+            ihdr = payload
+        elif kind == b"PLTE":
+            palette = payload
+        elif kind == b"tRNS":
+            transparency = payload
+        elif kind == b"IDAT":
+            idat += payload
+        elif kind == b"IEND":
+            break
         cursor = end
-    if ihdr is None or len(ihdr) != 13: raise ValueError("PNG has no valid IHDR")
+    if ihdr is None or len(ihdr) != 13:
+        raise ValueError("PNG has no valid IHDR")
     width, height, depth, color_type, compression, filtering, interlace = struct.unpack(">IIBBBBB", ihdr)
-    if not width or not height or width > 16384 or height > 16384: raise ValueError("PNG dimensions are invalid or exceed safety limit")
+    if not width or not height or width > 16384 or height > 16384:
+        raise ValueError("PNG dimensions are invalid or exceed safety limit")
     valid_direct = depth == 8 and color_type in (2, 4, 6)
     valid_grey = depth == 8 and color_type == 0
     valid_grey16 = depth == 16 and color_type == 0
@@ -800,8 +824,10 @@ def _decode_png_8bit(data: bytes) -> tuple[int, int, int, bytes, tuple[bytes, by
     valid_indexed = color_type == 3 and depth in (1, 2, 4, 8)
     if not (valid_direct or valid_grey or valid_grey16 or valid_ga16 or valid_indexed) or compression != 0 or filtering != 0 or interlace not in (0, 1):
         raise ValueError("deepmap encoder accepts 8-bit greyscale/RGB/GA/RGBA, 16-bit greyscale/GA, or indexed PNG at depth 1/2/4/8, with optional Adam7 interlace")
-    try: raw = zlib.decompress(bytes(idat))
-    except zlib.error as exc: raise ValueError(f"invalid PNG deflate stream: {exc}") from exc
+    try:
+        raw = zlib.decompress(bytes(idat))
+    except zlib.error as exc:
+        raise ValueError(f"invalid PNG deflate stream: {exc}") from exc
     channels = 1 if color_type in (0, 3) else 3 if color_type == 2 else 2 if color_type == 4 else 4
     pixel_bytes = channels * depth // 8 if color_type != 3 else 0
     filter_bpp = max(1, (channels * depth + 7) // 8)
@@ -811,7 +837,7 @@ def _decode_png_8bit(data: bytes) -> tuple[int, int, int, bytes, tuple[bytes, by
     else:
         # Adam7 maps seven independently filtered subimages into the final image.
         # Keeping indexed output as one byte per sample avoids fragile bit repacking.
-        passes = ((0,0,8,8),(4,0,8,8),(0,4,4,8),(2,0,4,4),(0,2,2,4),(1,0,2,2),(0,1,1,2))
+        passes = ((0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2))
         output_bpp = 1 if color_type == 3 else pixel_bytes
         decoded = bytearray(width * height * output_bpp)
         pos = 0
@@ -859,19 +885,24 @@ def _decode_png_8bit(data: bytes) -> tuple[int, int, int, bytes, tuple[bytes, by
     if color_type == 3:
         if palette is None or not palette or len(palette) % 3 or len(palette) > 768:
             raise ValueError("indexed PNG has invalid or missing PLTE")
-        entries = len(palette) // 3; rgba = bytearray(); indices = bytearray(); palette_bgra = bytearray()
+        entries = len(palette) // 3
+        rgba = bytearray()
+        indices = bytearray()
+        palette_bgra = bytearray()
         for index in range(entries):
-            r, g, b = palette[index * 3:index * 3 + 3]; alpha = transparency[index] if index < len(transparency) else 255
+            r, g, b = palette[index * 3:index * 3 + 3]
+            alpha = transparency[index] if index < len(transparency) else 255
             palette_bgra += bytes(((b * alpha + 127) // 255, (g * alpha + 127) // 255, (r * alpha + 127) // 255, alpha))
         packed_stride = (width * depth + 7) // 8
         for y in range(height):
             for x in range(width):
-                index = decoded[y * width + x] if interlace else _packed_sample(decoded[y * packed_stride:(y + 1) * packed_stride], x, depth)
-                if index >= entries: raise ValueError("indexed PNG references palette entry outside PLTE")
-                indices.append(index); rgba += palette[index * 3:index * 3 + 3] + bytes((transparency[index] if index < len(transparency) else 255,))
+                index = decoded[y * width + x] if interlace else _packed_sample(bytes(decoded[y * packed_stride:(y + 1) * packed_stride]), x, depth)
+                if index >= entries:
+                    raise ValueError("indexed PNG references palette entry outside PLTE")
+                indices.append(index)
+                rgba += palette[index * 3:index * 3 + 3] + bytes((transparency[index] if index < len(transparency) else 255,))
         return width, height, 6, bytes(rgba), (bytes(palette_bgra), bytes(indices))
     return width, height, color_type, bytes(decoded), None
-
 
 
 def resize_png(data: bytes, width: int, height: int) -> bytes:
@@ -881,9 +912,11 @@ def resize_png(data: bytes, width: int, height: int) -> bytes:
     source_width, source_height, color_type, pixels, _indexed = _decode_png_8bit(data)
     rgba = bytearray()
     if color_type == 2:
-        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]): rgba += bytes((r, g, b, 255))
+        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]):
+            rgba += bytes((r, g, b, 255))
     elif color_type == 4:
-        for gray, alpha in zip(pixels[0::2], pixels[1::2]): rgba += bytes((gray, gray, gray, alpha))
+        for gray, alpha in zip(pixels[0::2], pixels[1::2]):
+            rgba += bytes((gray, gray, gray, alpha))
     else:
         rgba += pixels
     scanlines = bytearray()
@@ -894,9 +927,11 @@ def resize_png(data: bytes, width: int, height: int) -> bytes:
             sx = min(source_width - 1, x * source_width // width)
             offset = (sy * source_width + sx) * 4
             scanlines += rgba[offset:offset + 4]
+
     def chunk(kind: bytes, payload: bytes) -> bytes:
         return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(bytes(scanlines), 9)) + chunk(b"IEND", b"")
+
 
 def _gray_ga_bytes(premultiplied: bytes) -> bytes | None:
     """Interleaved premultiplied (v, a) bytes when every BGRA pixel is gray.
@@ -984,8 +1019,13 @@ def _csi_ga_deepmap(width: int, height: int, ga: bytes, filename: str, *, scale:
         dmp2 = _dmp2_lzfse_stream(width, height, ga, 2, version)
     mode = 2 if all_opaque else 0
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, 2, len(dmp2), 0) + dmp2
-    header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
-    header[24:28] = b" 8AG"; struct.pack_into("<I", header, 28, 2); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
+    header = bytearray(184)
+    header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
+    header[24:28] = b" 8AG"
+    struct.pack_into("<I", header, 28, 2)
+    struct.pack_into("<I2H", header, 32, 0, 12, 0)
+    header[40:168] = _fixed(filename, 128)
     tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height),
                      struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height),
                      struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"),
@@ -1002,15 +1042,18 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
     flags = 276 if vector_fallback else 16
     if color_type == 4:
         for gray, alpha in zip(pixels[0::2], pixels[1::2]):
-            premultiplied += bytes(((gray * alpha + 127) // 255, alpha)); all_opaque &= alpha == 255
+            premultiplied += bytes(((gray * alpha + 127) // 255, alpha))
+            all_opaque &= alpha == 255
         straight = pixels[0::2]
         return _csi_ga_deepmap(width, height, bytes(premultiplied), filename, scale=scale,
                                all_opaque=all_opaque, v_constant=straight == straight[:1] * len(straight), flags=flags)
     elif color_type == 2:
-        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]): premultiplied += bytes((b, g, r, 255))
+        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]):
+            premultiplied += bytes((b, g, r, 255))
     else:
         for r, g, b, alpha in zip(pixels[0::4], pixels[1::4], pixels[2::4], pixels[3::4]):
-            premultiplied += bytes(((b * alpha + 127) // 255, (g * alpha + 127) // 255, (r * alpha + 127) // 255, alpha)); all_opaque &= alpha == 255
+            premultiplied += bytes(((b * alpha + 127) // 255, (g * alpha + 127) // 255, (r * alpha + 127) // 255, alpha))
+            all_opaque &= alpha == 255
     if indexed is None:
         # Grayscale-representable RGB(A) sources normalize to GA8 (packed:
         # probe5 c04; standalone storage: probe6 solo_* oracles).
@@ -1053,20 +1096,31 @@ def _csi_png_deepmap(data: bytes, filename: str, *, scale: int = 1, vector_fallb
     else:
         dmp2 = _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2)
     payload = b"MLEC" + struct.pack("<7I", mode, 11, 16 + len(dmp2), 1, bpp, len(dmp2), 0) + dmp2
-    header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
-    header[24:28] = pixel_format; struct.pack_into("<I", header, 28, color_space); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
-    tlvs = b"".join((struct.pack("<2I5I",1001,20,1,0,0,width,height),struct.pack("<2I7I",1003,28,1,0,0,0,0,width,height),struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,width * bpp)))
+    header = bytearray(184)
+    header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, flags, width, height, scale * 100)
+    header[24:28] = pixel_format
+    struct.pack_into("<I", header, 28, color_space)
+    struct.pack_into("<I2H", header, 32, 0, 12, 0)
+    header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height), struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height), struct.pack(
+        "<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1), struct.pack("<2II", 1007, 4, width * bpp)))
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
-
 
 
 def _csi_png_palette_img(data: bytes, filename: str, *, scale: int = 1) -> bytes:
     width, height, palette_argb, indices = _decode_indexed_png_for_palette_img(data)
     payload = build_palette_img_wrapper(palette_argb, indices, width=width, height=height)
-    header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, 16, width, height, scale * 100)
-    header[24:28] = b"BGRA"; struct.pack_into("<I", header, 28, 1); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
-    tlvs = b"".join((struct.pack("<2I5I",1001,20,1,0,0,width,height),struct.pack("<2I7I",1003,28,1,0,0,0,0,width,height),struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,32)))
+    header = bytearray(184)
+    header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, 16, width, height, scale * 100)
+    header[24:28] = b"BGRA"
+    struct.pack_into("<I", header, 28, 1)
+    struct.pack_into("<I2H", header, 32, 0, 12, 0)
+    header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height), struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height),
+                    struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1), struct.pack("<2II", 1007, 4, 32)))
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
 
@@ -1107,11 +1161,11 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
         for r, g, b, alpha in zip(pixels[0::4], pixels[1::4], pixels[2::4], pixels[3::4]):
             premultiplied += bytes(((b * alpha + 127) // 255, (g * alpha + 127) // 255, (r * alpha + 127) // 255, alpha))
             all_opaque &= alpha == 255
-    premultiplied = bytes(premultiplied)
+    premultiplied = bytearray(bytes(premultiplied))
     # Grayscale-representable RGB(A) sources normalize to GA8 before any
     # grammar selection. Verified for packed renditions (probe5 c04);
     # standalone gray-RGB(A) storage is inferred, not yet probed.
-    ga = _gray_ga_bytes(premultiplied)
+    ga = _gray_ga_bytes(bytes(premultiplied))
     if ga is not None:
         rs = pixels[0::3] if color_type == 2 else pixels[0::4]
         return _csi_ga_deepmap(width, height, ga, filename, scale=scale,
@@ -1135,7 +1189,7 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
         bands = [(y, min(rows_per, height - y)) for y in range(0, height, rows_per)]
         chunks = []
         for y, rows in bands:
-            band = band_dmp2(premultiplied[y * row_bytes:(y + rows) * row_bytes], rows)
+            band = band_dmp2(bytes(premultiplied)[y * row_bytes:(y + rows) * row_bytes], rows)
             blob = struct.pack("<4I", 1, 4, len(band), 0) + band
             chunks.append(b"KCBC" + struct.pack("<4I", 0, 0, rows, len(blob)) + blob)
         payload = b"MLEC" + struct.pack("<3I", 3, 11, len(chunks)) + b"".join(chunks)
@@ -1144,39 +1198,44 @@ def make_deepmap_csi_variant(data: bytes, filename: str, *, scale: int = 1,
         mode_field = 2 if (all_opaque and stack_bottom) else 0
         npix = width * height
         if uniform and npix <= 8:
-            dmp2 = dmp2mini.v1_raw(width, height, premultiplied, 4)
+            dmp2 = dmp2mini.v1_raw(width, height, bytes(premultiplied), 4)
         elif uniform and npix <= 128:
             # Apple v3-mini opcode form (hp9 color-uniform sweep, 36..512 B).
-            dmp2 = dmp2mini.v3_mini_color(width, height, premultiplied[:4])
+            dmp2 = dmp2mini.v3_mini_color(width, height, bytes(premultiplied[:4]))
         elif uniform and 144 <= npix <= 2304:
             # Apple v4-mini RLE form (hp9/probe5 12x12..48x48 uniform oracles).
-            dmp2 = dmp2mini.v4_mini(width, height, premultiplied[:4])
+            dmp2 = dmp2mini.v4_mini(width, height, bytes(premultiplied[:4]))
         elif uniform:
-            dmp2 = band_dmp2(premultiplied, height)
+            dmp2 = band_dmp2(bytes(premultiplied), height)
         elif width * height * 4 > 512:
             # probe6 chk64 + iconstack layer oracles: up-to-255-color sources
             # use the v4 palette grammar; richer sources use v2 raw LZFSE.
-            pal = _palette_plane(premultiplied)
+            pal = _palette_plane(bytes(premultiplied))
             if pal is not None:
                 dmp2 = _dmp2_v4_palette(width, height, pal[0], pal[1])
             else:
-                dmp2 = _dmp2_lzfse_stream(width, height, premultiplied, 4, 2)
+                dmp2 = _dmp2_lzfse_stream(width, height, bytes(premultiplied), 4, 2)
         elif npix <= 8:
             # Tiny multi-color sources: Apple stores v1 raw frames (hp9 k_2x4).
-            dmp2 = dmp2mini.v1_raw(width, height, premultiplied, 4)
+            dmp2 = dmp2mini.v1_raw(width, height, bytes(premultiplied), 4)
         else:
             # Apple: v3-mini multi-swatch opcode streams here (token grammar
             # not fully decoded; v2 remains a valid readable stream of
             # comparable size, documented gap).
-            dmp2 = band_dmp2(premultiplied, height)
+            dmp2 = band_dmp2(bytes(premultiplied), height)
         payload = b"MLEC" + struct.pack("<7I", mode_field, 11, 16 + len(dmp2), 1, 4, len(dmp2), 0) + dmp2
     tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height),
                      struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height),
                      struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"),
                      struct.pack("<2II", 1006, 4, 1),
                      struct.pack("<2II", 1007, 4, width * 4)))
-    header = bytearray(184); header[:4] = b"ISTC"; struct.pack_into("<5I", header, 4, 1, 16, width, height, scale * 100)
-    header[24:28] = b"BGRA"; struct.pack_into("<I", header, 28, 1); struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
+    header = bytearray(184)
+    header[:4] = b"ISTC"
+    struct.pack_into("<5I", header, 4, 1, 16, width, height, scale * 100)
+    header[24:28] = b"BGRA"
+    struct.pack_into("<I", header, 28, 1)
+    struct.pack_into("<I2H", header, 32, 0, 12, 0)
+    header[40:168] = _fixed(filename, 128)
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
 
@@ -1188,15 +1247,20 @@ def png_dimensions(data: bytes) -> tuple[int, int]:
 
 def _png_premultiplied_bgra(data: bytes) -> tuple[int, int, bytes, bool]:
     width, height, color_type, pixels, _indexed = _decode_png_8bit(data)
-    output = bytearray(); opaque = True
+    output = bytearray()
+    opaque = True
     if color_type == 2:
-        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]): output += bytes((b, g, r, 255))
+        for r, g, b in zip(pixels[0::3], pixels[1::3], pixels[2::3]):
+            output += bytes((b, g, r, 255))
     elif color_type == 4:
         for gray, alpha in zip(pixels[0::2], pixels[1::2]):
-            value = (gray * alpha + 127) // 255; output += bytes((value, value, value, alpha)); opaque &= alpha == 255
+            value = (gray * alpha + 127) // 255
+            output += bytes((value, value, value, alpha))
+            opaque &= alpha == 255
     else:
         for r, g, b, alpha in zip(pixels[0::4], pixels[1::4], pixels[2::4], pixels[3::4]):
-            output += bytes(((b*alpha+127)//255, (g*alpha+127)//255, (r*alpha+127)//255, alpha)); opaque &= alpha == 255
+            output += bytes(((b*alpha+127)//255, (g*alpha+127)//255, (r*alpha+127)//255, alpha))
+            opaque &= alpha == 255
     return width, height, bytes(output), opaque
 
 
@@ -1213,29 +1277,38 @@ def _csi_png_cbck(data: bytes, filename: str, *, scale: int = 1) -> bytes:
         compressed = lzfse_compat.compress(pixels[y * row_bytes:(y + rows) * row_bytes])
         chunks.append(b"KCBC" + struct.pack("<4I", 0, 0, rows, len(compressed)) + compressed)
     payload = b"MLEC" + struct.pack("<3I", 3, 4, len(chunks)) + b"".join(chunks)
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 0, width, height, scale * 100)
-    header[24:28] = b"BGRA"; struct.pack_into("<I", header, 28, 1)
-    struct.pack_into("<I2H", header, 32, 0, 12, 0); header[40:168] = _fixed(filename, 128)
-    tlvs = b"".join((struct.pack("<2I5I",1001,20,1,0,0,width,height),struct.pack("<2I7I",1003,28,1,0,0,0,0,width,height),struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,width * 4)))
+    header[24:28] = b"BGRA"
+    struct.pack_into("<I", header, 28, 1)
+    struct.pack_into("<I2H", header, 32, 0, 12, 0)
+    header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I5I", 1001, 20, 1, 0, 0, width, height), struct.pack("<2I7I", 1003, 28, 1, 0, 0, 0, 0, width, height),
+                    struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1), struct.pack("<2II", 1007, 4, width * 4)))
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
 
 
 def _csi_msis(name: str) -> bytes:
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 0, 0, 0, 100)
-    struct.pack_into("<I2H", header, 32, 0, 1010, 0); header[40:168] = _fixed(name, 128)
+    struct.pack_into("<I2H", header, 32, 0, 1010, 0)
+    header[40:168] = _fixed(name, 128)
     payload = b"SISM" + struct.pack("<5I", 1, 1, 1024, 4, 1)
     struct.pack_into("<4I", header, 168, 0, 1, 0, len(payload))
     return bytes(header) + payload
 
 
 def _csi_texture_reference(name: str, reference: TextureReference, *, width: int, height: int, scale: int = 2, auxiliary_flag: TextureAuxiliaryFlag | None = None) -> bytes:
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 0, width, height, scale * 100)
-    header[24:28] = b"ARGB"; struct.pack_into("<I2H", header, 32, 0, 1007, 0); header[40:168] = _fixed(name, 128)
-    tlvs = [struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"), struct.pack("<2II",1006,4,1)]
+    header[24:28] = b"ARGB"
+    struct.pack_into("<I2H", header, 32, 0, 1007, 0)
+    header[40:168] = _fixed(name, 128)
+    tlvs = [struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1)]
     if auxiliary_flag is not None:
         raw = build_texture_auxiliary_flag(auxiliary_flag)
         tlvs.append(struct.pack("<2I", 1014, len(raw)) + raw)
@@ -1254,10 +1327,13 @@ def _csi_texture_data_from_png(data: bytes, filename: str, *, width: int, height
         compressed = lzfse_compat.compress(pixels[y * row_bytes:(y + rows) * row_bytes])
         chunks.append(b"KCBC" + struct.pack("<4I", 0, 0, rows, len(compressed)) + compressed)
     payload = b"MLEC" + struct.pack("<3I", 1, 4, len(chunks)) + b"".join(chunks)
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 0, width, height, scale * 100)
-    header[24:28] = b"ARGB"; struct.pack_into("<I2H", header, 32, 0, 1008, 0); header[40:168] = _fixed(filename, 128)
-    tlvs = b"".join((struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1),struct.pack("<2II",1007,4,mode_field)))
+    header[24:28] = b"ARGB"
+    struct.pack_into("<I2H", header, 32, 0, 1008, 0)
+    header[40:168] = _fixed(filename, 128)
+    tlvs = b"".join((struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1), struct.pack("<2II", 1007, 4, mode_field)))
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
 
@@ -1265,7 +1341,7 @@ def _csi_texture_data_from_png(data: bytes, filename: str, *, width: int, height
 def _csi_solid_image_stack(name: str, *, canvas_points: tuple[int, int], scale: int, identifier_values: list[int]) -> bytes:
     width, height = canvas_points
     refs = [
-        SolidImageStackLayerReference(0, 0, 0, width, height, 0, 1.0, SolidImageStackReferencedKey(((1,85),(2,181),(17,ident),(0,0))))
+        SolidImageStackLayerReference(0, 0, 0, width, height, 0, 1.0, SolidImageStackReferencedKey(((1, 85), (2, 181), (17, ident), (0, 0))))
         for ident in identifier_values
     ]
     flags = [SolidImageStackLayerFlag(b"\0"*8, 1, b"\0"*4) for _ in identifier_values]
@@ -1273,16 +1349,19 @@ def _csi_solid_image_stack(name: str, *, canvas_points: tuple[int, int], scale: 
     tlv1012 = build_solidimagestack_layer_list(refs)
     tlv1020 = build_solidimagestack_layer_flags(flags)
     tlv1021 = build_solidimagestack_layer_reserved(reserved)
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 0, width, height, 100)
-    header[24:28] = b"ATAD"; struct.pack_into("<I2H", header, 32, 0, 1018, 0); header[40:168] = _fixed(name, 128)
+    header[24:28] = b"ATAD"
+    struct.pack_into("<I2H", header, 32, 0, 1018, 0)
+    header[40:168] = _fixed(name, 128)
     tlvs = b"".join((
-        struct.pack("<2I",1012,len(tlv1012)) + tlv1012,
-        struct.pack("<2I",1020,len(tlv1020)) + tlv1020,
-        struct.pack("<2I",1021,len(tlv1021)) + tlv1021,
-        struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),
-        struct.pack("<2I2I",1005,8 + len(b"public.layeredimage\0"), len(b"public.layeredimage\0"), 0) + b"public.layeredimage\0",
-        struct.pack("<2II",1006,4,1),
+        struct.pack("<2I", 1012, len(tlv1012)) + tlv1012,
+        struct.pack("<2I", 1020, len(tlv1020)) + tlv1020,
+        struct.pack("<2I", 1021, len(tlv1021)) + tlv1021,
+        struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"),
+        struct.pack("<2I2I", 1005, 8 + len(b"public.layeredimage\0"), len(b"public.layeredimage\0"), 0) + b"public.layeredimage\0",
+        struct.pack("<2II", 1006, 4, 1),
     ))
     payload = b"DWAR" + struct.pack("<2I", 0, 0)
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
@@ -1293,23 +1372,26 @@ def _csi_svg(data: bytes, filename: str) -> bytes:
     text = data.lstrip()
     if not text.startswith(b"<svg") and b"<svg" not in text[:512]:
         raise ValueError("input is not an SVG document")
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 4, 0, 0, 0)
     header[24:28] = b" GVS"  # little-endian fourcc 'SVG '
     struct.pack_into("<I", header, 28, 0)
     struct.pack_into("<I2H", header, 32, 0, 9, 0)
     header[40:168] = _fixed(filename, 128)
-    tlvs = b"".join((struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),struct.pack("<2II",1006,4,1)))
+    tlvs = b"".join((struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"), struct.pack("<2II", 1006, 4, 1)))
     payload = b"DWAR" + struct.pack("<2I", 0, len(data)) + data
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
+
 
 def _csi_symbol_svg(data: bytes, filename: str) -> bytes:
     """CoreUI symbol-vector CSI (part 59, layout 1017)."""
     text = data.lstrip()
     if b"<svg" not in text[:512] and b":svg" not in text[:512]:
         raise ValueError("input is not an SVG document")
-    header = bytearray(184); header[:4] = b"ISTC"
+    header = bytearray(184)
+    header[:4] = b"ISTC"
     struct.pack_into("<5I", header, 4, 1, 4, 0, 0, 100)
     header[24:28] = b" GVS"
     struct.pack_into("<I2H", header, 32, 0, 1017, 0)
@@ -1319,10 +1401,10 @@ def _csi_symbol_svg(data: bytes, filename: str) -> bytes:
     metrics = bytes.fromhex("070000000d0000000000803f0000803f000000000000803f0000803f0000803f0000000000000000")
     symbol_info = struct.pack("<3I", 1, 1, 3)
     tlvs = b"".join((
-        struct.pack("<2I8s",1004,8,b"\0\0\0\0\0\0\x80?"),
-        struct.pack("<2II",1006,4,1),
-        struct.pack("<2I",1018,len(metrics)) + metrics,
-        struct.pack("<2I",1019,len(symbol_info)) + symbol_info,
+        struct.pack("<2I8s", 1004, 8, b"\0\0\0\0\0\0\x80?"),
+        struct.pack("<2II", 1006, 4, 1),
+        struct.pack("<2I", 1018, len(metrics)) + metrics,
+        struct.pack("<2I", 1019, len(symbol_info)) + symbol_info,
     ))
     payload = b"DWAR" + struct.pack("<2I", 0, len(data)) + data
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
@@ -1363,7 +1445,6 @@ def _csi_color(name: str, components: tuple[float, float, float, float], color_s
     payload = b"RLOC" + struct.pack("<3I4d", 1, color_space_id, 4, *components)
     struct.pack_into("<4I", header, 168, len(tlvs), 1, 0, len(payload))
     return bytes(header) + tlvs + payload
-
 
 
 def _leaf_many_links(entries: list[tuple[int, int]], inline_keys: list[bytes], node_size: int, forward: int, backward: int) -> bytes:
@@ -1434,57 +1515,68 @@ def _build_assets_car_multilevel(assets: list[AssetRendition], *, platform: str,
     # returns the input unchanged when no class qualifies).
     from .packed import pack_renditions
     assets = pack_renditions(list(assets))
-    ordered = sorted(assets, key=lambda item: (item.name.encode("utf-8"), item.part, item.scale, item.csi))
+    ordered = sorted(assets, key=lambda item: (str(item.name).encode("utf-8"), item.part, item.scale, item.csi))
     facets = _collect_facets(ordered)
-    facet_names = sorted({entry["name"] for entry in facets.values()}, key=lambda item: str(item).encode("utf-8"))
-    names = [name.encode("utf-8") for name in facet_names]
-    if any(not name or len(name) > 255 for name in names): raise ValueError("asset names must contain 1..255 UTF-8 bytes")
+    facet_names = sorted({entry["name"] for entry in facets.values()}, key=lambda item: str(item))
+    names = [str(name).encode("utf-8") for name in facet_names]
+    if any(not name or len(name) > 255 for name in names):
+        raise ValueError("asset names must contain 1..255 UTF-8 bytes")
     facet_by_name = {entry["name"]: (ident, entry["part"]) for ident, entry in facets.items()}
     attrs = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
     locale_ids = {name: _localization_identifier(name) for name in locale_names}
-    if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
-    keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), attrs, locale_ids.get(asset.localization, 0)) for asset in ordered]
-    if len(set(keys)) != len(keys): raise ValueError("duplicate rendition key")
+    if len(set(locale_ids.values())) != len(locale_ids):
+        raise ValueError("localization identifier collision")
+    keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), attrs,
+                               locale_ids.get(str(asset.localization or ""), 0)) for asset in ordered]
+    if len(set(keys)) != len(keys):
+        raise ValueError("duplicate rendition key")
 
-    writer = BOMWriter(); writer.add_block(_car_header(len(ordered), profile), "CARHEADER")
+    writer = BOMWriter()
+    writer.add_block(_car_header(len(ordered), profile), "CARHEADER")
     if locale_names:
         locale_records = []
         for locale in locale_names:
-            key_id = writer.add_block(locale.encode("utf-8")); value_id = writer.add_block(struct.pack("<H", locale_ids[locale]))
-            locale_records.append((value_id, key_id, locale.encode("utf-8")))
+            key_id = writer.add_block(str(locale).encode("utf-8"))
+            value_id = writer.add_block(struct.pack("<H", locale_ids[locale]))
+            locale_records.append((value_id, key_id, str(locale).encode("utf-8")))
         _add_multilevel_tree(writer, "LOCALIZATIONKEYS", locale_records, node_size=4096, key_size=0xFFFFFFFF)
     appearance_registry = _appearance_registry(ordered, platform)
     if appearance_registry:
         appearance_records = []
         for appearance_name, appearance_id in appearance_registry:
-            key_id = writer.add_block(appearance_name.encode("utf-8"))
+            key_id = writer.add_block(str(appearance_name).encode("utf-8"))
             value_id = writer.add_block(struct.pack("<H", appearance_id))
-            appearance_records.append((value_id, key_id, appearance_name.encode("utf-8")))
+            appearance_records.append((value_id, key_id, str(appearance_name).encode("utf-8")))
         _add_multilevel_tree(writer, "APPEARANCEKEYS", appearance_records, node_size=4096, key_size=0xFFFFFFFF)
     # Allocate payload blocks before indexes; BOM references are stable and do
     # not require a historical Apple block ordering.
     facet_blocks = []
     for name, raw_name in zip(facet_names, names):
         ident, part = facet_by_name[name]
-        key_id = writer.add_block(raw_name); value_id = writer.add_block(_facet_value(ident, part))
+        key_id = writer.add_block(raw_name)
+        value_id = writer.add_block(_facet_value(int(ident), int(str(part))))
         facet_blocks.append((value_id, key_id, raw_name))
     writer.add_block(_key_format(attrs), "KEYFORMAT")
     rendition_blocks = []
     for asset, key in zip(ordered, keys):
-        key_id = writer.add_block(key); value_id = writer.add_block(_adapt_csi_for_profile(asset.csi, profile))
+        key_id = writer.add_block(key)
+        value_id = writer.add_block(_adapt_csi_for_profile(asset.csi, profile))
         rendition_blocks.append((value_id, key_id, key))
-    rendition_blocks.sort(key=lambda item: item[2]); facet_blocks.sort(key=lambda item: item[2])
+    rendition_blocks.sort(key=lambda item: item[2])
+    facet_blocks.sort(key=lambda item: item[2])
     equal = len({len(x) for x in names}) == 1
     _add_multilevel_tree(writer, "RENDITIONS", rendition_blocks, node_size=4096, key_size=len(attrs)*2)
     _add_multilevel_tree(writer, "FACETKEYS", facet_blocks, node_size=4096, key_size=len(names[0]) if equal else 0xFFFFFFFF)
     writer.add_block(_extended_metadata(platform, target, thinning_arguments), "EXTENDED_METADATA")
     bitmap_records = []
     for name in facet_names:
-        value_id = writer.add_block(BITMAP_VALUE); identifier = facet_by_name[name][0]
+        value_id = writer.add_block(BITMAP_VALUE)
+        identifier = facet_by_name[name][0]
         bitmap_records.append((value_id, identifier, struct.pack(">I", identifier)))
     _add_multilevel_tree(writer, "BITMAPKEYS", bitmap_records, node_size=1024, key_size=0, numeric_key=True, leaf_limit=64)
     return writer.build()
+
 
 def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", target: str = "13.0", thinning_arguments: str = "", coreui_profile: "CoreUIProfile | str | None" = None) -> bytes:
     """Build a CAR with any number of facets and renditions per facet.
@@ -1501,21 +1593,24 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
     # See _build_assets_car_multilevel: packing is registry-independent.
     from .packed import pack_renditions
     assets = pack_renditions(list(assets))
-    ordered = sorted(assets, key=lambda item: (item.name.encode("utf-8"), item.part, item.scale, item.csi))
+    ordered = sorted(assets, key=lambda item: (str(item.name).encode("utf-8"), item.part, item.scale, item.csi))
     facets = _collect_facets(ordered)
-    facet_names = sorted({entry["name"] for entry in facets.values()}, key=lambda item: str(item).encode("utf-8"))
-    names = [name.encode("utf-8") for name in facet_names]
+    facet_names = sorted({entry["name"] for entry in facets.values()}, key=lambda item: str(item))
+    names = [str(name).encode("utf-8") for name in facet_names]
     if any(not name or len(name) > 255 for name in names):
         raise ValueError("asset names must contain 1..255 UTF-8 bytes")
     facet_by_name = {entry["name"]: (ident, entry["part"]) for ident, entry in facets.items()}
     key_attributes = _select_key_attributes(ordered, platform)
     locale_names = sorted({a.localization for a in ordered if a.localization}, key=lambda x: x.encode("utf-8"))
     locale_ids = {name: _localization_identifier(name) for name in locale_names}
-    if len(set(locale_ids.values())) != len(locale_ids): raise ValueError("localization identifier collision")
-    keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), key_attributes, locale_ids.get(asset.localization, 0)) for asset in ordered]
+    if len(set(locale_ids.values())) != len(locale_ids):
+        raise ValueError("localization identifier collision")
+    keys = [_rendition_key_for(asset, 0 if asset.skip_facet else _effective_identifier(asset), key_attributes,
+                               locale_ids.get(str(asset.localization or ""), 0)) for asset in ordered]
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate rendition key for the same asset, part, and scale")
-    rendition_count = len(ordered); facet_count = len(facet_names)
+    rendition_count = len(ordered)
+    facet_count = len(facet_names)
     appearance_registry = _appearance_registry(ordered, platform)
     has_appearances = bool(appearance_registry)
 
@@ -1523,7 +1618,8 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
     # descriptor/root occupy 6..7 and each registry record uses key+value.
     prefix_next = 8 + 2 * len(appearance_registry) if has_appearances else 6
     localization_descriptor_id = prefix_next if locale_names else 0
-    if locale_names: prefix_next += 2 + 2 * len(locale_names)
+    if locale_names:
+        prefix_next += 2 + 2 * len(locale_names)
     facet_base = prefix_next
     key_format_id = facet_base + 2 * facet_count
     rendition_base = key_format_id + 1
@@ -1555,7 +1651,7 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
         writer.add_block(_tree_descriptor(7, 4096, len(appearance_registry), 0xFFFFFFFF), "APPEARANCEKEYS")
         writer.add_block(_leaf_many(appearance_entries, [], 4096))
         for appearance_name, appearance_id in appearance_registry:
-            writer.add_block(appearance_name.encode("utf-8"))
+            writer.add_block(str(appearance_name).encode("utf-8"))
             writer.add_block(struct.pack("<H", appearance_id))
     if locale_names:
         locale_root = localization_descriptor_id + 1
@@ -1563,10 +1659,11 @@ def build_assets_car(assets: list[AssetRendition], *, platform: str = "macosx", 
         writer.add_block(_tree_descriptor(locale_root, 4096, len(locale_names), 0xFFFFFFFF), "LOCALIZATIONKEYS")
         writer.add_block(_leaf_many(locale_entries, [], 4096))
         for locale in locale_names:
-            writer.add_block(locale.encode("utf-8")); writer.add_block(struct.pack("<H", locale_ids[locale]))
+            writer.add_block(str(locale).encode("utf-8"))
+            writer.add_block(struct.pack("<H", locale_ids[locale]))
     for name, name_raw in zip(facet_names, names):
         writer.add_block(name_raw)
-        writer.add_block(_facet_value(*facet_by_name[name]))
+        writer.add_block(_facet_value(int(facet_by_name[name][0]), int(str(facet_by_name[name][1]))))
     writer.add_block(_key_format(key_attributes), "KEYFORMAT")
     for asset, key in zip(ordered, keys):
         writer.add_block(key)
@@ -1583,27 +1680,40 @@ def build_pdf_fallback_car(name: str, pdf: bytes, png_1x: bytes, png_2x: bytes, 
     profile = resolve_profile(coreui_profile, platform)
     """Build a preserved PDF plus Xcode-style GA8 deepmap fallbacks."""
     name_raw = name.encode("utf-8")
-    if not name_raw or len(name_raw) > 255: raise ValueError("asset name must contain 1..255 UTF-8 bytes")
+    if not name_raw or len(name_raw) > 255:
+        raise ValueError("asset name must contain 1..255 UTF-8 bytes")
     identifier = _identifier(name)
     fallbacks = [(1, png_1x), (2, png_2x)]
-    if png_3x is not None: fallbacks.append((3, png_3x))
+    if png_3x is not None:
+        fallbacks.append((3, png_3x))
     records = [(_rendition_key(identifier, 42, 1), _csi_pdf(bytes(pdf), filename))]
-    records += [(_rendition_key(identifier, 0xB5, scale), _csi_png_deepmap(bytes(png), filename, scale=scale, vector_fallback=True)) for scale, png in fallbacks]
-    count = len(records); metadata_id = 9 + 2 * count; bitmap_descriptor_id = metadata_id + 1; bitmap_root_id = bitmap_descriptor_id + 1; bitmap_value_id = bitmap_root_id + 1
+    records += [(_rendition_key(identifier, 0xB5, scale), _csi_png_deepmap(bytes(png), filename, scale=scale, vector_fallback=True))
+                for scale, png in fallbacks]
+    count = len(records)
+    metadata_id = 9 + 2 * count
+    bitmap_descriptor_id = metadata_id + 1
+    bitmap_root_id = bitmap_descriptor_id + 1
+    bitmap_value_id = bitmap_root_id + 1
     sorted_records = sorted(enumerate(records), key=lambda item: item[1][0])
     entries = [(10 + index * 2, 9 + index * 2) for index, _ in sorted_records]
     inline = [record[0] for _, record in sorted_records]
-    writer = BOMWriter(); writer.add_block(_car_header(count, profile), "CARHEADER")
-    writer.add_block(_tree_descriptor(3, 4096, count, 16), "RENDITIONS"); writer.add_block(_leaf_many(entries, inline, 4096))
-    writer.add_block(_tree_descriptor(5, 4096, 1, len(name_raw)), "FACETKEYS"); writer.add_block(_leaf(7, 6, name_raw, 4096))
-    writer.add_block(name_raw); writer.add_block(_facet_value(identifier, 0xB5)); writer.add_block(_key_format(), "KEYFORMAT")
-    for key, csi in records: writer.add_block(key); writer.add_block(csi)
+    writer = BOMWriter()
+    writer.add_block(_car_header(count, profile), "CARHEADER")
+    writer.add_block(_tree_descriptor(3, 4096, count, 16), "RENDITIONS")
+    writer.add_block(_leaf_many(entries, inline, 4096))
+    writer.add_block(_tree_descriptor(5, 4096, 1, len(name_raw)), "FACETKEYS")
+    writer.add_block(_leaf(7, 6, name_raw, 4096))
+    writer.add_block(name_raw)
+    writer.add_block(_facet_value(identifier, 0xB5))
+    writer.add_block(_key_format(), "KEYFORMAT")
+    for key, csi in records:
+        writer.add_block(key)
+        writer.add_block(csi)
     writer.add_block(_extended_metadata(platform, target), "EXTENDED_METADATA")
     writer.add_block(_tree_descriptor(bitmap_root_id, 1024, 1, 0, True), "BITMAPKEYS")
-    writer.add_block(_leaf(bitmap_value_id, identifier, b"", 1024)); writer.add_block(BITMAP_VALUE)
+    writer.add_block(_leaf(bitmap_value_id, identifier, b"", 1024))
+    writer.add_block(BITMAP_VALUE)
     return writer.build()
-
-
 
 
 def svg_renditions(name: str, svg: bytes, filename: str = "image.svg", *, fallback_scales: tuple[int, ...] = (1, 2, 3)) -> list[AssetRendition]:
@@ -1614,7 +1724,7 @@ def svg_renditions(name: str, svg: bytes, filename: str = "image.svg", *, fallba
     if any(scale not in (1, 2, 3) for scale in fallback_scales):
         raise ValueError("SVG fallback scales must be 1, 2, or 3")
     try:
-        import cairosvg
+        import cairosvg  # type: ignore
     except ImportError as exc:
         raise ValueError("automatic SVG fallback generation requires cairosvg") from exc
     result = [vector]
@@ -1630,9 +1740,12 @@ def build_svg_car(name: str, svg: bytes, filename: str = "image.svg", *, fallbac
 
 def cbck_png_rendition(name: str, png: bytes, filename: str = "image.png", *, scale: int = 1, idiom: str | int = 0) -> AssetRendition:
     """Build an ordinary image rendition using chunked CBCK/LZFSE storage."""
-    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4, "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
-    try: idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
-    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported idiom: {idiom}") from exc
+    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4,
+              "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
+    try:
+        idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported idiom: {idiom}") from exc
     if scale not in (1, 2, 3) or idiom_id not in range(9):
         raise ValueError("invalid CBCK scale or idiom")
     return AssetRendition(name, _csi_png_cbck(bytes(png), filename, scale=scale), 181, scale=scale, idiom=idiom_id)
@@ -1640,20 +1753,26 @@ def cbck_png_rendition(name: str, png: bytes, filename: str = "image.png", *, sc
 
 def layered_image_renditions(name: str, layers: list[bytes], *, idiom: str | int = 3, scale: int = 1, depths: list[int] | None = None) -> list[AssetRendition]:
     """Create ordered CoreUI layer-key renditions for tvOS/visionOS image stacks."""
-    if not layers: raise ValueError("layered image needs at least one layer")
-    idioms={"tv":3,"vision":8,"visionos":8,"universal":0}
-    try: idiom_id=idioms[idiom] if isinstance(idiom,str) else int(idiom)
-    except (KeyError,ValueError) as exc: raise ValueError(f"unsupported layered-image idiom: {idiom}") from exc
-    if idiom_id not in (0,3,8): raise ValueError("layered images support universal, tv, or vision idioms")
-    if depths is None: depths = list(range(1, len(layers) + 1)) if idiom_id == 8 else [0] * len(layers)
-    if len(depths) != len(layers) or any(not 0 <= x <= 65535 for x in depths): raise ValueError("invalid layer depth list")
-    return [AssetRendition(name,_csi_png_deepmap(bytes(png),f"{name}-layer-{index}.png",scale=scale),181,scale=scale,idiom=idiom_id,layer=index,dimension2=depths[index-1])
-            for index,png in enumerate(layers,1)]
+    if not layers:
+        raise ValueError("layered image needs at least one layer")
+    idioms = {"tv": 3, "vision": 8, "visionos": 8, "universal": 0}
+    try:
+        idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported layered-image idiom: {idiom}") from exc
+    if idiom_id not in (0, 3, 8):
+        raise ValueError("layered images support universal, tv, or vision idioms")
+    if depths is None:
+        depths = list(range(1, len(layers) + 1)) if idiom_id == 8 else [0] * len(layers)
+    if len(depths) != len(layers) or any(not 0 <= x <= 65535 for x in depths):
+        raise ValueError("invalid layer depth list")
+    return [AssetRendition(name, _csi_png_deepmap(bytes(png), f"{name}-layer-{index}.png", scale=scale), 181, scale=scale, idiom=idiom_id, layer=index, dimension2=depths[index-1])
+            for index, png in enumerate(layers, 1)]
 
 
 def build_layered_icon_car(name: str, layers: list[bytes], *, platform: str = "appletvos", target: str = "15.0", scale: int = 1, depths: list[int] | None = None) -> bytes:
-    idiom="vision" if platform.lower() in ("xros","xrsimulator","visionos") else "tv"
-    return build_assets_car(layered_image_renditions(name,layers,idiom=idiom,scale=scale,depths=depths),platform=platform,target=target)
+    idiom = "vision" if platform.lower() in ("xros", "xrsimulator", "visionos") else "tv"
+    return build_assets_car(layered_image_renditions(name, layers, idiom=idiom, scale=scale, depths=depths), platform=platform, target=target)
 
 
 def solid_image_stack_aggregate_renditions(name: str, layers: list[tuple[str, bytes]], *, platform: str = "xros", scale: int = 2, canvas_points: tuple[int, int] | None = None) -> list[AssetRendition]:
@@ -1678,18 +1797,23 @@ def solid_image_stack_aggregate_renditions(name: str, layers: list[tuple[str, by
         w, h = png_dimensions(png_bytes)
         width = w if width is None else width
         height = h if height is None else height
-        image_renditions.append(AssetRendition(child_name, _csi_png_deepmap(bytes(png_bytes), 'content.png', scale=scale), 181, scale=scale, idiom=idiom, identifier_override=child_id))
+        image_renditions.append(AssetRendition(child_name, _csi_png_deepmap(bytes(png_bytes), 'content.png',
+                                scale=scale), 181, scale=scale, idiom=idiom, identifier_override=child_id))
         for dim1, payload_value, mode_field in ((1, 55, 0x80000), (2, 32, 0x40000)):
             ref_pairs = ((1, 41), (2, 181), (8, dim1), (12, scale), (17, child_id), (15, idiom), (0, 0))
             ref = TextureReference(payload_value, 0, 1, 1, 0x1C, ref_pairs)
-            aux = TextureAuxiliaryFlag(b'\0'*8 + (b'\1' if layer_name == 'Back' and dim1 == 1 else b'\0') + b'\0'*4, (0, 0, 1 if layer_name == 'Back' and dim1 == 1 else 0))
-            aggregate.append(AssetRendition(child_name, _csi_texture_reference('content.png', ref, width=w, height=h, scale=scale, auxiliary_flag=aux), 0, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
-            aggregate.append(AssetRendition(child_name, _csi_texture_data_from_png(bytes(png_bytes), 'content.png', width=w, height=h, scale=scale, mode_field=mode_field), 181, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
+            aux = TextureAuxiliaryFlag(b'\0'*8 + (b'\1' if layer_name == 'Back' and dim1 == 1 else b'\0') +
+                                       b'\0'*4, (0, 0, 1 if layer_name == 'Back' and dim1 == 1 else 0))
+            aggregate.append(AssetRendition(child_name, _csi_texture_reference('content.png', ref, width=w, height=h, scale=scale,
+                             auxiliary_flag=aux), 0, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
+            aggregate.append(AssetRendition(child_name, _csi_texture_data_from_png(bytes(png_bytes), 'content.png', width=w, height=h, scale=scale,
+                             mode_field=mode_field), 181, 181, scale=scale, idiom=idiom, dimension1=dim1, element=41, identifier_override=child_id))
     if width is None or height is None:
         raise ValueError("solid image stack needs image content")
     if canvas_points is None:
         canvas_points = (width // scale, height // scale)
-    aggregate.insert(0, AssetRendition(name, _csi_solid_image_stack('Contents.json', canvas_points=canvas_points, scale=scale, identifier_values=child_ids), 181, 181, idiom=0, scale=1))
+    aggregate.insert(0, AssetRendition(name, _csi_solid_image_stack('Contents.json', canvas_points=canvas_points,
+                     scale=scale, identifier_values=child_ids), 181, 181, idiom=0, scale=1))
     return aggregate + image_renditions
 
 
@@ -1697,27 +1821,33 @@ def build_solid_image_stack_aggregate_car(name: str, layers: list[tuple[str, byt
     return build_assets_car(solid_image_stack_aggregate_renditions(name, layers, platform=platform, scale=scale, canvas_points=canvas_points), platform=platform, target=target)
 
 
-WATCH_COMPLICATION_FAMILIES = {"circularSmall":1,"extraLarge":2,"graphicBezel":3,"graphicCircular":4,"graphicCorner":5,"graphicExtraLarge":6,"graphicRectangular":7,"modularLarge":8,"modularSmall":9,"utilitarianLarge":10,"utilitarianSmall":11,"utilitarianSmallFlat":12}
-WATCH_COMPLICATION_ROLES = {"background":1,"foreground":2,"mask":3,"ring":4,"template":5}
+WATCH_COMPLICATION_FAMILIES = {"circularSmall": 1, "extraLarge": 2, "graphicBezel": 3, "graphicCircular": 4, "graphicCorner": 5, "graphicExtraLarge": 6,
+                               "graphicRectangular": 7, "modularLarge": 8, "modularSmall": 9, "utilitarianLarge": 10, "utilitarianSmall": 11, "utilitarianSmallFlat": 12}
+WATCH_COMPLICATION_ROLES = {"background": 1, "foreground": 2, "mask": 3, "ring": 4, "template": 5}
 
 
 def watch_complication_renditions(name: str, images: list[bytes], *, scale: int = 2, families: list[str] | None = None, roles: list[str] | None = None) -> list[AssetRendition]:
     """Encode watch family in subtype and role in dimension2 keys."""
-    if not images: raise ValueError("complication needs at least one image")
+    if not images:
+        raise ValueError("complication needs at least one image")
     if families is None:
         available = tuple(WATCH_COMPLICATION_FAMILIES)
-        if len(images) > len(available): raise ValueError("too many complication images without explicit families")
+        if len(images) > len(available):
+            raise ValueError("too many complication images without explicit families")
         families = list(available[:len(images)])
     roles = roles or ["template"] * len(images)
-    if len(families)!=len(images) or len(roles)!=len(images): raise ValueError("complication metadata count mismatch")
-    try: pairs=[(WATCH_COMPLICATION_FAMILIES[f],WATCH_COMPLICATION_ROLES[r]) for f,r in zip(families,roles)]
-    except KeyError as exc: raise ValueError(f"unsupported complication family or role: {exc.args[0]}") from exc
-    return [AssetRendition(name,_csi_png_deepmap(bytes(png),f"{name}-{families[i-1]}-{roles[i-1]}.png",scale=scale),181,scale=scale,idiom=5,subtype=family,dimension2=role)
-            for i,(png,(family,role)) in enumerate(zip(images,pairs),1)]
+    if len(families) != len(images) or len(roles) != len(images):
+        raise ValueError("complication metadata count mismatch")
+    try:
+        pairs = [(WATCH_COMPLICATION_FAMILIES[f], WATCH_COMPLICATION_ROLES[r]) for f, r in zip(families, roles)]
+    except KeyError as exc:
+        raise ValueError(f"unsupported complication family or role: {exc.args[0]}") from exc
+    return [AssetRendition(name, _csi_png_deepmap(bytes(png), f"{name}-{families[i-1]}-{roles[i-1]}.png", scale=scale), 181, scale=scale, idiom=5, subtype=family, dimension2=role)
+            for i, (png, (family, role)) in enumerate(zip(images, pairs), 1)]
 
 
 def build_watch_complication_car(name: str, images: list[bytes], *, target: str = "8.0", scale: int = 2, families: list[str] | None = None, roles: list[str] | None = None) -> bytes:
-    return build_assets_car(watch_complication_renditions(name,images,scale=scale,families=families,roles=roles),platform="watchos",target=target)
+    return build_assets_car(watch_complication_renditions(name, images, scale=scale, families=families, roles=roles), platform="watchos", target=target)
 
 
 APP_ICON_IDIOMS = {
@@ -1731,8 +1861,10 @@ APP_ICON_IDIOMS = {
 
 def app_icon_renditions(name: str, png: bytes, filename: str = "icon.png", *, platform: str = "iphoneos") -> list[AssetRendition]:
     """Return platform-specific MSIS and CBCK records for a modern AppIcon."""
-    try: idioms = APP_ICON_IDIOMS[platform.lower()]
-    except KeyError as exc: raise ValueError(f"unsupported AppIcon platform: {platform}") from exc
+    try:
+        idioms = APP_ICON_IDIOMS[platform.lower()]
+    except KeyError as exc:
+        raise ValueError(f"unsupported AppIcon platform: {platform}") from exc
     csi = _csi_png_cbck(bytes(png), filename)
     records: list[AssetRendition] = []
     for idiom in idioms:
@@ -1751,25 +1883,34 @@ def data_rendition(name: str, data: bytes, uti: str = "public.data", *, idiom: s
 
 
 def _selector_ids(idiom: str | int = 0, appearance: str | int = 0) -> tuple[int, int]:
-    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4, "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
+    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4,
+              "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
     appearances = {"any": 0, "light": 0, "dark": 1, "high-contrast": 2, "high": 2}
-    try: idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
-    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported idiom: {idiom}") from exc
-    try: appearance_id = appearances[appearance] if isinstance(appearance, str) else int(appearance)
-    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported appearance: {appearance}") from exc
-    if idiom_id not in range(9): raise ValueError("invalid idiom")
-    if appearance_id not in (0, 1, 2): raise ValueError("invalid appearance")
+    try:
+        idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported idiom: {idiom}") from exc
+    try:
+        appearance_id = appearances[appearance] if isinstance(appearance, str) else int(appearance)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported appearance: {appearance}") from exc
+    if idiom_id not in range(9):
+        raise ValueError("invalid idiom")
+    if appearance_id not in (0, 1, 2):
+        raise ValueError("invalid appearance")
     return idiom_id, appearance_id
 
 
 def jpeg_rendition(name: str, data: bytes, filename: str = "image.jpg", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
-    if scale not in (1, 2, 3): raise ValueError("image scale must be 1, 2, or 3")
+    if scale not in (1, 2, 3):
+        raise ValueError("image scale must be 1, 2, or 3")
     idiom_id, appearance_id = _selector_ids(idiom, appearance)
     return AssetRendition(name, _csi_jpeg(bytes(data), filename, scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
 def heif_rendition(name: str, data: bytes, filename: str = "image.heic", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
-    if scale not in (1, 2, 3): raise ValueError("image scale must be 1, 2, or 3")
+    if scale not in (1, 2, 3):
+        raise ValueError("image scale must be 1, 2, or 3")
     idiom_id, appearance_id = _selector_ids(idiom, appearance)
     return AssetRendition(name, _csi_heif(bytes(data), filename, scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
@@ -1777,15 +1918,23 @@ def heif_rendition(name: str, data: bytes, filename: str = "image.heic", *, scal
 def png_rendition(name: str, data: bytes, filename: str = "image.png", *, scale: int = 1, idiom: str | int = 0, appearance: str | int = 0, localization: str | None = None) -> AssetRendition:
     if scale not in (1, 2, 3):
         raise ValueError("image scale must be 1, 2, or 3")
-    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4, "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
+    idioms = {"universal": 0, "iphone": 1, "phone": 1, "ipad": 2, "pad": 2, "tv": 3, "car": 4,
+              "carplay": 4, "watch": 5, "marketing": 6, "mac": 7, "vision": 8, "visionos": 8}
     appearances = {"any": 0, "light": 0, "dark": 1, "high-contrast": 2, "high": 2}
-    try: idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
-    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported idiom: {idiom}") from exc
-    try: appearance_id = appearances[appearance] if isinstance(appearance, str) else int(appearance)
-    except (KeyError, ValueError) as exc: raise ValueError(f"unsupported appearance: {appearance}") from exc
-    if idiom_id not in range(9): raise ValueError("enabled idioms are universal, iphone, ipad, tv, car, watch, marketing, mac, and vision")
-    if appearance_id not in (0, 1, 2): raise ValueError("enabled appearances are any/light, dark, and high-contrast")
-    if localization is not None and (not localization or len(localization.encode("utf-8")) > 255): raise ValueError("invalid localization tag")
+    try:
+        idiom_id = idioms[idiom] if isinstance(idiom, str) else int(idiom)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported idiom: {idiom}") from exc
+    try:
+        appearance_id = appearances[appearance] if isinstance(appearance, str) else int(appearance)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported appearance: {appearance}") from exc
+    if idiom_id not in range(9):
+        raise ValueError("enabled idioms are universal, iphone, ipad, tv, car, watch, marketing, mac, and vision")
+    if appearance_id not in (0, 1, 2):
+        raise ValueError("enabled appearances are any/light, dark, and high-contrast")
+    if localization is not None and (not localization or len(localization.encode("utf-8")) > 255):
+        raise ValueError("invalid localization tag")
     # Xcode 26.x stores ordinary imageset PNGs as LZFSE deepmap2 (v2/v4
     # grammar); GA and indexed sources keep the verified v1 grammar.
     csi = make_deepmap_csi_variant(bytes(data), filename, scale=scale, stack_bottom=True)
@@ -1802,32 +1951,37 @@ def palette_png_rendition(name: str, data: bytes, filename: str = "image.png", *
     return AssetRendition(name, _csi_png_palette_img(bytes(data), filename, scale=scale), 0xB5, scale=scale, idiom=idiom_id, appearance=appearance_id, localization=localization)
 
 
-SYMBOL_WEIGHTS = {"Ultralight":1, "Thin":2, "Light":3, "Regular":4, "Medium":5, "Semibold":6, "Bold":7, "Heavy":8, "Black":9}
-SYMBOL_SIZES = {"S":1, "M":2, "L":3}
+SYMBOL_WEIGHTS = {"Ultralight": 1, "Thin": 2, "Light": 3, "Regular": 4, "Medium": 5, "Semibold": 6, "Bold": 7, "Heavy": 8, "Black": 9}
+SYMBOL_SIZES = {"S": 1, "M": 2, "L": 3}
 
 
 def symbol_template_renditions(name: str, svg: bytes, filename: str = "symbol.svg", *, deployment_target: int = 0) -> list[AssetRendition]:
     """Expand SF Symbols template groups such as ``Regular-M`` into glyph records."""
     import xml.etree.ElementTree as ET
-    try: root = ET.fromstring(svg)
-    except ET.ParseError as exc: raise ValueError(f"invalid symbol SVG: {exc}") from exc
-    found: list[tuple[int,int,bytes]] = []
+    try:
+        root = ET.fromstring(svg)
+    except ET.ParseError as exc:
+        raise ValueError(f"invalid symbol SVG: {exc}") from exc
+    found: list[tuple[int, int, bytes]] = []
     for element in root.iter():
         ident = element.attrib.get("id", "")
-        if "-" not in ident: continue
+        if "-" not in ident:
+            continue
         weight_name, size_name = ident.rsplit("-", 1)
-        if weight_name not in SYMBOL_WEIGHTS or size_name not in SYMBOL_SIZES: continue
+        if weight_name not in SYMBOL_WEIGHTS or size_name not in SYMBOL_SIZES:
+            continue
         # Preserve definitions/style and the selected glyph. CoreUI accepts a
         # normal SVG payload per weight/size; template-only guide groups are omitted.
         wrapper = ET.Element(root.tag, dict(root.attrib))
         for child in root:
-            if child.tag.rsplit("}",1)[-1] == "defs": wrapper.append(ET.fromstring(ET.tostring(child)))
+            if child.tag.rsplit("}", 1)[-1] == "defs":
+                wrapper.append(ET.fromstring(ET.tostring(child)))
         wrapper.append(ET.fromstring(ET.tostring(element)))
         found.append((SYMBOL_WEIGHTS[weight_name], SYMBOL_SIZES[size_name], ET.tostring(wrapper, encoding="utf-8", xml_declaration=True)))
     if not found:
         raise ValueError("symbol template has no recognized weight-size glyph groups")
     return [symbol_rendition(name, payload, filename, weight=weight, size=size, deployment_target=deployment_target)
-            for weight,size,payload in sorted(found)]
+            for weight, size, payload in sorted(found)]
 
 
 def build_symbol_template_car(name: str, svg: bytes, filename: str = "symbol.svg", *, platform: str = "macosx", target: str = "13.0") -> bytes:
@@ -1835,9 +1989,12 @@ def build_symbol_template_car(name: str, svg: bytes, filename: str = "symbol.svg
 
 
 def symbol_rendition(name: str, data: bytes, filename: str = "symbol.svg", *, weight: int = 4, size: int = 2, deployment_target: int = 0) -> AssetRendition:
-    if weight not in range(1, 10): raise ValueError("symbol weight must be 1..9")
-    if size not in range(1, 4): raise ValueError("symbol size must be 1..3")
+    if weight not in range(1, 10):
+        raise ValueError("symbol weight must be 1..9")
+    if size not in range(1, 4):
+        raise ValueError("symbol size must be 1..3")
     return AssetRendition(name, _csi_symbol_svg(bytes(data), filename), 59, 59, glyph_weight=weight, glyph_size=size, deployment_target=deployment_target)
+
 
 def build_symbol_car(name: str, svg: bytes, filename: str = "symbol.svg", *, platform: str = "macosx", target: str = "13.0", weight: int = 4, size: int = 2) -> bytes:
     return build_assets_car([symbol_rendition(name, svg, filename, weight=weight, size=size)], platform=platform, target=target)

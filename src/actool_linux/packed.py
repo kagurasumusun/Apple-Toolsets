@@ -298,7 +298,7 @@ def _shelf_pack(rects: list[tuple[int, int]]) -> tuple[list[tuple[int, int]], in
     for i in order:
         acc += rects[i][0] + pad
         candidates.add(acc + (acc & 1))
-        
+
     max_w = max(r[0] for r in rects) + 2 * pad
     max_w = max_w + (max_w & 1)
     total_w = sum(r[0] + pad for r in rects) + pad
@@ -357,7 +357,7 @@ def _paginate_and_pack(
                 break
             best_page_indices = subset
             best_pack = (pos_sub, w_sub, h_sub)
-        
+
         sub_group = [group[i] for i in best_page_indices]
         sub_decoded = [decoded[i] for i in best_page_indices]
         pos_sub, w_sub, h_sub = best_pack
@@ -466,7 +466,7 @@ def _encode_zero_run(out: bytearray, length: int, is_first: bool) -> None:
         out += bytes((0xf0, val))
         length -= (val + first_bias)
         return _encode_zero_run_cont(out, length, cont_bias)
-    
+
     # All continuation tokens
     _encode_zero_run_cont(out, length, cont_bias)
 
@@ -626,8 +626,8 @@ def pack_renditions(assets: list[AssetRendition]) -> list[AssetRendition]:
     for appearance, class_name in sorted(packable, key=lambda k: (k[0], k[1])):
         group = packable[(appearance, class_name)]
         gray, opaque = class_of[class_name]
-        decoded = [decoded_cache[id(a)] for a in group]
-        paged_groups = _paginate_and_pack(group, decoded, max_page_area=27000)
+        decoded_list = [decoded_cache[id(a)] for a in group]
+        paged_groups = _paginate_and_pack(group, decoded_list, max_page_area=27000)
         for sub_group, sub_decoded, positions, atlas_w, atlas_h in paged_groups:
             canvas = composite_atlas(sub_decoded, positions, atlas_w, atlas_h)
             atlas_csi = _csi_atlas(class_name, atlas_w, atlas_h, canvas, gray=gray, opaque=opaque)
