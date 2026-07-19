@@ -959,8 +959,14 @@ def _gray_ga_bytes(premultiplied: bytes) -> bytes | None:
 def _dmp2_lzfse_stream(width: int, height: int, raw: bytes, bpp: int, version: int) -> bytes:
     """dmp2 v2/v3 frame: magic, version, (1, 10, bpp), u16 w/h, u32 stream
     length, then the LZFSE stream. The u32 length field matters: streams of
-    noisy sources exceed 64KiB (Apple's frame confirmed u32 in oracles)."""
-    stream = lzfse_compat.compress(raw)
+    noisy sources exceed 64KiB (Apple's frame confirmed u32 in oracles).
+    
+    When _OPTIMIZE_MODE is set, applies OMEGA+ optimization (RLE, Delta, Palette)."""
+    if _OPTIMIZE_MODE in ("omega+", "nexus", "alpha", "omni"):
+        from ..research.omega_plus import optimize_dmp2_payload
+        stream = optimize_dmp2_payload(raw, bpp)
+    else:
+        stream = lzfse_compat.compress(raw)
     return (b"dmp2" + bytes((version, 1, 10, bpp)) + struct.pack("<HH", width, height)
             + struct.pack("<I", len(stream)) + stream)
 
@@ -1313,6 +1319,11 @@ def _csi_png_cbck(data: bytes, filename: str, *, scale: int = 1) -> bytes:
     if _OPTIMIZE_MODE == "omega":
         from ..research.omega_compression import omega_compress
         return omega_compress(pixels, width, height, filename, scale=scale)
+
+    if _OPTIMIZE_MODE == "omega-plus":
+        # OMEGA+ uses NEXUS for CBCK, plus DMP2 optimization via _dmp2_lzfse_stream
+        from ..research.nexus_compression import nexus_compress
+        return nexus_compress(pixels, width, height, filename, scale=scale)
 
     if _OPTIMIZE_MODE == "alpha":
         from ..research.alpha_compression import alpha_compress
