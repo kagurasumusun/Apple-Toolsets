@@ -183,6 +183,16 @@ impl ZeroCodeBezel {
             }
         }
 
+        if offset + 4 <= data.len() {
+            let effect_count = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
+            offset += 4;
+            for _ in 0..effect_count {
+                let (effect, new_off) = ZeroCodeEffect::deserialize(data, offset)?;
+                bezel.add_effect(effect);
+                offset = new_off;
+            }
+        }
+
         Ok(bezel)
     }
 }

@@ -103,6 +103,27 @@ pub fn _csi_link(x: u32, y: u32, w: u32, h: u32, page: u16) -> Vec<u8> {
     build_link_tlv(x, y, w, h, page)
 }
 
+pub fn _csi_link_full(source_csi: &[u8], x: u32, y: u32, w: u32, h: u32, page: u16) -> Vec<u8> {
+    let mut out = if source_csi.len() >= 184 {
+        source_csi[..184].to_vec()
+    } else {
+        let mut h = vec![0u8; 184];
+        h[0..4].copy_from_slice(b"ISTC");
+        h
+    };
+
+    let _ = (&mut out[32..36]).write_u32::<LittleEndian>(1003); // Layout 1003
+    let link_tlv = build_link_tlv(x, y, w, h, page);
+
+    let _ = (&mut out[168..172]).write_u32::<LittleEndian>(link_tlv.len() as u32);
+    let _ = (&mut out[172..176]).write_u32::<LittleEndian>(1);
+    let _ = (&mut out[176..180]).write_u32::<LittleEndian>(0);
+    let _ = (&mut out[180..184]).write_u32::<LittleEndian>(0); // Payload length 0 for LINK
+
+    out.extend_from_slice(&link_tlv);
+    out
+}
+
 pub fn build_link_tlv(x: u32, y: u32, w: u32, h: u32, page: u16) -> Vec<u8> {
     let mut value = Vec::new();
     value.extend_from_slice(b"INLK");
@@ -189,10 +210,10 @@ pub fn pack_renditions(renditions: Vec<AssetRendition>) -> Vec<AssetRendition> {
 
     for reg in regions {
         let (_, candidate_rendition) = &candidates[reg.rendition_index];
-        let link_tlv = build_link_tlv(reg.x, reg.y, reg.width, reg.height, 0);
+        let link_csi = _csi_link_full(&candidate_rendition.csi_bytes, reg.x, reg.y, reg.width, reg.height, 0);
 
         let mut packed_rend = candidate_rendition.clone();
-        packed_rend.csi_bytes = link_tlv;
+        packed_rend.csi_bytes = link_csi;
         result_renditions.push(packed_rend);
     }
 

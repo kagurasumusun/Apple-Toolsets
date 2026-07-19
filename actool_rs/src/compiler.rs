@@ -150,7 +150,10 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                     if let Some((_req_w, _req_h, source_path)) = best_candidate {
                         if let Ok(img) = image::open(&source_path) {
                             let (w, h) = img.dimensions();
-                            let bgra_bytes = img.to_rgba8().into_raw();
+                            let mut bgra_bytes = img.to_rgba8().into_raw();
+                            for px in bgra_bytes.chunks_exact_mut(4) {
+                                px.swap(0, 2);
+                            }
 
                             let csi_bytes = crate::csi::make_adaptive_csi(
                                 &bgra_bytes,
@@ -188,7 +191,10 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                             if let Some(source_path) = safe_resolve_file(&asset.directory, fname) {
                                 if let Ok(img) = image::open(&source_path) {
                                     let (w, h) = img.dimensions();
-                                    let bgra_bytes = img.to_rgba8().into_raw();
+                                    let mut bgra_bytes = img.to_rgba8().into_raw();
+                                    for px in bgra_bytes.chunks_exact_mut(4) {
+                                        px.swap(0, 2);
+                                    }
 
                                     let scale = entry
                                         .scale

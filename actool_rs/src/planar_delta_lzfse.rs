@@ -77,7 +77,7 @@ pub fn planar_delta_decode(data: &[u8]) -> Result<Vec<u8>, &'static str> {
 
     let w = u32::from_le_bytes(data[4..8].try_into().unwrap()) as usize;
     let h = u32::from_le_bytes(data[8..12].try_into().unwrap()) as usize;
-    let n_pixels = w * h;
+    let n_pixels = w.checked_mul(h).ok_or("Invalid dimensions: multiplication overflow")?;
 
     if data.len() < 12 + n_pixels * 4 {
         return Err("Truncated PDLT payload");

@@ -45,7 +45,9 @@ pub fn build_stack_root_csi(
     let _ = (&mut header[32..36]).write_u32::<LittleEndian>(1002);
 
     let _ = (&mut header[168..172]).write_u32::<LittleEndian>(tlvs.len() as u32);
-    let _ = (&mut header[172..176]).write_u32::<LittleEndian>(payload.len() as u32);
+    let _ = (&mut header[172..176]).write_u32::<LittleEndian>(1);
+    let _ = (&mut header[176..180]).write_u32::<LittleEndian>(0);
+    let _ = (&mut header[180..184]).write_u32::<LittleEndian>(payload.len() as u32);
 
     let mut out = Vec::new();
     out.extend_from_slice(&header);
@@ -74,10 +76,10 @@ pub fn composite_source_over(layers_bgra: &[Vec<u8>], width: u32, height: u32) -
             let da = canvas[i * 4 + 3] as u16;
 
             let inv = 255 - sa;
-            canvas[i * 4] = (sb + (db * inv + 127) / 255) as u8;
-            canvas[i * 4 + 1] = (sg + (dg * inv + 127) / 255) as u8;
-            canvas[i * 4 + 2] = (sr + (dr * inv + 127) / 255) as u8;
-            canvas[i * 4 + 3] = (sa + (da * inv + 127) / 255) as u8;
+            canvas[i * 4] = (sb + (db * inv + 127) / 255).min(255) as u8;
+            canvas[i * 4 + 1] = (sg + (dg * inv + 127) / 255).min(255) as u8;
+            canvas[i * 4 + 2] = (sr + (dr * inv + 127) / 255).min(255) as u8;
+            canvas[i * 4 + 3] = (sa + (da * inv + 127) / 255).min(255) as u8;
         }
     }
 

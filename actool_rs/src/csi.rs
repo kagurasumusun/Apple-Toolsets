@@ -31,34 +31,79 @@ pub fn parse_csi(data: &[u8]) -> Result<CSIHeader, crate::bom::BOMError> {
         return Err(crate::bom::BOMError::TruncatedHeader);
     }
 
+    let is_little = match &data[0..4] {
+        b"ISTC" => true,
+        b"CTSI" => false,
+        _ => return Err(crate::bom::BOMError::InvalidMagic(data[0..4].to_vec())),
+    };
+
     let mut magic = [0u8; 4];
     magic.copy_from_slice(&data[0..4]);
 
-    let version = u32::from_le_bytes(data[4..8].try_into().unwrap());
-    let flags = u32::from_le_bytes(data[8..12].try_into().unwrap());
-    let width = u32::from_le_bytes(data[12..16].try_into().unwrap());
-    let height = u32::from_le_bytes(data[16..20].try_into().unwrap());
-    let scale = u32::from_le_bytes(data[20..24].try_into().unwrap());
+    let (version, flags, width, height, scale) = if is_little {
+        (
+            u32::from_le_bytes(data[4..8].try_into().unwrap()),
+            u32::from_le_bytes(data[8..12].try_into().unwrap()),
+            u32::from_le_bytes(data[12..16].try_into().unwrap()),
+            u32::from_le_bytes(data[16..20].try_into().unwrap()),
+            u32::from_le_bytes(data[20..24].try_into().unwrap()),
+        )
+    } else {
+        (
+            u32::from_be_bytes(data[4..8].try_into().unwrap()),
+            u32::from_be_bytes(data[8..12].try_into().unwrap()),
+            u32::from_be_bytes(data[12..16].try_into().unwrap()),
+            u32::from_be_bytes(data[16..20].try_into().unwrap()),
+            u32::from_be_bytes(data[20..24].try_into().unwrap()),
+        )
+    };
 
     let mut pixel_format = [0u8; 4];
     pixel_format.copy_from_slice(&data[24..28]);
 
-    let color_space_id = u32::from_le_bytes(data[28..32].try_into().unwrap());
-    let layout = u32::from_le_bytes(data[32..36].try_into().unwrap());
+    let (color_space_id, layout) = if is_little {
+        (
+            u32::from_le_bytes(data[28..32].try_into().unwrap()),
+            u32::from_le_bytes(data[32..36].try_into().unwrap()),
+        )
+    } else {
+        (
+            u32::from_be_bytes(data[28..32].try_into().unwrap()),
+            u32::from_be_bytes(data[32..36].try_into().unwrap()),
+        )
+    };
 
     let name_end = data[40..168].iter().position(|&b| b == 0).unwrap_or(128);
     let name = String::from_utf8_lossy(&data[40..40 + name_end]).to_string();
 
-    let tlv_len = u32::from_le_bytes(data[168..172].try_into().unwrap()) as usize;
-    let payload_len = u32::from_le_bytes(data[180..184].try_into().unwrap()) as usize;
+    let (tlv_len, payload_len) = if is_little {
+        (
+            u32::from_le_bytes(data[168..172].try_into().unwrap()) as usize,
+            u32::from_le_bytes(data[180..184].try_into().unwrap()) as usize,
+        )
+    } else {
+        (
+            u32::from_be_bytes(data[168..172].try_into().unwrap()) as usize,
+            u32::from_be_bytes(data[180..184].try_into().unwrap()) as usize,
+        )
+    };
 
     let mut tlvs = Vec::new();
     let mut cursor = 184;
     let tlv_end = cursor + tlv_len;
 
     while cursor + 8 <= tlv_end && cursor + 8 <= data.len() {
-        let tag = u32::from_le_bytes(data[cursor..cursor + 4].try_into().unwrap());
-        let len = u32::from_le_bytes(data[cursor + 4..cursor + 8].try_into().unwrap()) as usize;
+        let (tag, len) = if is_little {
+            (
+                u32::from_le_bytes(data[cursor..cursor + 4].try_into().unwrap()),
+                u32::from_le_bytes(data[cursor + 4..cursor + 8].try_into().unwrap()) as usize,
+            )
+        } else {
+            (
+                u32::from_be_bytes(data[cursor..cursor + 4].try_into().unwrap()),
+                u32::from_be_bytes(data[cursor + 4..cursor + 8].try_into().unwrap()) as usize,
+            )
+        };
         cursor += 8;
 
         if cursor + len <= data.len() {

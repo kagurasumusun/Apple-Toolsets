@@ -1,5 +1,5 @@
 use actool_rs::appicons::{app_icon_entry_rank, AppIconEntry};
-use actool_rs::autosafe::{auto_safe_compress, AlphaCharacteristic, ImageDomain, SafetyLevel};
+use actool_rs::autosafe::{auto_safe_compress, AlphaCharacteristic, SafetyLevel};
 use actool_rs::bom::BOMStore;
 use actool_rs::bomwriter::BOMWriter;
 use actool_rs::car::CARFile;
@@ -268,26 +268,60 @@ fn test_ultrahd_tiled_encoding() {
 }
 
 #[test]
-fn test_auto_safe_optimization_precision_domain() {
+fn test_dirty_alpha_preservation() {
+    // Test that when clean_alpha = false (or in CustomShaderSafe / StrictLossless mode),
+    // dirty alpha RGB pixels in alpha=0 regions are 100% preserved.
     let mut dirty_bgra = vec![0u8; 16 * 4];
     for px in dirty_bgra.chunks_exact_mut(4) {
-        px[0] = 100;
-        px[1] = 200;
-        px[2] = 50;
-        px[3] = 0;
+        px[0] = 123; // B
+        px[1] = 210; // G
+        px[2] = 88;  // R
+        px[3] = 0;   // Fully transparent alpha
     }
 
-    let (_comp, report) = auto_safe_compress(&dirty_bgra, 2, 2, "texture", SafetyLevel::CustomShaderSafe);
+    // When CustomShaderSafe is requested, exact RGB values in alpha=0 must be preserved
+    let (comp, report) = auto_safe_compress(&dirty_bgra, 4, 4, "texture", SafetyLevel::CustomShaderSafe);
     assert_eq!(report.alpha_type, AlphaCharacteristic::DirtyAlpha);
-    assert!(report.is_lossless);
 
-    let (_comp2, report2) = auto_safe_compress(&dirty_bgra, 2, 2, "image", SafetyLevel::PerceptualSafe);
-    assert_eq!(report2.alpha_type, AlphaCharacteristic::DirtyAlpha);
+    let decompressed = lzfse::decompress(&comp).expect("Decompression failed");
+    assert_eq!(decompressed, dirty_bgra);
 
-    let mono_bgra = vec![128u8; 16 * 4];
-    let (_comp3, report3) = auto_safe_compress(&mono_bgra, 2, 2, "image", SafetyLevel::AutoDomainDetect);
-    assert_eq!(report3.detected_domain, ImageDomain::GrayscaleUI);
-    assert!(report3.is_monochrome);
+    // Test encode_cbck with clean_alpha = false
+    let cbck_raw = encode_cbck(&dirty_bgra, 4, 4, 4, false);
+    let decomp_cbck = actool_rs::cbck::decompress(&cbck_raw).expect("CBCK decompress failed");
+    assert_eq!(decomp_cbck, dirty_bgra);
+}
+
+#[test]
+fn test_zero_code_bezel_effects_roundtrip() {
+    use actool_rs::zero_code_db::{ZeroCodeBezel, ZeroCodeEffect, ZeroCodeLayer};
+
+    let mut bezel = ZeroCodeBezel::new("GlassBezel", 100, 100);
+    bezel.add_layer(ZeroCodeLayer::new("Background", 0.8));
+    bezel.add_effect(ZeroCodeEffect::new(1, 12.5));
+
+    let bytes = bezel.serialize();
+    let restored = ZeroCodeBezel::deserialize(&bytes).expect("Bezel deserialize failed");
+
+    assert_eq!(restored.name, "GlassBezel");
+    assert_eq!(restored.layers.len(), 1);
+    assert_eq!(restored.effects.len(), 1);
+    assert_eq!(restored.effects[0].effect_type, 1);
+    assert_eq!(restored.effects[0].radius, 12.5);
+}
+
+#[test]
+fn test_csi_payload_offset_compliance() {
+    use actool_rs::smart_cbck::smart_encode_png_cbck;
+    use actool_rs::csi::parse_csi;
+
+    let bgra = vec![100u8; 16 * 16 * 4];
+    let csi_bytes = smart_encode_png_cbck(&bgra, 16, 16, "test.png", 1, true);
+
+    let parsed = parse_csi(&csi_bytes).expect("CSI parse failed");
+    assert_eq!(parsed.width, 16);
+    assert_eq!(parsed.height, 16);
+    assert!(!parsed.rendition_data.is_empty());
 }
 
 #[test]

@@ -52,7 +52,7 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>, &'static str> {
         let magic = &data[cursor..cursor + 4];
         cursor += 4;
 
-        if magic == b"bvx$" {
+        if magic == b"bvx$" || magic == b"bvx-" {
             // End of stream marker
             break;
         } else if magic == b"bvx2" {

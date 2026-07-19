@@ -145,7 +145,9 @@ pub fn smart_encode_png_cbck(
     header[40..40 + len].copy_from_slice(&fname_bytes[..len]);
 
     let _ = (&mut header[168..172]).write_u32::<LittleEndian>(tlvs.len() as u32);
-    let _ = (&mut header[172..176]).write_u32::<LittleEndian>(payload.len() as u32);
+    let _ = (&mut header[172..176]).write_u32::<LittleEndian>(1);
+    let _ = (&mut header[176..180]).write_u32::<LittleEndian>(0);
+    let _ = (&mut header[180..184]).write_u32::<LittleEndian>(payload.len() as u32);
 
     let mut out = header;
     out.extend_from_slice(&tlvs);

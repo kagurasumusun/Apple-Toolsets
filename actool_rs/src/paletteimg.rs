@@ -84,8 +84,11 @@ pub fn unpack_row_indices(
     width: usize,
     bits_per_index: usize,
 ) -> Result<Vec<u8>, PaletteImageError> {
+    if width == 0 || bits_per_index == 0 {
+        return Ok(Vec::new());
+    }
     let row_bytes = (width * bits_per_index + 7) / 8;
-    if data.len() % row_bytes != 0 {
+    if row_bytes == 0 || data.len() % row_bytes != 0 {
         return Err(PaletteImageError::InvalidRowLength);
     }
 
@@ -112,6 +115,9 @@ pub fn pack_row_indices(
     width: usize,
     bits_per_index: usize,
 ) -> Result<Vec<u8>, PaletteImageError> {
+    if width == 0 || bits_per_index == 0 {
+        return Ok(Vec::new());
+    }
     let row_bytes = (width * bits_per_index + 7) / 8;
     if indices.len() % width != 0 {
         return Err(PaletteImageError::InvalidRowLength);

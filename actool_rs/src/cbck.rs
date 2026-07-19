@@ -61,6 +61,9 @@ pub fn encode_cbck(
         .map(|&(y_off, rows)| {
             let offset = (y_off as usize) * row_bytes;
             let chunk_len = (rows as usize) * row_bytes;
+            if offset + chunk_len > pixel_data.len() {
+                return Vec::new();
+            }
             let chunk_raw = &pixel_data[offset..offset + chunk_len];
 
             let compressed = lzfse::compress(chunk_raw);

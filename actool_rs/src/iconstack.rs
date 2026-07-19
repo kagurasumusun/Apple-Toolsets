@@ -72,8 +72,11 @@ pub fn build_iconstack_root_style_list(entries: &[IconStackRootStyleEntry]) -> V
         let _ = out.write_f32::<LittleEndian>(entry.value);
         out.push(entry.enabled);
 
-        let hex_bytes = hex::decode(&entry.reserved_hex).unwrap_or_else(|_| vec![0u8; 4]);
-        out.extend_from_slice(&hex_bytes[..4]);
+        let hex_bytes = hex::decode(&entry.reserved_hex).unwrap_or_default();
+        let mut pad = [0u8; 4];
+        let copy_len = std::cmp::min(hex_bytes.len(), 4);
+        pad[..copy_len].copy_from_slice(&hex_bytes[..copy_len]);
+        out.extend_from_slice(&pad);
     }
 
     out
