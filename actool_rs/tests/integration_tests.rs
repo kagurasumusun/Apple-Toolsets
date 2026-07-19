@@ -186,3 +186,39 @@ fn test_hybrid_compressor() {
     let compressed = compressor.compress_chunk(&bgra, 16, 16);
     assert!(!compressed.is_empty());
 }
+
+#[test]
+fn test_3d_pbr_orm_and_normal_map() {
+    use actool_rs::model3d::{generate_mipmap_chain, compress_normal_map_2channel, PBRMaterialMap};
+
+    let pbr = PBRMaterialMap::new("MetalGold", 32, 32);
+    let orm_payload = pbr.compress_orm_payload();
+    assert!(!orm_payload.is_empty());
+
+    let rgb_normal = vec![128u8; 32 * 32 * 3];
+    let compressed_normal = compress_normal_map_2channel(&rgb_normal, 32, 32);
+    assert!(!compressed_normal.is_empty());
+
+    let bgra = vec![200u8; 32 * 32 * 4];
+    let mips = generate_mipmap_chain(&bgra, 32, 32);
+    assert!(mips.len() >= 5); // 32x32 -> 16x16 -> 8x8 -> 4x4 -> 2x2 -> 1x1
+    assert_eq!(mips[0].0, 32);
+    assert_eq!(mips[1].0, 16);
+    assert_eq!(mips[2].0, 8);
+}
+
+#[test]
+fn test_ar_resource_group() {
+    use actool_rs::arresource::{ARReferenceImageSpec, ARResourceGroup};
+
+    let mut group = ARResourceGroup::new("ARObjects");
+    group.add_image(ARReferenceImageSpec {
+        name: "Poster.jpg".to_string(),
+        physical_width_meters: 0.5,
+        physical_height_meters: 0.75,
+    });
+
+    let json_str = group.serialize_ar_group();
+    assert!(json_str.contains("Poster.jpg"));
+    assert!(json_str.contains("0.5"));
+}

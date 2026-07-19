@@ -61,3 +61,5 @@ pub mod zero_code_db;
 pub fn version() -> &'static str {
     "0.1.0"
 }
+pub mod arresource;
+pub mod model3d;
