@@ -1,4 +1,5 @@
 use crate::cbck::encode_cbck;
+use crate::dmp2mini;
 use crate::lzfse;
 use byteorder::{LittleEndian, WriteBytesExt};
 
@@ -100,16 +101,61 @@ pub fn build_tlv(tag: u32, value: &[u8]) -> Vec<u8> {
     out
 }
 
-pub fn build_csi_png(
+pub fn make_adaptive_csi(
     bgra: &[u8],
     width: u32,
     height: u32,
     filename: &str,
     scale: u32,
-    prefer_cbck: bool,
+    optimize_mode: Option<&str>,
 ) -> Vec<u8> {
-    let row_bytes = width * 4;
+    let total_pixels = (width * height) as usize;
+    if total_pixels == 0 || bgra.len() < total_pixels * 4 {
+        return build_csi_png(bgra, width, height, filename, scale, false);
+    }
 
+    // 1. Check if source is a uniform single color
+    let first_px = &bgra[0..4];
+    let is_uniform = bgra.chunks_exact(4).all(|px| px == first_px);
+
+    let row_bytes = width * 4;
+    let is_oversized = (row_bytes * height) > 0x155555;
+
+    // 2. Select format payload based on Apple's actool adaptive decision rules
+    let payload = if let Some(mode) = optimize_mode {
+        match mode {
+            "smart" => crate::smart_cbck::SmartCBCKEncoder::new(true).encode(bgra, width, height),
+            "hybrid" => crate::hybrid_compression::hybrid_compress_for_cbck(bgra, width, height),
+            "alpha" => crate::alpha_compression::alpha_compress(bgra, width, height),
+            "omni" => crate::omni_compression::omni_compress(bgra, width, height),
+            "omega" => crate::omega_compression::omega_compress(bgra, width, height),
+            _ => encode_cbck(bgra, width, height, 4, true),
+        }
+    } else if is_uniform {
+        if total_pixels <= 8 {
+            dmp2mini::v1_raw(width as u16, height as u16, bgra, 4)
+        } else if total_pixels <= 128 {
+            let mut px = [0u8; 4];
+            px.copy_from_slice(first_px);
+            dmp2mini::v3_mini_color(width as u16, height as u16, &px)
+        } else {
+            let comp = lzfse::compress(bgra);
+            let mut out = Vec::new();
+            out.extend_from_slice(b"dmp2");
+            out.extend_from_slice(&[2, 1, 10, 4]);
+            let _ = out.write_u16::<LittleEndian>(width as u16);
+            let _ = out.write_u16::<LittleEndian>(height as u16);
+            let _ = out.write_u32::<LittleEndian>(comp.len() as u32);
+            out.extend_from_slice(&comp);
+            out
+        }
+    } else if is_oversized {
+        encode_cbck(bgra, width, height, 4, true)
+    } else {
+        lzfse::compress(bgra)
+    };
+
+    // 3. Build ISTC header and TLVs
     let mut tlvs = Vec::new();
 
     let mut val1001 = Vec::new();
@@ -143,12 +189,6 @@ pub fn build_csi_png(
     let _ = val1007.write_u32::<LittleEndian>(row_bytes);
     tlvs.extend_from_slice(&build_tlv(1007, &val1007));
 
-    let payload = if prefer_cbck && (row_bytes * height > 0x155555) && height > 1 {
-        encode_cbck(bgra, width, height, 4, true)
-    } else {
-        lzfse::compress(bgra)
-    };
-
     let mut header = vec![0u8; 184];
     header[0..4].copy_from_slice(b"ISTC");
     let _ = (&mut header[4..8]).write_u32::<LittleEndian>(1);
@@ -173,4 +213,22 @@ pub fn build_csi_png(
     out.extend_from_slice(&payload);
 
     out
+}
+
+pub fn build_csi_png(
+    bgra: &[u8],
+    width: u32,
+    height: u32,
+    filename: &str,
+    scale: u32,
+    prefer_cbck: bool,
+) -> Vec<u8> {
+    make_adaptive_csi(
+        bgra,
+        width,
+        height,
+        filename,
+        scale,
+        if prefer_cbck { Some("smart") } else { None },
+    )
 }

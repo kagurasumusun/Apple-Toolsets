@@ -151,15 +151,27 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                             let (w, h) = img.dimensions();
                             let bgra_bytes = img.to_rgba8().into_raw();
 
-                            car_writer.add_png_image(
-                                &asset.name,
+                            let csi_bytes = crate::csi::make_adaptive_csi(
                                 &bgra_bytes,
                                 w,
                                 h,
+                                &asset.name,
                                 1,
-                                1,
-                                rendition_id_counter,
+                                options.optimize.as_deref(),
                             );
+
+                            car_writer.add_rendition(crate::carwriter::AssetRendition {
+                                name: asset.name.clone(),
+                                filename: format!("{}.png", asset.name),
+                                csi_bytes,
+                                identifier: rendition_id_counter,
+                                idiom: 0,
+                                scale: 1,
+                                gamut: 0,
+                                appearance: 0,
+                                width: w,
+                                height: h,
+                            });
                             rendition_id_counter += 1;
 
                             diagnostics.push(Diagnostic::notice(
@@ -184,15 +196,27 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                                         .and_then(|c| c.to_digit(10))
                                         .unwrap_or(1) as u16;
 
-                                    car_writer.add_png_image(
-                                        &asset.name,
+                                    let csi_bytes = crate::csi::make_adaptive_csi(
                                         &bgra_bytes,
                                         w,
                                         h,
-                                        scale,
-                                        1,
-                                        rendition_id_counter,
+                                        fname,
+                                        scale as u32,
+                                        options.optimize.as_deref(),
                                     );
+
+                                    car_writer.add_rendition(crate::carwriter::AssetRendition {
+                                        name: asset.name.clone(),
+                                        filename: fname.clone(),
+                                        csi_bytes,
+                                        identifier: rendition_id_counter,
+                                        idiom: 0,
+                                        scale,
+                                        gamut: 0,
+                                        appearance: 0,
+                                        width: w,
+                                        height: h,
+                                    });
                                     rendition_id_counter += 1;
                                 }
                             }
@@ -207,6 +231,9 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
             }
         }
     }
+
+    // Apply Atlas packing post-processing (pack eligible 1x universal assets into ZZZZPackedAsset)
+    car_writer.renditions = crate::packed::pack_renditions(car_writer.renditions);
 
     let car_bytes = car_writer.build();
     let car_path = options.output_dir.join("Assets.car");
@@ -224,11 +251,3 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
         output_files,
     })
 }
-
-// --- Auto-generated 1:1 definition shims ---
-
-pub fn _resolve_image_stack_layers() {} // Alias for resolve_image_stack_layers
-
-pub fn _partial_info() {} // Alias for partial_info
-
-pub fn ok() {}
