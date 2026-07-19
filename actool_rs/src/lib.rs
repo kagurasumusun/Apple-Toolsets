@@ -68,3 +68,6 @@ pub mod ultrahd;
 pub mod autosafe;
 pub mod astc_native;
 pub mod audio;
+pub mod ciede2000;
+pub mod ergonomics;
+pub mod psychoacoustics;

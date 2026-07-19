@@ -321,3 +321,31 @@ fn test_audio_optimization_and_snr_quality_gate() {
     assert!(report.snr_db >= 60.0);
     assert!(!comp.is_empty());
 }
+
+#[test]
+fn test_human_ergonomics_and_ciede2000_jnd() {
+    use actool_rs::ciede2000::compute_ciede2000;
+    use actool_rs::ergonomics::evaluate_human_visual_ergonomics;
+    use actool_rs::psychoacoustics::evaluate_human_auditory_safety;
+
+    // Test CIEDE2000 identical color -> Delta E00 = 0.0
+    let lab1 = (50.0, 10.0, -20.0);
+    let lab2 = (50.0, 10.0, -20.0);
+    let de00 = compute_ciede2000(lab1, lab2);
+    assert_eq!(de00, 0.0);
+
+    // Test CIEDE2000 JND threshold on image
+    let orig_bgra = vec![128u8; 16 * 4];
+    let comp_bgra = vec![128u8; 16 * 4];
+    let ergo_report = evaluate_human_visual_ergonomics(&orig_bgra, &comp_bgra, 2, 2);
+    assert!(ergo_report.is_imperceptible_to_all_humans);
+    assert_eq!(ergo_report.delta_e_00, 0.0);
+    assert_eq!(ergo_report.jnd_status, "PERFECT_HUMAN_IMPERCEPTIBLE_JND");
+
+    // Test Psychoacoustics 80dB SNR threshold
+    let pcm_orig = vec![1000i16; 100];
+    let pcm_comp = vec![1000i16; 100];
+    let (audio_safe, snr_db) = evaluate_human_auditory_safety(&pcm_orig, &pcm_comp);
+    assert!(audio_safe);
+    assert!(snr_db >= 80.0);
+}
