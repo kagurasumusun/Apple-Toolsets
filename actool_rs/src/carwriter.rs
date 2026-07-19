@@ -303,3 +303,34 @@ pub fn _gray_ga_bytes(bgra: &[u8]) -> Vec<u8> {
     }
     ga
 }
+
+pub fn _csi_data(data: &[u8], name: &str) -> Vec<u8> {
+    let mut header = vec![0u8; 184];
+    header[0..4].copy_from_slice(b"ISTC");
+    header[24..28].copy_from_slice(b"DATA");
+    let name_bytes = name.as_bytes();
+    let len = std::cmp::min(name_bytes.len(), 127);
+    header[40..40 + len].copy_from_slice(&name_bytes[..len]);
+
+    let _ = (&mut header[172..176]).write_u32::<LittleEndian>(1);
+    let _ = (&mut header[180..184]).write_u32::<LittleEndian>(data.len() as u32);
+    let mut out = header;
+    out.extend_from_slice(data);
+    out
+}
+
+pub fn data_rendition(name: &str, data: &[u8]) -> AssetRendition {
+    let csi_bytes = _csi_data(data, name);
+    AssetRendition {
+        name: name.to_string(),
+        filename: name.to_string(),
+        csi_bytes,
+        identifier: _identifier(name),
+        idiom: 0,
+        scale: 1,
+        gamut: 0,
+        appearance: 0,
+        width: 0,
+        height: 0,
+    }
+}

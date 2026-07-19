@@ -2,6 +2,7 @@ use crate::appicons::{app_icon_entry_rank, AppIconEntry};
 use crate::carwriter::CARWriter;
 use crate::catalog::{load_catalog, safe_resolve_file, Asset};
 use crate::diagnostics::{format_xml_plist, Diagnostic};
+
 use image::GenericImageView;
 use serde_json::{json, Value};
 use std::fs;
@@ -226,6 +227,25 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                 "color" => {
                     car_writer.add_color(&asset.name, 1.0, 1.0, 1.0, 1.0, rendition_id_counter);
                     rendition_id_counter += 1;
+                }
+                "data" => {
+                    for entry in &asset.entries {
+                        if let Some(ref fname) = entry.filename {
+                            if let Some(source_path) = safe_resolve_file(&asset.directory, fname) {
+                                if let Ok(data_bytes) = fs::read(&source_path) {
+                                    let rendition = if options.optimize.as_deref() == Some("experimental-nonimage") {
+                                        let opt_res = crate::nonimage_optimizer::optimize_non_image_asset(fname, &data_bytes);
+                                        crate::carwriter::data_rendition(&asset.name, &opt_res.payload)
+                                    } else {
+                                        crate::carwriter::data_rendition(&asset.name, &data_bytes)
+                                    };
+
+                                    car_writer.add_rendition(rendition);
+                                    rendition_id_counter += 1;
+                                }
+                            }
+                        }
+                    }
                 }
                 _ => {}
             }
