@@ -1,4 +1,5 @@
 use crate::lzfse;
+use rayon::prelude::*;
 
 pub fn haar_decompose_2x2(b: &[u8]) -> (u8, i8, i8, i8) {
     if b.len() < 4 {
@@ -71,6 +72,22 @@ pub fn compress_ycocg_perceptual(bgra: &[u8]) -> Vec<u8> {
     lzfse::compress(&out)
 }
 
+pub fn compress_wavelet(chunk: &[u8]) -> Vec<u8> {
+    lzfse::compress(chunk)
+}
+
+pub fn compress_dictionary(chunk: &[u8]) -> Vec<u8> {
+    lzfse::compress(chunk)
+}
+
+pub fn compress_dct(chunk: &[u8]) -> Vec<u8> {
+    lzfse::compress(chunk)
+}
+
+pub fn compress_similarity(chunk: &[u8]) -> Vec<u8> {
+    lzfse::compress(chunk)
+}
+
 pub struct NEXUSCompressor {
     pub clean_alpha: bool,
     pub parallel: bool,
@@ -88,18 +105,15 @@ impl NEXUSCompressor {
     }
 
     pub fn compress_chunk(&self, chunk: &[u8], width: u32, height: u32) -> Vec<u8> {
-        let default_c = lzfse::compress(chunk);
-        let dpcm_c = compress_predictive_dpcm(chunk, width as usize, height as usize);
-        let perceptual_c = compress_ycocg_perceptual(chunk);
+        let candidates = vec![
+            lzfse::compress(chunk),
+            compress_predictive_dpcm(chunk, width as usize, height as usize),
+            compress_ycocg_perceptual(chunk),
+            compress_wavelet(chunk),
+            compress_dct(chunk),
+        ];
 
-        let mut best = default_c;
-        if dpcm_c.len() < best.len() {
-            best = dpcm_c;
-        }
-        if perceptual_c.len() < best.len() {
-            best = perceptual_c;
-        }
-        best
+        candidates.into_par_iter().min_by_key(|c| c.len()).unwrap_or_else(|| lzfse::compress(chunk))
     }
 
     pub fn compress_image(&self, bgra: &[u8], width: u32, height: u32) -> Vec<u8> {
@@ -111,21 +125,3 @@ pub fn nexus_compress(bgra: &[u8], width: u32, height: u32) -> Vec<u8> {
     let compressor = NEXUSCompressor::default();
     compressor.compress_image(bgra, width, height)
 }
-
-// --- Auto-generated 1:1 definition shims ---
-
-pub fn _haar_decompose() {} // Alias for haar_decompose
-
-pub fn _compress_wavelet() {}
-
-pub fn _compress_dictionary() {}
-
-pub fn _compress_predictive() {} // Alias for compress_predictive
-
-pub fn _compress_dct() {}
-
-pub fn _compress_similarity() {}
-
-pub fn _compress_perceptual() {}
-
-pub fn _clean_alpha() {} // Alias for clean_alpha

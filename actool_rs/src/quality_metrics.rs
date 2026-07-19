@@ -1,14 +1,19 @@
+use rayon::prelude::*;
+
 pub fn compute_psnr(orig: &[u8], comp: &[u8]) -> f64 {
     if orig.len() != comp.len() || orig.is_empty() {
         return 0.0;
     }
 
-    let mut mse = 0.0f64;
-    for (a, b) in orig.iter().zip(comp.iter()) {
-        let diff = (*a as f64) - (*b as f64);
-        mse += diff * diff;
-    }
-    mse /= orig.len() as f64;
+    let mse: f64 = orig
+        .par_iter()
+        .zip(comp.par_iter())
+        .map(|(&a, &b)| {
+            let diff = (a as f64) - (b as f64);
+            diff * diff
+        })
+        .sum::<f64>()
+        / (orig.len() as f64);
 
     if mse < 1e-10 {
         return 99.0;
@@ -63,18 +68,19 @@ pub fn compute_delta_e(orig_rgb: &[u8], comp_rgb: &[u8]) -> f64 {
     }
 
     let pixels = orig_rgb.len() / 3;
-    let mut total_delta = 0.0f64;
+    let total_delta: f64 = (0..pixels)
+        .into_par_iter()
+        .map(|i| {
+            let (l1, a1, b1) = rgb_to_lab(orig_rgb[i * 3], orig_rgb[i * 3 + 1], orig_rgb[i * 3 + 2]);
+            let (l2, a2, b2) = rgb_to_lab(comp_rgb[i * 3], comp_rgb[i * 3 + 1], comp_rgb[i * 3 + 2]);
 
-    for i in 0..pixels {
-        let (l1, a1, b1) = rgb_to_lab(orig_rgb[i * 3], orig_rgb[i * 3 + 1], orig_rgb[i * 3 + 2]);
-        let (l2, a2, b2) = rgb_to_lab(comp_rgb[i * 3], comp_rgb[i * 3 + 1], comp_rgb[i * 3 + 2]);
+            let dl = l1 - l2;
+            let da = a1 - a2;
+            let db = b1 - b2;
 
-        let dl = l1 - l2;
-        let da = a1 - a2;
-        let db = b1 - b2;
-
-        total_delta += (dl * dl + da * da + db * db).sqrt();
-    }
+            (dl * dl + da * da + db * db).sqrt()
+        })
+        .sum();
 
     total_delta / (pixels as f64)
 }
@@ -88,22 +94,33 @@ pub fn compute_ssim(orig: &[u8], comp: &[u8]) -> f64 {
     let c2 = (0.03 * 255.0) * (0.03 * 255.0);
 
     let n = orig.len() as f64;
-    let mu_orig = orig.iter().map(|&x| x as f64).sum::<f64>() / n;
-    let mu_comp = comp.iter().map(|&x| x as f64).sum::<f64>() / n;
+    let mu_orig = orig.par_iter().map(|&x| x as f64).sum::<f64>() / n;
+    let mu_comp = comp.par_iter().map(|&x| x as f64).sum::<f64>() / n;
 
-    let var_orig = orig.iter().map(|&x| {
-        let d = (x as f64) - mu_orig;
-        d * d
-    }).sum::<f64>() / n;
+    let var_orig = orig
+        .par_iter()
+        .map(|&x| {
+            let d = (x as f64) - mu_orig;
+            d * d
+        })
+        .sum::<f64>()
+        / n;
 
-    let var_comp = comp.iter().map(|&x| {
-        let d = (x as f64) - mu_comp;
-        d * d
-    }).sum::<f64>() / n;
+    let var_comp = comp
+        .par_iter()
+        .map(|&x| {
+            let d = (x as f64) - mu_comp;
+            d * d
+        })
+        .sum::<f64>()
+        / n;
 
-    let covar = orig.iter().zip(comp.iter()).map(|(&a, &b)| {
-        ((a as f64) - mu_orig) * ((b as f64) - mu_comp)
-    }).sum::<f64>() / n;
+    let covar = orig
+        .par_iter()
+        .zip(comp.par_iter())
+        .map(|(&a, &b)| ((a as f64) - mu_orig) * ((b as f64) - mu_comp))
+        .sum::<f64>()
+        / n;
 
     let num = (2.0 * mu_orig * mu_comp + c1) * (2.0 * covar + c2);
     let den = (mu_orig * mu_orig + mu_comp * mu_comp + c1) * (var_orig + var_comp + c2);
@@ -111,14 +128,50 @@ pub fn compute_ssim(orig: &[u8], comp: &[u8]) -> f64 {
     num / den
 }
 
+pub fn sobel(bgra: &[u8], width: usize, height: usize) -> (Vec<f32>, Vec<f32>) {
+    let mut gx = vec![0.0f32; width * height];
+    let mut gy = vec![0.0f32; width * height];
+
+    if width < 2 || height < 2 {
+        return (gx, gy);
+    }
+
+    for y in 0..height - 1 {
+        for x in 0..width - 1 {
+            let idx = y * width + x;
+            let current = bgra[idx * 4] as f32;
+            let right = bgra[idx * 4 + 4] as f32;
+            let down = bgra[(idx + width) * 4] as f32;
+
+            gx[idx] = (right - current).abs();
+            gy[idx] = (down - current).abs();
+        }
+    }
+
+    (gx, gy)
+}
+
+pub fn compute_edge_preservation(orig: &[u8], comp: &[u8], width: usize, height: usize) -> f32 {
+    let (orig_gx, orig_gy) = sobel(orig, width, height);
+    let (comp_gx, comp_gy) = sobel(comp, width, height);
+
+    let mut diff_sum = 0.0f32;
+    for i in 0..orig_gx.len() {
+        let orig_mag = (orig_gx[i] * orig_gx[i] + orig_gy[i] * orig_gy[i]).sqrt();
+        let comp_mag = (comp_gx[i] * comp_gx[i] + comp_gy[i] * comp_gy[i]).sqrt();
+        diff_sum += (orig_mag - comp_mag).abs();
+    }
+
+    1.0 - (diff_sum / (orig_gx.len() as f32 * 255.0)).clamp(0.0, 1.0)
+}
+
+pub fn evaluate_quality(orig: &[u8], comp: &[u8]) -> (f64, f64, f64) {
+    let psnr = compute_psnr(orig, comp);
+    let delta_e = compute_delta_e(orig, comp);
+    let ssim = compute_ssim(orig, comp);
+    (psnr, delta_e, ssim)
+}
+
 pub fn is_quality_acceptable(orig: &[u8], comp: &[u8], min_psnr: f64) -> bool {
     compute_psnr(orig, comp) >= min_psnr
 }
-
-// --- Auto-generated 1:1 definition shims ---
-
-pub fn compute_edge_preservation() {}
-
-pub fn evaluate_quality() {}
-
-pub fn sobel() {}

@@ -1,5 +1,6 @@
 use crate::lzfse;
 use byteorder::{LittleEndian, WriteBytesExt};
+use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct CBCKChunk {
@@ -28,56 +29,61 @@ pub fn encode_cbck(
         return Vec::new();
     }
 
-    // Process alpha cleaning if requested (zero out RGB where alpha=0)
     let mut cleaned_bgra;
     let pixel_data = if clean_alpha {
         cleaned_bgra = bgra.to_vec();
-        for chunk in cleaned_bgra.chunks_exact_mut(4) {
+        cleaned_bgra.par_chunks_exact_mut(4).for_each(|chunk| {
             if chunk[3] == 0 {
                 chunk[0] = 0;
                 chunk[1] = 0;
                 chunk[2] = 0;
             }
-        }
+        });
         &cleaned_bgra
     } else {
         bgra
     };
 
-    // Apple raw cap per chunk is ~0x155555 (~1.39MB)
     const APPLE_CBCK_RAW_CAP: usize = 0x155555;
     let rows_per_chunk = std::cmp::max(1, APPLE_CBCK_RAW_CAP / row_bytes);
 
-    let mut chunks = Vec::new();
+    let mut bands = Vec::new();
     let mut y = 0;
-
     while y < height {
         let current_rows = std::cmp::min(rows_per_chunk as u32, height - y);
-        let offset = (y as usize) * row_bytes;
-        let chunk_len = (current_rows as usize) * row_bytes;
-        let chunk_raw = &pixel_data[offset..offset + chunk_len];
-
-        let compressed = lzfse::compress(chunk_raw);
-
-        let mut chunk_buf = Vec::new();
-        chunk_buf.extend_from_slice(b"KCBC");
-        let _ = chunk_buf.write_u16::<LittleEndian>(y as u16);
-        let _ = chunk_buf.write_u16::<LittleEndian>(current_rows as u16);
-        let _ = chunk_buf.write_u32::<LittleEndian>(chunk_raw.len() as u32);
-        let _ = chunk_buf.write_u32::<LittleEndian>(compressed.len() as u32);
-        chunk_buf.extend_from_slice(&compressed);
-
-        chunks.push(chunk_buf);
+        bands.push((y, current_rows));
         y += current_rows;
     }
+
+    // High performance parallel chunk compression using Rayon thread pool
+    let kcbc_chunks: Vec<Vec<u8>> = bands
+        .par_iter()
+        .map(|&(y_off, rows)| {
+            let offset = (y_off as usize) * row_bytes;
+            let chunk_len = (rows as usize) * row_bytes;
+            let chunk_raw = &pixel_data[offset..offset + chunk_len];
+
+            let compressed = lzfse::compress(chunk_raw);
+
+            let mut chunk_buf = Vec::with_capacity(16 + compressed.len());
+            chunk_buf.extend_from_slice(b"KCBC");
+            let _ = chunk_buf.write_u16::<LittleEndian>(y_off as u16);
+            let _ = chunk_buf.write_u16::<LittleEndian>(rows as u16);
+            let _ = chunk_buf.write_u32::<LittleEndian>(chunk_raw.len() as u32);
+            let _ = chunk_buf.write_u32::<LittleEndian>(compressed.len() as u32);
+            chunk_buf.extend_from_slice(&compressed);
+
+            chunk_buf
+        })
+        .collect();
 
     let mut out = Vec::new();
     out.extend_from_slice(b"MLEC");
     let _ = out.write_u32::<LittleEndian>(3); // Mode 3
     let _ = out.write_u32::<LittleEndian>(codec); // Codec 4 or 11
-    let _ = out.write_u32::<LittleEndian>(chunks.len() as u32);
+    let _ = out.write_u32::<LittleEndian>(kcbc_chunks.len() as u32);
 
-    for c in chunks {
+    for c in kcbc_chunks {
         out.extend_from_slice(&c);
     }
 
@@ -134,6 +140,18 @@ pub fn parse_cbck(data: &[u8]) -> Result<CBCKPayload, &'static str> {
     Ok(CBCKPayload { mode, codec, chunks })
 }
 
-// --- Auto-generated 1:1 definition shims ---
+pub fn decompress(data: &[u8]) -> Result<Vec<u8>, &'static str> {
+    let parsed = parse_cbck(data)?;
+    let decompressed_chunks: Result<Vec<Vec<u8>>, &'static str> = parsed
+        .chunks
+        .par_iter()
+        .map(|c| lzfse::decompress(&c.compressed))
+        .collect();
 
-pub fn decompress() {}
+    let chunks = decompressed_chunks?;
+    let mut full = Vec::new();
+    for c in chunks {
+        full.extend_from_slice(&c);
+    }
+    Ok(full)
+}
