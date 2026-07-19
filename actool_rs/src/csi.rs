@@ -114,7 +114,7 @@ pub fn make_adaptive_csi(
     let row_bytes = width * 4;
 
     let payload = if total_pixels == 0 || bgra.len() < total_pixels * 4 {
-        lzfse::compress(bgra)
+        bgra.to_vec() // Preserve raw/pre-compressed payload directly without recursive re-compression
     } else {
         let tier = classify_resolution_tier(width, height);
         let first_px = &bgra[0..4];

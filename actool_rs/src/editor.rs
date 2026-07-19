@@ -30,10 +30,19 @@ impl CAREditor {
                 r.csi.name.clone()
             };
 
+            let csi_full_block = crate::csi::build_csi_png(
+                &r.csi.rendition_data,
+                r.csi.width,
+                r.csi.height,
+                &name,
+                r.csi.scale,
+                false,
+            );
+
             let rend = AssetRendition {
                 name: name.clone(),
                 filename: format!("{}.png", name),
-                csi_bytes: r.csi.rendition_data.clone(),
+                csi_bytes: csi_full_block,
                 identifier: (i + 1) as u16,
                 idiom: 0,
                 scale: r.csi.scale as u16,
