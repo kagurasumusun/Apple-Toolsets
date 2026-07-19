@@ -1,4 +1,4 @@
-# 💻 DeepWiki API Reference Matrix (100% Pure Rust)
+# DeepWiki API Reference Matrix (100% Pure Rust)
 
 Automated AST-extracted specification for all Rust modules in `Apple-Toolsets`.
 

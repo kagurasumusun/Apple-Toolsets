@@ -5,13 +5,13 @@
 
 ## 検証結果
 
-### ✅ 全圧縮モードでApple互換性を確認
+### [OK] 全圧縮モードでApple互換性を確認
 
 | モード | .car サイズ | assetutil | 状態 |
 |--------|-----------|-----------|------|
-| Default (LZFSEのみ) | 181,752 B | ✅ 読み込み成功 | Apple互換 |
-| SmartCBCK (`--optimize=smart`) | 181,752 B | ✅ 読み込み成功 | Apple互換 |
-| Hybrid (`--optimize=hybrid`) | 181,752 B | ✅ 読み込み成功 | Apple互換 |
+| Default (LZFSEのみ) | 181,752 B | [OK] 読み込み成功 | Apple互換 |
+| SmartCBCK (`--optimize=smart`) | 181,752 B | [OK] 読み込み成功 | Apple互換 |
+| Hybrid (`--optimize=hybrid`) | 181,752 B | [OK] 読み込み成功 | Apple互換 |
 
 ### CBCKチャンクレベルでの圧縮率比較
 
@@ -27,11 +27,11 @@
 
 ### AppleのCBCKデコーダーの動作
 
-1. **LZFSE解凍**: ✅ 各チャンクを`LZFSE.decompress()`で解凍
-2. **BGRA解釈**: ✅ 解凍結果をそのままBGRAピクセルとして表示
+1. **LZFSE解凍**: [OK] 各チャンクを`LZFSE.decompress()`で解凍
+2. **BGRA解釈**: [OK] 解凍結果をそのままBGRAピクセルとして表示
 3. **パレット展開**: ❌ **やらない** — パレットデータはBGRAとして解釈され壊れる
 4. **逆差分変換**: ❌ **やらない** — 差分データがBGRAとして解釈され画像が崩れる
-5. **ダーティアルファクリーニング**: ✅ Appleも同じ処理を行う
+5. **ダーティアルファクリーニング**: [OK] Appleも同じ処理を行う
 
 ### DMP2ヘッダーの必要性
 
@@ -43,10 +43,10 @@
 ### 新手法の位置づけ
 
 - **LPC (Local-Palette Chunking)**: 低色数領域の色数を削減→BGRA再構築→LZFSE
-  - Apple互換: ✅ (前処理としてBGRAに戻す)
+  - Apple互換: [OK] (前処理としてBGRAに戻す)
   - 効果: UI要素、アイコンで有効
 - **Planar-Delta LZFSE**: グラデーション領域の差分を量子化→LZFSE
-  - Apple互換: ✅ (前処理としてBGRAに戻す)
+  - Apple互換: [OK] (前処理としてBGRAに戻す)
   - 効果: **グラデーションで94.5%削減**（劇的）
 - **Hybrid (融合)**: チャンク分析で自動戦略選択
   - 低色数+高エッジ → LPC

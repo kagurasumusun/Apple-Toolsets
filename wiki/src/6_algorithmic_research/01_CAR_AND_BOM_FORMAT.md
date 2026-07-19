@@ -1,10 +1,10 @@
-# 📦 CoreUI CAR File & BOMStore Binary Architecture (Master Specification)
+# CoreUI CAR File & BOMStore Binary Architecture (Master Specification)
 
 このドキュメントは、Apple のクローズドなアセットアーカイブ形式である **`.car` (CoreUI Archive)** ファイルおよびそのバイナリ基盤である **`BOMStore` (Bill of Materials Store)** 形式のバイトレベル完全解剖仕様書である。
 
 ---
 
-## 🖼 Binary Layout Architectural Diagram
+## Binary Layout Architectural Diagram
 
 ![Apple CoreUI CAR Archive & BOMStore Binary Layout Architecture](../images/car_binary_layout.png)
 

@@ -1,10 +1,10 @@
-# 🚀 Beyond God-Mode: Ergonomics, Auto-Safe Guards & 3D Asset Engineering (Master Specification)
+# Beyond God-Mode: Ergonomics, Auto-Safe Guards & 3D Asset Engineering (Master Specification)
 
 このドキュメントは、人間人間工学（Human Ergonomics）視覚・聴覚閾値モデル、ISO/CIE 11664-6 CIEDE2000 色差式、自動ドメイン識別ガードレール（`AutoDomainDetect`）、**Dirty Alpha 自動保護メカニズム**、および 3D PBR テクスチャパッキングアルゴリズムの完全数理仕様書である。
 
 ---
 
-## 🖼 4-Gate Auto-Safe Quality Barriers & Perceptual Protection Diagram
+## 4-Gate Auto-Safe Quality Barriers & Perceptual Protection Diagram
 
 ![4-Gate Auto-Safe Quality Barriers & Perceptual Protection](../images/autosafe_4gate_protection.png)
 
@@ -50,7 +50,7 @@
 6. **最終色差式 $\Delta E_{00}$**:
    $$\Delta E_{00} = \sqrt{\left(\frac{\Delta L'}{S_L}\right)^2 + \left(\frac{\Delta C'}{S_C}\right)^2 + \left(\frac{\Delta H'}{S_H}\right)^2 + R_T \left(\frac{\Delta C'}{S_C}\right)\left(\frac{\Delta H'}{S_H}\right)}$$
 
-#### 🏆 JND (Just Noticeable Difference) 閾値
+#### JND (Just Noticeable Difference) 閾値
 - **$\Delta E_{00} \le 1.0$**: 全人類の 100% が視覚的に差を識別不可能な領域（完全弁別不能限界）。
 - **判定条件**: `evaluate_human_visual_ergonomics` において、$\Delta E_{00} \le 1.0$, $\text{PSNR} \ge 45.0 \text{ dB}$, $\text{SSIM} \ge 0.99$, $\text{EdgePreservation} \ge 0.99$ をすべて同時に満たす場合のみ認知非破壊として合格（`PERFECT_HUMAN_IMPERCEPTIBLE_JND`）。
 

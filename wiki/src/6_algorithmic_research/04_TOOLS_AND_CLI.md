@@ -1,4 +1,4 @@
-# 🛠 Developer Tools, CAREditor API, Virtual Storage & Non-Image Engine (Master Specification)
+# Developer Tools, CAREditor API, Virtual Storage & Non-Image Engine (Master Specification)
 
 このドキュメントは、`actool_rs` / `actool_linux` に搭載されているコマンドラインツール（CLI）、対話型 `.car` 編集エンジン（`CAREditor`）、仮想ストレージマウント/同期システム（`mount.rs`）、破損 CAR 自動修復リカバリエンジン（`repair.rs`）、および非画像アセット専門最適化エンジン（`nonimage_optimizer.rs`）の完全仕様書である。
 

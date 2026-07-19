@@ -1,4 +1,4 @@
-# 🧩 Facet Hash16 Anatomy & The 100% Accuracy Lookup Table (Master Specification)
+# Facet Hash16 Anatomy & The 100% Accuracy Lookup Table (Master Specification)
 
 このドキュメントは、Apple CoreUI の `FACETKEYS` B-Tree 内でアセット名（文字列）を検索するための内部 16 ビット識別子 **`facet hash16`** のアルゴリズムおよび 100% 精度ルックアップテーブルの実装仕様書である。
 

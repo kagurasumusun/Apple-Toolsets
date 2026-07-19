@@ -1,4 +1,4 @@
-# 📖 Rust API Reference: 
+# Rust API Reference: 
 
 - **Source File**: 
 - **Domain Layer**: 

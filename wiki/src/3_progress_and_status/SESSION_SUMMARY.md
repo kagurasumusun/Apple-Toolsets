@@ -2,14 +2,14 @@
 
 ## 完了した主要タスク
 
-### 1. v4パレットdmp2構造バグ修正 ✅
+### 1. v4パレットdmp2構造バグ修正 [OK]
 **コミット**: `a5f76ae`
 - **問題**: u32長プレフィックスがApple形式と不一致
 - **修正**: `packed.py`の`_atlas_dmp2`関数からu32長プレフィックスを削除
 - **効果**: Appleのdmp2 v4パレット形式と完全一致
 - **検証**: 全236テストパス
 
-### 2. マルチスウォッチmini ISAエンコーダー完全実装 ✅
+### 2. マルチスウォッチmini ISAエンコーダー完全実装 [OK]
 **コミット**: `0f2f373`
 - **実装内容**:
   - f0/fXオペコード（ゼロラン、bias=25/16）
@@ -19,7 +19,7 @@
 - **効果**: アトラスインデックスプレーンの圧縮率大幅向上（LZFSE比で数倍〜数十倍）
 - **検証**: 全236テストパス
 
-### 3. facet hash16解析と修正 ✅
+### 3. facet hash16解析と修正 [OK]
 **コミット**: `725472d`
 - **発見した規則**:
   - 重み: `W(k) = 33^(k+3) mod 65536`
@@ -31,7 +31,7 @@
   - len=3の大文字検出ロジックを追加
 - **検証**: 全236テストパス
 
-### 4. 37ケースアトラス差分解析 ✅
+### 4. 37ケースアトラス差分解析 [OK]
 **コミット**: `b291e7b`
 - **結果**: 316 mismatches
   - hash_only: 258件（facet hash16の違い、cosmetic）
@@ -39,7 +39,7 @@
   - size_diff: 21件（packer geometryの違い）
 - **ドキュメント**: `ATLAS_SWEEP_ANALYSIS.md`
 
-### 5. CoreUIプライベートAPI解析 ✅
+### 5. CoreUIプライベートAPI解析 [OK]
 **成果**: AssetCatalogTinkererからCoreUIヘッダー取得
 - `CUICatalog`, `CUIStructuredThemeStore`, `CUIRenditionKey`
 - `_renditionkeytoken` 構造体

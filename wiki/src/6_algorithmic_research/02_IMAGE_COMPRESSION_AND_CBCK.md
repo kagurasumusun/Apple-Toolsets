@@ -1,10 +1,10 @@
-# 🖼 Apple's Image Compression Codecs, Deepmap & CBCK Anatomy (Master Specification)
+# Apple's Image Compression Codecs, Deepmap & CBCK Anatomy (Master Specification)
 
 このドキュメントは、Apple CoreUI および iOS / macOS グラフィックスサブシステムで採用されている非公開画像圧縮コーデック群（**Deepmap `dmp2`**, **CBCK `MLEC/KCBC`**, **Ultra-HD 2D Spatial Tiling**, **ASTC GPU-Direct Hardware Blocks**）の解剖結果および実装仕様書である。
 
 ---
 
-## 🖼 Codecs & Spatial Tiling Pipeline Diagram
+## Codecs & Spatial Tiling Pipeline Diagram
 
 ![Apple Image Compression & Ultra-HD Spatial Tiling Pipeline](../images/cbck_ultrahd_pipeline.png)
 
@@ -31,14 +31,14 @@ Apple の CoreUI 描画エンジンは、画像解像度や色数に応じて 4 
   └── Version 4 (Palette Quantized): 8-bit インデックスカラー + LZFSE
 ```
 
-#### ① Version 1: `v1_raw` (極小画像・単色フォールバック)
+#### (1) Version 1: `v1_raw` (極小画像・単色フォールバック)
 - **適用条件**: 画像サイズが $8$ ピクセル以下（例: $2 \times 4$）、または伸長解凍命令のオーバーヘッドが非圧縮バイト数を上回る場合。
 - **構造**: `dmp2` 12 バイトヘッダに続いて、非圧縮の BGRA 生ピクセルバッファ（$W \times H \times 4$ バイト）が直列配置される。
 
-#### ② Version 2: `v2_lzfse` (中間標準)
+#### (2) Version 2: `v2_lzfse` (中間標準)
 - **構造**: 12 バイトヘッダの後に 4 バイトのストリーム長 $L_{stream}$ が続き、その直後から純粋な LZFSE 圧縮ストリームが接続される。
 
-#### ③ Version 3: `v3_mini` (DMP2 Mini ISA 命令ストリーム)
+#### (3) Version 3: `v3_mini` (DMP2 Mini ISA 命令ストリーム)
 - **構造**: 最小限のメモリフットプリントで単色グラデーションや小さな UI アイコンをデコードするためのマイクロプロセッサライクな命令セット（Mini ISA）。
 
 ##### DMP2 Mini ISA オコード仕様一覧
@@ -50,7 +50,7 @@ Apple の CoreUI 描画エンジンは、画像解像度や色数に応じて 4 
 - **`0xE2 0x00 0x00` / `0xE3 0x00 0x00 0x00`**: ピクセル総数 $\pmod 4$ のアライメント調整用ストリーム終端マーカー。
 - **`0x06` + 7-byte zeros**: DMP2 ISA ストリームの最終終端シーケンス（`V3_MINI_TAIL`）。
 
-#### ④ Version 4: `v4_palette` (8-bit インデックスカラーパレット)
+#### (4) Version 4: `v4_palette` (8-bit インデックスカラーパレット)
 - **適用条件**: ユニーク色数が 255 色以下の UI アセット。
 - **構造**: Swatch 0（完全透過 `(0,0,0,0)` 用）を予約とし、最大 255 色の RGBA パレットテーブルを保持。ピクセル平面は 8-bit インデックス配列として LZFSE 圧縮される。
 

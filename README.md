@@ -1,4 +1,4 @@
-# 🍎 Apple Toolsets Suite (`Apple-Toolsets`)
+# Apple Toolsets Suite (`Apple-Toolsets`)
 
 [![DeepWiki Documentation](https://img.shields.io/badge/DeepWiki-AI%20Codebase%20Wiki-blue?style=for-the-badge&logo=openai)](https://deepwiki.com/kagurasumusun/Apple-Toolsets)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-mdBook%20%26%20Rustdoc-green?style=for-the-badge&logo=github)](https://kagurasumusun.github.io/Apple-Toolsets/)
@@ -10,11 +10,11 @@ Built 100% in pure Rust (`apple-toolsets`) with zero compiler warnings and maxim
 
 ---
 
-## 🌐 Official Documentation & DeepWiki Endpoints
+## Official Documentation & DeepWiki Endpoints
 
-- **🤖 Official DeepWiki Live Site**: [https://deepwiki.com/kagurasumusun/Apple-Toolsets](https://deepwiki.com/kagurasumusun/Apple-Toolsets)
-- **📖 GitHub Pages Book & Rustdoc**: [https://kagurasumusun.github.io/Apple-Toolsets/](https://kagurasumusun.github.io/Apple-Toolsets/)
-- **⚡ DeepWiki MCP (Model Context Protocol) Server**: `https://mcp.deepwiki.com/mcp`
+- **Official DeepWiki Live Site**: [https://deepwiki.com/kagurasumusun/Apple-Toolsets](https://deepwiki.com/kagurasumusun/Apple-Toolsets)
+- **GitHub Pages Book & Rustdoc**: [https://kagurasumusun.github.io/Apple-Toolsets/](https://kagurasumusun.github.io/Apple-Toolsets/)
+- **DeepWiki MCP (Model Context Protocol) Server**: `https://mcp.deepwiki.com/mcp`
   
   *Configure in Cursor / Claude / Windsurf (`mcp.json`)*:
   ```json
@@ -29,7 +29,7 @@ Built 100% in pure Rust (`apple-toolsets`) with zero compiler warnings and maxim
 
 ---
 
-## 🌟 Key Capabilities & Master Specifications
+## Key Capabilities & Master Specifications
 
 - **Apple CoreUI Contract Compliance**:
   Full 100% zero app-change compatibility with `UIImage(named:)` and `NSDataAsset.data`.
@@ -77,7 +77,7 @@ Apple-Toolsets/ (1 Branch: main)
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Building & Running `apple-toolsets`
 
@@ -98,7 +98,7 @@ cargo doc --workspace --no-deps
 
 ---
 
-## 📜 License & Disclaimers
+## License & Disclaimers
 
 - Developed under clean-room engineering specifications by `kagurasumusun`.
 - `actool`, `ibtool`, `Xcode`, and `CoreUI` are trademarks of Apple Inc. This is an independent open-source toolset project.

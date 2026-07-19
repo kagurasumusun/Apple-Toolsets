@@ -1,6 +1,6 @@
 # セッション完了レポート - 2026-07-18
 
-## ✅ 完了した主要実装
+## [OK] 完了した主要実装
 
 ### 1. v4パレットdmp2構造バグ修正
 **コミット**: `a5f76ae`
@@ -61,7 +61,7 @@ a5f76ae fix: remove u32 length prefix from v4 palette atlas dmp2 payload
 ```
 
 ## テスト結果
-- **225 tests OK** (11 skipped) ✅
+- **225 tests OK** (11 skipped) [OK]
 - すべての新機能が正常に動作
 
 ## 重要な発見
@@ -138,17 +138,17 @@ a5f76ae fix: remove u32 length prefix from v4 palette atlas dmp2 payload
 ## 実装の完成度
 
 ### 完了した機能
-✅ v4パレットdmp2構造（Apple互換）
-✅ マルチスウォッチmini ISAエンコーダー
-✅ facet hash16（len=1-3）
-✅ CoreUIバージョン抽出（400-975）
-✅ CoreUIプロファイル判定（11プロファイル）
-✅ CoreUIデータベース検出（9種類）
-✅ アトラス差分解析ツール
-✅ 古いCoreUIプロファイル（400, 450）
+[OK] v4パレットdmp2構造（Apple互換）
+[OK] マルチスウォッチmini ISAエンコーダー
+[OK] facet hash16（len=1-3）
+[OK] CoreUIバージョン抽出（400-975）
+[OK] CoreUIプロファイル判定（11プロファイル）
+[OK] CoreUIデータベース検出（9種類）
+[OK] アトラス差分解析ツール
+[OK] 古いCoreUIプロファイル（400, 450）
 
 ### 未完了の機能
-✅ facet hash16 (全パターン) — 完全一致
+[OK] facet hash16 (全パターン) — 完全一致
 ⚠️ アトラスpacker geometry — 基本的な実装あり、詳細完全解決済み (100% Lookup Table 導入済み)
 ⚠️ 複数のBOMデータベース使用 — 検出機能実装済み、使用例なし
 ⚠️ CoreUI < 900対応 — プロファイル定義済み、テストデータなし
