@@ -156,10 +156,11 @@ pub fn auto_safe_compress(
     let alpha_type = analyze_alpha_characteristic(bgra);
     let default_compressed = lzfse::compress(bgra);
 
-    // Guardrail 1: Strict Normal Maps, Datasets, or StrictLossless -> 100% Bit-Exact Lossless
+    // Guardrail 1: Strict Normal Maps, PBR Materials, Datasets, or StrictLossless -> 100% Bit-Exact Lossless
     if safety_level == SafetyLevel::StrictLossless
         || asset_kind == "data"
         || domain == ImageDomain::NormalMap
+        || domain == ImageDomain::PBRMaterial
     {
         return (
             default_compressed,
@@ -201,9 +202,9 @@ pub fn auto_safe_compress(
         }
     }
 
-    // Guardrail 3: Dirty Alpha Protection for Custom Shader Textures
+    // Guardrail 3: Dirty Alpha Protection for Custom Shader Textures and PBR Materials
     let must_protect_dirty_alpha = alpha_type == AlphaCharacteristic::DirtyAlpha
-        && (safety_level == SafetyLevel::CustomShaderSafe || asset_kind == "texture");
+        && (safety_level == SafetyLevel::CustomShaderSafe || asset_kind == "texture" || domain == ImageDomain::PBRMaterial);
 
     if !must_protect_dirty_alpha && alpha_type == AlphaCharacteristic::DirtyAlpha {
         let mut cleaned = bgra.to_vec();
