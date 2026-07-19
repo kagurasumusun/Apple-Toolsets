@@ -66,3 +66,5 @@ pub mod model3d;
 pub mod media;
 pub mod ultrahd;
 pub mod autosafe;
+pub mod astc_native;
+pub mod audio;

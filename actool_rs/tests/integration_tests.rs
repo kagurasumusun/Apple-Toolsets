@@ -292,3 +292,32 @@ fn test_auto_safe_optimization_precision_domain() {
     assert_eq!(report3.detected_domain, ImageDomain::GrayscaleUI);
     assert!(report3.is_monochrome);
 }
+
+#[test]
+fn test_native_gpu_direct_astc_blocks() {
+    use actool_rs::astc_native::{build_astc_gpu_direct_csi, ASTCGPUDirectBlockDim};
+
+    let bgra = vec![128u8; 16 * 16 * 4];
+    let csi_4x4 = build_astc_gpu_direct_csi(&bgra, 16, 16, "texture_astc.png", ASTCGPUDirectBlockDim::Block4x4);
+    assert!(csi_4x4.len() > 184);
+    assert_eq!(&csi_4x4[24..28], b"AS44");
+
+    let csi_8x8 = build_astc_gpu_direct_csi(&bgra, 16, 16, "texture_astc.png", ASTCGPUDirectBlockDim::Block8x8);
+    assert_eq!(&csi_8x8[24..28], b"AS88");
+}
+
+#[test]
+fn test_audio_optimization_and_snr_quality_gate() {
+    use actool_rs::audio::{compute_signal_to_noise_ratio_db, optimize_audio_payload};
+
+    let signal = vec![1000i16; 100];
+    let identical = vec![1000i16; 100];
+    let snr = compute_signal_to_noise_ratio_db(&signal, &identical);
+    assert!(snr > 100.0);
+
+    let pcm = vec![100u8; 2000];
+    let (comp, report) = optimize_audio_payload("sample.wav", &pcm, 60.0);
+    assert!(report.is_lossless);
+    assert!(report.snr_db >= 60.0);
+    assert!(!comp.is_empty());
+}
