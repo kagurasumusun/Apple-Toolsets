@@ -1,4 +1,4 @@
-from actool_linux.ai_quantizer import PerceptualQuantizer
+from actool_linux.codecs.ai_quantizer import PerceptualQuantizer
 import numpy as np
 import time
 

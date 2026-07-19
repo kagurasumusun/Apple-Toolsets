@@ -6,8 +6,8 @@ try:
 except ImportError:
     lzfse = None
 
-from actool_linux.bom import BOMError
-from actool_linux.cbck import parse_cbck
+from actool_linux.core.bom import BOMError
+from actool_linux.codecs.cbck import parse_cbck
 
 
 class CBCKTests(unittest.TestCase):

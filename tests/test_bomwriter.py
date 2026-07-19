@@ -1,7 +1,7 @@
 import unittest
 
-from actool_linux.bom import BOMStore
-from actool_linux.bomwriter import BOMWriter
+from actool_linux.core.bom import BOMStore
+from actool_linux.core.bomwriter import BOMWriter
 
 
 class BOMWriterTests(unittest.TestCase):

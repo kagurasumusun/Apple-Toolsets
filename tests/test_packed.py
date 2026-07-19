@@ -6,11 +6,11 @@ import unittest
 import zlib
 from pathlib import Path
 
-from actool_linux.bom import BOMStore
-from actool_linux.car import CARFile
-from actool_linux.carwriter import build_assets_car, png_rendition
+from actool_linux.core.bom import BOMStore
+from actool_linux.core.car import CARFile
+from actool_linux.core.carwriter import build_assets_car, png_rendition
 from actool_linux import lzfse_compat
-from actool_linux.packed import pack_renditions, is_pack_candidate, _shelf_pack
+from actool_linux.assets.packed import pack_renditions, is_pack_candidate, _shelf_pack
 
 
 def _decode_mini_isa_plane(stream: bytes, width: int, height: int) -> bytes:
@@ -482,7 +482,7 @@ class Probe6GrammarTests(unittest.TestCase):
         self.assertEqual(len(dmp2), 16 + slen)           # u32 frame is exact
         restored = lzfse_compat.decompress(dmp2[16:16 + slen])
         self.assertEqual(len(restored), 64 * 64 * 4)
-        from actool_linux.packed import _decode_deepmap_pixels
+        from actool_linux.assets.packed import _decode_deepmap_pixels
         csi = png_rendition("P", png, "p.png", scale=1).csi
         decoded = _decode_deepmap_pixels(csi)
         self.assertIsNotNone(decoded)                    # noisy sources stay packable
@@ -573,7 +573,7 @@ class AtlasPaletteOverflowTests(unittest.TestCase):
         return assets
 
     def test_many_color_atlas_uses_v2(self):
-        from actool_linux.packed import _atlas_dmp2, atlas_name
+        from actool_linux.assets.packed import _atlas_dmp2, atlas_name
         # 300 distinct opaque colors -> no v4 representation
         bgra = bytearray()
         for n in range(300):
@@ -600,7 +600,7 @@ class AtlasPaletteOverflowTests(unittest.TestCase):
         self.assertEqual(len(raw), aw * ah * 4)
 
     def test_palette_boundary_255_vs_256(self):
-        from actool_linux.packed import _atlas_dmp2
+        from actool_linux.assets.packed import _atlas_dmp2
         bgra255 = bytearray()
         for n in range(255):
             bgra255 += bytes((n, (n * 3) & 0xFF, (n * 7) & 0xFF, 255))

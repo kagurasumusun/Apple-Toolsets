@@ -5,10 +5,10 @@ import struct
 import unittest
 import zlib
 
-from actool_linux.bom import BOMStore
-from actool_linux.car import CARFile
-from actool_linux.carwriter import build_palette_img_car
-from actool_linux.paletteimg import (
+from actool_linux.core.bom import BOMStore
+from actool_linux.core.car import CARFile
+from actool_linux.core.carwriter import build_palette_img_car
+from actool_linux.codecs.paletteimg import (
     decode_quantized_image_payload,
     parse_theme_pixel_rendition,
 )

@@ -4,14 +4,14 @@ import unittest
 from pathlib import Path
 import tempfile
 
-from actool_linux.bom import BOMStore, BOMError
-from actool_linux.car import CARFile
-from actool_linux.carwriter import build_assets_car, png_rendition, _identifier, _localization_identifier, AssetRendition
-from actool_linux.coreui import auto_select_profile, resolve_profile, PROFILES, COREUI_498, COREUI_700, COREUI_800, COREUI_850, COREUI_918_MACOS, COREUI_918_DEVICE, COREUI_975_MACOS, COREUI_975_DEVICE
-from actool_linux.repack import repack
-from actool_linux.carinfo import inspect
-from actool_linux.thinning import ThinningOptions, thin_renditions
-from actool_linux.packed import pack_renditions
+from actool_linux.core.bom import BOMStore, BOMError
+from actool_linux.core.car import CARFile
+from actool_linux.core.carwriter import build_assets_car, png_rendition, _identifier, _localization_identifier, AssetRendition
+from actool_linux.core.coreui import auto_select_profile, resolve_profile, PROFILES, COREUI_498, COREUI_700, COREUI_800, COREUI_850, COREUI_918_MACOS, COREUI_918_DEVICE, COREUI_975_MACOS, COREUI_975_DEVICE
+from actool_linux.tools.repack import repack
+from actool_linux.core.carinfo import inspect
+from actool_linux.assets.thinning import ThinningOptions, thin_renditions
+from actool_linux.assets.packed import pack_renditions
 
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
 

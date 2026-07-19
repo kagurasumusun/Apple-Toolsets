@@ -9,9 +9,9 @@ import zlib
 
 HAS_LZFSE = importlib.util.find_spec("lzfse") is not None
 
-from actool_linux.carinfo import inspect
-from actool_linux.atlas import build_packed_atlas_car
-from actool_linux.carwriter import build_palette_img_car
+from actool_linux.core.carinfo import inspect
+from actool_linux.assets.atlas import build_packed_atlas_car
+from actool_linux.core.carwriter import build_palette_img_car
 
 P2=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAEklEQVR4nGPg/m/wiCH0aNUKABRABFncH0e8AAAAAElFTkSuQmCC")
 

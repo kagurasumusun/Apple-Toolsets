@@ -8,10 +8,10 @@ import plistlib
 import struct
 import zlib
 
-from actool_linux.bom import BOMStore
-from actool_linux.car import CARFile
-from actool_linux.model import load_catalog
-from actool_linux.compiler import CompileOptions, compile_catalogs
+from actool_linux.core.bom import BOMStore
+from actool_linux.core.car import CARFile
+from actool_linux.tools.model import load_catalog
+from actool_linux.tools.compiler import CompileOptions, compile_catalogs
 
 
 def _solid_rgba_png(width: int, height: int, rgba: tuple[int, int, int, int]) -> bytes:

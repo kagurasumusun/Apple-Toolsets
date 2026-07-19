@@ -13,14 +13,14 @@ import numpy as np
 # Add project to path
 sys.path.insert(0, "/home/user/repo-cleanup")
 
-from actool_linux.smart_cbck import SmartCBCKEncoder, smart_encode_png_cbck
-from actool_linux.lpc_lzfse import (
+from actool_linux.codecs.smart_cbck import SmartCBCKEncoder, smart_encode_png_cbck
+from actool_linux.codecs.lpc_lzfse import (
     lpc_encode_pure,
     lpc_encode_apple_compat,
     extract_palette,
     analyze_chunk_compressibility,
 )
-from actool_linux.planar_delta_lzfse import (
+from actool_linux.codecs.planar_delta_lzfse import (
     planar_delta_encode,
     planar_delta_decode,
     delta_encode_plane,
@@ -52,7 +52,7 @@ def test_smart_cbck_apple_compatible():
     assert count > 0, "Expected at least 1 chunk"
 
     # Parse using stable/cbck.py parser (Apple format)
-    from actool_linux.cbck import parse_cbck
+    from actool_linux.codecs.cbck import parse_cbck
     parsed = parse_cbck(payload)
     assert parsed.mode == 3
     assert parsed.codec == 4
@@ -92,7 +92,7 @@ def test_smart_cbck_with_transparency():
     encoder = SmartCBCKEncoder(clean_alpha=True)
     payload = encoder.encode(bgra.tobytes(), w, h)
 
-    from actool_linux.cbck import parse_cbck
+    from actool_linux.codecs.cbck import parse_cbck
     parsed = parse_cbck(payload)
 
     # Verify clean alpha: decompressed transparent pixels should have RGB=0
@@ -205,7 +205,7 @@ def test_planar_delta_compress():
     """Test planar-delta + LZFSE compression."""
     print("\n=== Test 6: Planar-Delta + LZFSE Compression ===")
 
-    from actool_linux.planar_delta_lzfse import planar_delta_compress, planar_delta_decompress
+    from actool_linux.codecs.planar_delta_lzfse import planar_delta_compress, planar_delta_decompress
 
     # Smooth gradient image
     w, h = 128, 128

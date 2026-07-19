@@ -1,5 +1,5 @@
 """Allow ``python3 -m actool_linux`` to invoke the CLI."""
-from .cli import main
+from actool_linux.tools.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())
