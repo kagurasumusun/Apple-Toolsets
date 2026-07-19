@@ -48,24 +48,9 @@ class SmartCBCKEncoder:
         """
         self.clean_alpha = clean_alpha
         self.chunk_raw_cap = chunk_raw_cap
-        self._load_ai_model()
-
-    def _load_ai_model(self) -> None:
-        """Load the micro-AI model weights for strategy prediction."""
-        try:
-            weights_path = Path(__file__).resolve().parent.parent / "data" / "micro_ai_weights.json"
-            with open(weights_path, "r") as f:
-                w = json.load(f)
-            self._W1 = np.array(w["W1"], dtype=np.float32)
-            self._b1 = np.array(w["b1"], dtype=np.float32)
-            self._W2 = np.array(w["W2"], dtype=np.float32)
-            self._b2 = np.array(w["b2"], dtype=np.float32)
-            self.ai_ready = True
-        except Exception:
-            self.ai_ready = False
 
     def _predict_strategy(self, chunk_bgra: bytes, width: int, height: int) -> int:
-        """Predict the optimal compression strategy for a chunk using the micro-AI.
+        """Predict the optimal compression strategy for a chunk using deterministic heuristics.
 
         Features extracted:
         - alpha_zero_ratio: fraction of fully-transparent pixels
@@ -90,27 +75,12 @@ class SmartCBCKEncoder:
         unique_colors = len(np.unique(sample.view(np.uint32).flatten()))
         unique_color_ratio = min(1.0, unique_colors / max(1, len(sample)))
 
-        # Feature 3: edge density (simple horizontal diff)
-        gray = arr[:, :, :3].mean(axis=2).astype(np.float32)
-        if width > 1:
-            edge_density = float(np.sum(np.abs(np.diff(gray, axis=1)))) / (total_pixels * 255)
-        else:
-            edge_density = 0.0
-
-        if not self.ai_ready:
-            # Fallback heuristics when AI model is not available
-            if alpha_zero_ratio > 0.8:
-                return self.STRATEGY_CLEAN_ALPHA
-            if unique_color_ratio < 0.05:
-                return self.STRATEGY_AGGRESSIVE
-            return self.STRATEGY_LZFSE
-
-        # Neural network inference: 3 features → hidden(16, ReLU) → 3 outputs
-        X = np.array([alpha_zero_ratio, unique_color_ratio, edge_density], dtype=np.float32)
-        z1 = X @ self._W1 + self._b1
-        a1 = np.maximum(0, z1)  # ReLU
-        z2 = a1 @ self._W2 + self._b2
-        return int(np.argmax(z2))
+        # Deterministic heuristic decision tree
+        if alpha_zero_ratio > 0.8:
+            return self.STRATEGY_CLEAN_ALPHA
+        if unique_color_ratio < 0.05:
+            return self.STRATEGY_AGGRESSIVE
+        return self.STRATEGY_LZFSE
 
     @staticmethod
     def _clean_dirty_transparency(bgra: bytearray) -> bytearray:

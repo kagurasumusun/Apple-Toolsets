@@ -63,33 +63,18 @@ class HybridCompressor:
     """LPC + Planar-Delta 融合型適応圧縮エンジン."""
 
     def __init__(self, clean_alpha: bool = True, lpc_max_colors: int = 256,
-                 planar_quant_step: int = 8, use_ai: bool = False):
+                 planar_quant_step: int = 8, use_ai: bool = False, **kwargs):
         """
         Args:
             clean_alpha: ダーティアルファをクリーニングするか
             lpc_max_colors: LPCの最大パレット色数
             planar_quant_step: Planar量子化のステップサイズ（8 = 3ビット精度）
-            use_ai: マイクロAIモデルで戦略選択するか（デフォルトFalse=ヒューリスティック）
+            use_ai: 互換性のための予約パラメータ（決定論的ヒューリスティックを選択）
         """
         self.clean_alpha = clean_alpha
         self.lpc_max_colors = lpc_max_colors
         self.planar_quant_step = planar_quant_step
-        self.use_ai = use_ai
-        self._load_ai_model()
-
-    def _load_ai_model(self) -> None:
-        """マイクロAIモデルを読み込む（存在しない場合はヒューリスティック）."""
-        try:
-            weights_path = Path(__file__).resolve().parent.parent / "data" / "micro_ai_weights.json"
-            with open(weights_path, "r") as f:
-                w = json.load(f)
-            self._W1 = np.array(w["W1"], dtype=np.float32)
-            self._b1 = np.array(w["b1"], dtype=np.float32)
-            self._W2 = np.array(w["W2"], dtype=np.float32)
-            self._b2 = np.array(w["b2"], dtype=np.float32)
-            self.ai_ready = True
-        except Exception:
-            self.ai_ready = False
+        self.use_ai = False
 
     def analyze_chunk(self, bgra: np.ndarray) -> dict:
         """チャンクの特徴量を分析.
@@ -141,17 +126,7 @@ class HybridCompressor:
     def _select_strategy(self, color_ratio: float, edge_density: float,
                          transparency_ratio: float, entropy_estimate: float) -> int:
         """特徴量から最適な戦略を選択."""
-        if self.use_ai and self.ai_ready:
-            # AI推論（モデルが4クラス対応の場合のみ）
-            if self._W2.shape[1] >= 4:
-                X = np.array([color_ratio, edge_density, transparency_ratio], dtype=np.float32)
-                z1 = X @ self._W1 + self._b1
-                a1 = np.maximum(0, z1)
-                z2 = a1 @ self._W2 + self._b2
-                return int(np.argmax(z2))
-            # AIモデルが3クラスのみ→ヒューリスティックにフォールバック
-
-        # ヒューリスティック戦略選択
+        # 決定論的ヒューリスティック戦略選択
         # 1. 超低エントロピー（単色 + 透過）→ Aggressive (LPC+Planar両方)
         if transparency_ratio > 0.9 and color_ratio < 0.01:
             return STRATEGY_AGGRESSIVE
