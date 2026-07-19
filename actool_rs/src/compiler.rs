@@ -44,93 +44,101 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
         };
 
         for asset in &catalog.assets {
-            if asset.kind == "app-icon" {
-                // If app_icon option is provided, filter by asset name
-                if let Some(ref icon_name) = options.app_icon {
-                    if icon_name != &asset.name {
-                        continue;
+            match asset.kind.as_str() {
+                "app-icon" => {
+                    if let Some(ref icon_name) = options.app_icon {
+                        if icon_name != &asset.name {
+                            continue;
+                        }
+                    }
+
+                    let mut best_candidate: Option<(u32, u32, PathBuf)> = None;
+                    let mut highest_rank = -1;
+
+                    for entry in &asset.entries {
+                        let app_entry = AppIconEntry {
+                            idiom: entry.idiom.clone(),
+                            size: entry.size.clone(),
+                            scale: entry.scale.clone(),
+                            filename: entry.filename.clone(),
+                            platform: entry.platform.clone(),
+                        };
+
+                        if let Some((rank, req_w, req_h)) =
+                            app_icon_entry_rank(&app_entry, &options.platform)
+                        {
+                            if let Some(ref fname) = entry.filename {
+                                if let Some(resolved_path) =
+                                    safe_resolve_file(&asset.directory, fname)
+                                {
+                                    if rank > highest_rank {
+                                        highest_rank = rank;
+                                        best_candidate = Some((req_w, req_h, resolved_path));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some((_req_w, _req_h, source_path)) = best_candidate {
+                        if let Ok(img) = image::open(&source_path) {
+                            let (w, h) = img.dimensions();
+                            let bgra_bytes = img.to_rgba8().into_raw();
+
+                            car_writer.add_png_image(
+                                &asset.name,
+                                &bgra_bytes,
+                                w,
+                                h,
+                                1,
+                                1,
+                                rendition_id_counter,
+                            );
+                            rendition_id_counter += 1;
+
+                            diagnostics.push(Diagnostic::notice(
+                                format!("Compiled AppIcon: {}", asset.name),
+                                Some(source_path),
+                            ));
+                        }
                     }
                 }
-
-                let mut best_candidate: Option<(u32, u32, PathBuf)> = None;
-                let mut highest_rank = -1;
-
-                for entry in &asset.entries {
-                    let app_entry = AppIconEntry {
-                        idiom: entry.idiom.clone(),
-                        size: entry.size.clone(),
-                        scale: entry.scale.clone(),
-                        filename: entry.filename.clone(),
-                        platform: entry.platform.clone(),
-                    };
-
-                    if let Some((rank, req_w, req_h)) =
-                        app_icon_entry_rank(&app_entry, &options.platform)
-                    {
+                "image" => {
+                    for entry in &asset.entries {
                         if let Some(ref fname) = entry.filename {
-                            if let Some(resolved_path) =
-                                safe_resolve_file(&asset.directory, fname)
-                            {
-                                if rank > highest_rank {
-                                    highest_rank = rank;
-                                    best_candidate = Some((req_w, req_h, resolved_path));
+                            if let Some(source_path) = safe_resolve_file(&asset.directory, fname) {
+                                if let Ok(img) = image::open(&source_path) {
+                                    let (w, h) = img.dimensions();
+                                    let bgra_bytes = img.to_rgba8().into_raw();
+
+                                    let scale = entry
+                                        .scale
+                                        .as_deref()
+                                        .and_then(|s| s.chars().next())
+                                        .and_then(|c| c.to_digit(10))
+                                        .unwrap_or(1) as u16;
+
+                                    car_writer.add_png_image(
+                                        &asset.name,
+                                        &bgra_bytes,
+                                        w,
+                                        h,
+                                        scale,
+                                        1,
+                                        rendition_id_counter,
+                                    );
+                                    rendition_id_counter += 1;
                                 }
                             }
                         }
                     }
                 }
-
-                if let Some((_req_w, _req_h, source_path)) = best_candidate {
-                    if let Ok(img) = image::open(&source_path) {
-                        let (w, h) = img.dimensions();
-                        let bgra_bytes = img.to_rgba8().into_raw();
-
-                        car_writer.add_png_image(
-                            &asset.name,
-                            &bgra_bytes,
-                            w,
-                            h,
-                            1,
-                            1,
-                            rendition_id_counter,
-                        );
-                        rendition_id_counter += 1;
-
-                        diagnostics.push(Diagnostic::notice(
-                            format!("Compiled AppIcon: {}", asset.name),
-                            Some(source_path),
-                        ));
-                    }
+                "color" => {
+                    // Default sRGB white color representation if no specific components provided
+                    car_writer.add_color(&asset.name, 1.0, 1.0, 1.0, 1.0, rendition_id_counter);
+                    rendition_id_counter += 1;
                 }
-            } else if asset.kind == "image" {
-                for entry in &asset.entries {
-                    if let Some(ref fname) = entry.filename {
-                        if let Some(source_path) = safe_resolve_file(&asset.directory, fname) {
-                            if let Ok(img) = image::open(&source_path) {
-                                let (w, h) = img.dimensions();
-                                let bgra_bytes = img.to_rgba8().into_raw();
-
-                                let scale = entry
-                                    .scale
-                                    .as_deref()
-                                    .and_then(|s| s.chars().next())
-                                    .and_then(|c| c.to_digit(10))
-                                    .unwrap_or(1) as u16;
-
-                                car_writer.add_png_image(
-                                    &asset.name,
-                                    &bgra_bytes,
-                                    w,
-                                    h,
-                                    scale,
-                                    1,
-                                    rendition_id_counter,
-                                );
-                                rendition_id_counter += 1;
-                            }
-                        }
-                    }
-                }
+                _ => {}
             }
         }
     }
@@ -142,7 +150,6 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
         .map_err(|e| format!("Failed to write Assets.car: {}", e))?;
     output_files.push(car_path.clone());
 
-    // Write export dependency info if requested
     if let Some(ref dep_info_path) = options.export_dependency_info {
         let xml_content = format_xml_plist(&diagnostics, &output_files);
         let _ = fs::write(dep_info_path, xml_content);

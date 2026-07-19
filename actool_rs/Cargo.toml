@@ -12,6 +12,10 @@ anyhow = "1.0"
 image = "0.25"
 flate2 = "1.0"
 uuid = { version = "1.10", features = ["v4"] }
+hex = "0.4"
+
+[dev-dependencies]
+tempfile = "3.10"
 
 [[bin]]
 name = "actool-rs"
@@ -28,6 +32,3 @@ path = "src/bin/car_repack.rs"
 [[bin]]
 name = "actool-pdf-car"
 path = "src/bin/pdf_car.rs"
-
-[dev-dependencies]
-tempfile = "3.10"

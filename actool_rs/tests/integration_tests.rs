@@ -5,7 +5,13 @@ use actool_rs::car::CARFile;
 use actool_rs::carwriter::CARWriter;
 use actool_rs::cbck::{encode_cbck, parse_cbck};
 use actool_rs::compiler::{compile_catalogs, CompileOptions};
+use actool_rs::dmp2mini::{decode_mini, v3_mini_color};
+use actool_rs::facet_hash_lookup::FacetHashLookupTable;
+use actool_rs::hybrid_compression::HybridCompressor;
 use actool_rs::lzfse;
+use actool_rs::packed::{atlas_name, build_link_tlv};
+use actool_rs::planar_delta_lzfse::{delta_decode_plane, delta_encode_plane, planar_delta_decode, planar_delta_encode};
+use actool_rs::quality_metrics::{compute_delta_e, compute_psnr, compute_ssim};
 use std::fs;
 use tempfile::tempdir;
 
@@ -96,7 +102,6 @@ fn test_compiler_flow() {
 
     fs::write(icon_dir.join("Contents.json"), contents_json).unwrap();
 
-    // Create 120x120 solid red image
     let img = image::RgbaImage::from_pixel(120, 120, image::Rgba([255, 0, 0, 255]));
     img.save(icon_dir.join("icon.png")).unwrap();
 
@@ -121,4 +126,63 @@ fn test_compiler_flow() {
 
     let store = BOMStore::from_path(&car_path).expect("Read Assets.car failed");
     assert!(store.variables.contains_key("CARHEADER"));
+}
+
+#[test]
+fn test_dmp2mini_roundtrip() {
+    let bgra = [10u8, 20u8, 30u8, 255u8];
+    let dmp2 = v3_mini_color(4, 4, &bgra);
+    let decoded = decode_mini(&dmp2, 4, 4, 4).expect("Decode dmp2 mini failed");
+
+    assert_eq!(decoded.len(), 4 * 4 * 4);
+    assert_eq!(&decoded[0..4], &bgra);
+}
+
+#[test]
+fn test_facet_hash() {
+    let hash = FacetHashLookupTable::compute_polynomial_hash("AppIcon");
+    assert!(hash > 0);
+}
+
+#[test]
+fn test_planar_delta_roundtrip() {
+    let plane = vec![10u8, 12u8, 15u8, 20u8, 20u8, 25u8];
+    let delta = delta_encode_plane(&plane);
+    let decoded = delta_decode_plane(&delta);
+    assert_eq!(plane, decoded);
+
+    let bgra = vec![100u8; 16 * 4];
+    let encoded = planar_delta_encode(&bgra, 4, 4);
+    let decoded_bgra = planar_delta_decode(&encoded).expect("Planar delta decode failed");
+    assert_eq!(bgra, decoded_bgra);
+}
+
+#[test]
+fn test_quality_metrics() {
+    let orig = vec![100u8; 300];
+    let comp = vec![100u8; 300];
+
+    let psnr = compute_psnr(&orig, &comp);
+    assert!(psnr > 90.0);
+
+    let delta_e = compute_delta_e(&orig, &comp);
+    assert_eq!(delta_e, 0.0);
+
+    let ssim = compute_ssim(&orig, &comp);
+    assert!((ssim - 1.0).abs() < 1e-4);
+}
+
+#[test]
+fn test_packed_helpers() {
+    assert_eq!(atlas_name(true, false), "ZZZZPackedAsset-1.1.0-gamut0");
+    let link = build_link_tlv(10, 20, 100, 100, 0);
+    assert!(link.len() > 10);
+}
+
+#[test]
+fn test_hybrid_compressor() {
+    let compressor = HybridCompressor::default();
+    let bgra = vec![200u8; 16 * 16 * 4];
+    let compressed = compressor.compress_chunk(&bgra, 16, 16);
+    assert!(!compressed.is_empty());
 }
