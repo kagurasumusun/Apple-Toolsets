@@ -1,13 +1,122 @@
 use crate::bomwriter::BOMWriter;
 use crate::csi::build_csi_png;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, WriteBytesExt};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub const KEY_ATTRIBUTES: &[u16] = &[17, 12, 15, 24, 7, 13];
 pub const IOS_ATTRIBUTES: &[u16] = &[17, 12, 15, 24, 7, 13];
-pub const MAC_ATTRIBUTES: &[u16] = &[17, 12, 15, 24, 7, 13];
+pub const MAC_ATTRIBUTES: &[u16] = &[17, 12, 1, 2, 3, 17, 8, 11, 12];
 pub const TV_ATTRIBUTES: &[u16] = &[17, 12, 15, 24, 7, 13];
 pub const WATCH_ATTRIBUTES: &[u16] = &[17, 12, 15, 24, 7, 13];
+
+pub fn select_key_attributes(platform: &str) -> &'static [u16] {
+    match platform {
+        "macosx" | "mac" => MAC_ATTRIBUTES,
+        "appletvos" | "tvos" => TV_ATTRIBUTES,
+        "watchos" | "watch" => WATCH_ATTRIBUTES,
+        _ => IOS_ATTRIBUTES,
+    }
+}
+
+pub fn fixed(value: f32) -> u32 {
+    (value * 65536.0) as u32
+}
+
+pub fn identifier(name: &str) -> u16 {
+    let poly_hash = crate::facet_hash_lookup::FacetHashLookupTable::compute_polynomial_hash(name);
+    (poly_hash % 65536) as u16
+}
+
+pub fn localization_identifier(name: &str) -> u16 {
+    if name.is_empty() || name == "universal" || name == "Any" {
+        0
+    } else {
+        identifier(name)
+    }
+}
+
+pub fn car_header(core_ui_version: u32, rendition_count: u32, main_version: &str) -> Vec<u8> {
+    let mut car_hdr = vec![0u8; 436];
+    car_hdr[0..4].copy_from_slice(b"CTAR");
+    BigEndian::write_u32(&mut car_hdr[4..8], core_ui_version);
+    BigEndian::write_u32(&mut car_hdr[8..12], 1);
+    BigEndian::write_u32(&mut car_hdr[12..16], 1700000000);
+    BigEndian::write_u32(&mut car_hdr[16..20], rendition_count);
+
+    let ver_bytes = main_version.as_bytes();
+    let len = std::cmp::min(ver_bytes.len(), 127);
+    car_hdr[20..20 + len].copy_from_slice(&ver_bytes[..len]);
+    car_hdr[148..148 + len].copy_from_slice(&ver_bytes[..len]);
+
+    let random_uuid = Uuid::new_v4();
+    car_hdr[404..420].copy_from_slice(random_uuid.as_bytes());
+
+    BigEndian::write_u32(&mut car_hdr[420..424], 0);
+    BigEndian::write_u32(&mut car_hdr[424..428], 1);
+    BigEndian::write_u32(&mut car_hdr[428..432], 1);
+    BigEndian::write_u32(&mut car_hdr[432..436], 1);
+
+    car_hdr
+}
+
+pub fn extended_metadata(author: &str, platform: &str, target: &str) -> Vec<u8> {
+    let mut meta = vec![0u8; 1028];
+    meta[0..4].copy_from_slice(b"META");
+
+    let write_str = |buf: &mut [u8], offset: usize, val: &str| {
+        let bytes = val.as_bytes();
+        let len = std::cmp::min(bytes.len(), 255);
+        buf[offset..offset + len].copy_from_slice(&bytes[..len]);
+    };
+
+    write_str(&mut meta, 4, author);
+    write_str(&mut meta, 260, target);
+    write_str(&mut meta, 516, platform);
+    write_str(&mut meta, 772, "actool-rs 0.1.0");
+
+    meta
+}
+
+pub fn key_format(attributes: &[u16]) -> Vec<u8> {
+    let mut kfmt = vec![0u8; 12 + attributes.len() * 4];
+    kfmt[0..4].copy_from_slice(b"kfmt");
+    BigEndian::write_u32(&mut kfmt[4..8], 0);
+    BigEndian::write_u32(&mut kfmt[8..12], attributes.len() as u32);
+    for (i, &attr) in attributes.iter().enumerate() {
+        BigEndian::write_u32(&mut kfmt[12 + i * 4..16 + i * 4], attr as u32);
+    }
+    kfmt
+}
+
+pub fn appearance_names_for(renditions: &[AssetRendition]) -> Vec<String> {
+    let mut names = Vec::new();
+    for r in renditions {
+        if r.appearance > 0 {
+            let name = format!("Appearance_{}", r.appearance);
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+    }
+    names
+}
+
+pub fn appearance_registry(appearances: &[String]) -> HashMap<String, u16> {
+    let mut reg = HashMap::new();
+    for (i, name) in appearances.iter().enumerate() {
+        reg.insert(name.clone(), (i + 1) as u16);
+    }
+    reg
+}
+
+pub fn adapt_csi_for_profile(csi_data: &[u8], profile_dialect: &str) -> Vec<u8> {
+    let mut adapted = csi_data.to_vec();
+    if profile_dialect == "coreui-918" && adapted.len() >= 184 {
+        let _ = (&mut adapted[4..8]).write_u32::<LittleEndian>(918);
+    }
+    adapted
+}
 
 #[derive(Debug, Clone)]
 pub struct AssetRendition {
@@ -23,17 +132,8 @@ pub struct AssetRendition {
     pub height: u32,
 }
 
-pub fn select_key_attributes(platform: &str) -> &'static [u16] {
-    match platform {
-        "macosx" | "mac" => MAC_ATTRIBUTES,
-        "appletvos" | "tvos" => TV_ATTRIBUTES,
-        "watchos" | "watch" => WATCH_ATTRIBUTES,
-        _ => IOS_ATTRIBUTES,
-    }
-}
-
 pub struct CARWriter {
-    renditions: Vec<AssetRendition>,
+    pub renditions: Vec<AssetRendition>,
     pub platform: String,
 }
 
@@ -57,7 +157,7 @@ impl CARWriter {
         height: u32,
         scale: u16,
         idiom: u16,
-        identifier: u16,
+        ident: u16,
     ) {
         let filename = format!("{}.png", name);
         let csi_bytes = build_csi_png(bgra, width, height, &filename, scale as u32, true);
@@ -66,7 +166,7 @@ impl CARWriter {
             name: name.to_string(),
             filename,
             csi_bytes,
-            identifier,
+            identifier: ident,
             idiom,
             scale,
             gamut: 0,
@@ -83,13 +183,12 @@ impl CARWriter {
         g: f32,
         b: f32,
         a: f32,
-        identifier: u16,
+        ident: u16,
     ) {
         let mut csi_bytes = vec![0u8; 184];
         csi_bytes[0..4].copy_from_slice(b"ISTC");
         csi_bytes[24..28].copy_from_slice(b"COLR");
 
-        // TLV for color components
         let mut colr_tlv = Vec::new();
         colr_tlv.extend_from_slice(&r.to_le_bytes());
         colr_tlv.extend_from_slice(&g.to_le_bytes());
@@ -106,7 +205,7 @@ impl CARWriter {
             name: name.to_string(),
             filename: format!("{}.color", name),
             csi_bytes,
-            identifier,
+            identifier: ident,
             idiom: 0,
             scale: 1,
             gamut: 0,
@@ -119,47 +218,22 @@ impl CARWriter {
     pub fn build(&self) -> Vec<u8> {
         let mut writer = BOMWriter::new();
 
-        // 1. CARHEADER Block (436 bytes)
-        let mut car_hdr = vec![0u8; 436];
-        car_hdr[0..4].copy_from_slice(b"CTAR"); // Big endian magic
-        BigEndian::write_u32(&mut car_hdr[4..8], 975); // coreUI version
-        BigEndian::write_u32(&mut car_hdr[8..12], 1); // storage version
-        BigEndian::write_u32(&mut car_hdr[12..16], 1700000000); // timestamp
-        BigEndian::write_u32(&mut car_hdr[16..20], self.renditions.len() as u32);
-
-        let main_ver = b"actool-rs 0.1.0";
-        car_hdr[20..20 + main_ver.len()].copy_from_slice(main_ver);
-        car_hdr[148..148 + main_ver.len()].copy_from_slice(main_ver);
-
-        let random_uuid = Uuid::new_v4();
-        car_hdr[404..420].copy_from_slice(random_uuid.as_bytes());
-
-        BigEndian::write_u32(&mut car_hdr[420..424], 0);
-        BigEndian::write_u32(&mut car_hdr[424..428], 1);
-        BigEndian::write_u32(&mut car_hdr[428..432], 1); // sRGB
-        BigEndian::write_u32(&mut car_hdr[432..436], 1);
-
+        let car_hdr = car_header(975, self.renditions.len() as u32, "actool-rs 0.1.0");
         writer.add_block(car_hdr, Some("CARHEADER".to_string()));
 
-        // 2. KEYFORMAT Block
         let attrs = select_key_attributes(&self.platform);
-        let mut kfmt = vec![0u8; 12 + attrs.len() * 4];
-        kfmt[0..4].copy_from_slice(b"kfmt");
-        BigEndian::write_u32(&mut kfmt[4..8], 0);
-        BigEndian::write_u32(&mut kfmt[8..12], attrs.len() as u32);
-        for (i, &attr) in attrs.iter().enumerate() {
-            BigEndian::write_u32(&mut kfmt[12 + i * 4..16 + i * 4], attr as u32);
-        }
+        let kfmt = key_format(attrs);
         writer.add_block(kfmt, Some("KEYFORMAT".to_string()));
 
-        // 3. CSI Rendition payload blocks
+        let ext_meta = extended_metadata("xcode", &self.platform, "15.0");
+        writer.add_block(ext_meta, Some("EXTENDED_METADATA".to_string()));
+
         let mut rendition_blocks = Vec::new();
         for r in &self.renditions {
             let block_id = writer.add_block(r.csi_bytes.clone(), None);
             rendition_blocks.push((r, block_id));
         }
 
-        // 4. B-Trees
         let facet_tree = build_btree_block(&[]);
         writer.add_block(facet_tree, Some("FACETKEYS".to_string()));
 
@@ -174,6 +248,17 @@ impl CARWriter {
 
         writer.build()
     }
+}
+
+pub fn build_assets_car(
+    renditions: Vec<AssetRendition>,
+    platform: &str,
+) -> Vec<u8> {
+    let mut writer = CARWriter::new(platform);
+    for r in renditions {
+        writer.add_rendition(r);
+    }
+    writer.build()
 }
 
 fn build_btree_block(items: &[(&AssetRendition, u32)]) -> Vec<u8> {

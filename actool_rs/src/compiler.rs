@@ -1,8 +1,9 @@
 use crate::appicons::{app_icon_entry_rank, AppIconEntry};
 use crate::carwriter::CARWriter;
-use crate::catalog::{load_catalog, safe_resolve_file};
+use crate::catalog::{load_catalog, safe_resolve_file, Asset};
 use crate::diagnostics::{format_xml_plist, Diagnostic};
 use image::GenericImageView;
+use serde_json::{json, Value};
 use std::fs;
 use std::path::PathBuf;
 
@@ -22,6 +23,71 @@ pub struct CompileOptions {
 pub struct CompileResult {
     pub diagnostics: Vec<Diagnostic>,
     pub output_files: Vec<PathBuf>,
+}
+
+pub fn color_component(val: f32) -> u8 {
+    (val.clamp(0.0, 1.0) * 255.0).round() as u8
+}
+
+pub fn layer_depth(asset: &Asset) -> usize {
+    asset.directory.components().count()
+}
+
+pub fn appearance_for(entry_appearance: Option<&str>) -> u16 {
+    match entry_appearance {
+        Some("dark") | Some("luminosity") => 1,
+        Some("tinted") => 2,
+        _ => 0,
+    }
+}
+
+pub fn partial_info(platform: &str, target: &str) -> Value {
+    json!({
+        "com.apple.actool.compilation-results": {
+            "platform": platform,
+            "minimum-deployment-target": target,
+            "tool": "actool-rs"
+        }
+    })
+}
+
+pub fn resolve_image_stack_layers(asset: &Asset, assets: &[Asset]) -> Vec<PathBuf> {
+    let mut layers = Vec::new();
+    for entry in &asset.entries {
+        if let Some(ref filename) = entry.filename {
+            let layer_dir = asset.directory.join(filename);
+            for candidate in assets {
+                if candidate.kind == "image-stack-layer" && candidate.directory == layer_dir {
+                    layers.push(candidate.directory.clone());
+                }
+            }
+        }
+    }
+    layers
+}
+
+pub fn compile_brand_assets(
+    inputs: &[PathBuf],
+    options: &CompileOptions,
+) -> Result<Vec<PathBuf>, String> {
+    let mut car_writer = CARWriter::new(&options.platform);
+    let mut counter = 100u16;
+
+    for path in inputs {
+        if let Ok(cat) = load_catalog(path) {
+            for asset in &cat.assets {
+                if asset.kind == "image" || asset.kind == "app-icon" {
+                    car_writer.add_color(&asset.name, 0.5, 0.5, 0.5, 1.0, counter);
+                    counter += 1;
+                }
+            }
+        }
+    }
+
+    let bytes = car_writer.build();
+    let car_path = options.output_dir.join("BrandAssets.car");
+    fs::write(&car_path, &bytes).map_err(|e| e.to_string())?;
+    Ok(vec![car_path])
 }
 
 pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String> {
@@ -134,7 +200,6 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
                     }
                 }
                 "color" => {
-                    // Default sRGB white color representation if no specific components provided
                     car_writer.add_color(&asset.name, 1.0, 1.0, 1.0, 1.0, rendition_id_counter);
                     rendition_id_counter += 1;
                 }
@@ -143,7 +208,6 @@ pub fn compile_catalogs(options: CompileOptions) -> Result<CompileResult, String
         }
     }
 
-    // Write Assets.car
     let car_bytes = car_writer.build();
     let car_path = options.output_dir.join("Assets.car");
     fs::write(&car_path, &car_bytes)

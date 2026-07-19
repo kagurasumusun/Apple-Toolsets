@@ -1,98 +1,131 @@
-#[derive(Debug, Clone)]
-pub struct AtlasItem {
-    pub name: String,
-    pub width: u32,
-    pub height: u32,
-    pub data: Vec<u8>,
+use crate::csi::build_tlv;
+use byteorder::{LittleEndian, WriteBytesExt};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AtlasKeyToken {
+    pub attribute: u16,
+    pub value: u16,
 }
 
 #[derive(Debug, Clone)]
-pub struct PackedAtlasRegion {
-    pub name: String,
+pub struct AtlasLink {
     pub x: u32,
     pub y: u32,
     pub width: u32,
     pub height: u32,
+    pub tokens: Vec<AtlasKeyToken>,
+    pub variant: String,
+    pub header_u16: u16,
+    pub header_u32: u32,
 }
 
 #[derive(Debug, Clone)]
-pub struct PackedAtlas {
-    pub total_width: u32,
-    pub total_height: u32,
-    pub regions: Vec<PackedAtlasRegion>,
-    pub buffer: Vec<u8>,
+pub struct AtlasNameList {
+    pub names: Vec<String>,
 }
 
-/// Simple shelf-packing algorithm for building texture atlases
-pub fn pack_atlas(items: &[AtlasItem]) -> PackedAtlas {
-    if items.is_empty() {
-        return PackedAtlas {
-            total_width: 0,
-            total_height: 0,
-            regions: Vec::new(),
-            buffer: Vec::new(),
-        };
+#[derive(Debug, Clone)]
+pub struct AtlasTrim {
+    pub original_width: u32,
+    pub original_height: u32,
+    pub origin_x: u32,
+    pub origin_y: u32,
+    pub trimmed_width: u32,
+    pub trimmed_height: u32,
+}
+
+pub fn parse_atlas_link(raw: &[u8]) -> Result<AtlasLink, &'static str> {
+    if raw.len() < 26 || &raw[0..4] != b"INLK" && &raw[0..4] != b"KLNI" {
+        return Err("Invalid atlas link magic or truncated header");
     }
 
-    let mut sorted_items: Vec<(usize, &AtlasItem)> = items.iter().enumerate().collect();
-    sorted_items.sort_by(|a, b| b.1.height.cmp(&a.1.height));
+    let version = u32::from_le_bytes(raw[4..8].try_into().unwrap());
+    let x = u32::from_le_bytes(raw[8..12].try_into().unwrap());
+    let y = u32::from_le_bytes(raw[12..16].try_into().unwrap());
+    let width = u32::from_le_bytes(raw[16..20].try_into().unwrap());
+    let height = u32::from_le_bytes(raw[20..24].try_into().unwrap());
 
-    let mut current_x = 0;
-    let mut current_y = 0;
-    let mut shelf_height = 0;
-
-    let atlas_width = 2048; // Standard 2048x2048 atlas max size
-    let mut max_y = 0;
-
-    let mut regions = Vec::new();
-
-    for (_idx, item) in sorted_items {
-        if current_x + item.width > atlas_width {
-            current_x = 0;
-            current_y += shelf_height;
-            shelf_height = 0;
-        }
-
-        regions.push(PackedAtlasRegion {
-            name: item.name.clone(),
-            x: current_x,
-            y: current_y,
-            width: item.width,
-            height: item.height,
-        });
-
-        current_x += item.width;
-        shelf_height = std::cmp::max(shelf_height, item.height);
-        max_y = std::cmp::max(max_y, current_y + item.height);
-    }
-
-    let total_height = max_y;
-    let total_width = atlas_width;
-
-    // Composite BGRA atlas buffer
-    let mut buffer = vec![0u8; (total_width * total_height * 4) as usize];
-
-    for r in &regions {
-        let item = items.iter().find(|i| i.name == r.name).unwrap();
-        if item.data.len() != (item.width * item.height * 4) as usize {
-            continue;
-        }
-
-        for y in 0..item.height {
-            let src_row = (y * item.width * 4) as usize;
-            let dst_row = (((r.y + y) * total_width + r.x) * 4) as usize;
-            let len = (item.width * 4) as usize;
-
-            if dst_row + len <= buffer.len() {
-                buffer[dst_row..dst_row + len].copy_from_slice(&item.data[src_row..src_row + len]);
+    let mut tokens = Vec::new();
+    if raw.len() >= 28 {
+        for off in (26..raw.len()).step_by(4) {
+            if off + 4 <= raw.len() {
+                let attr = u16::from_le_bytes(raw[off..off + 2].try_into().unwrap());
+                let val = u16::from_le_bytes(raw[off + 2..off + 4].try_into().unwrap());
+                if attr == 0 && val == 0 {
+                    break;
+                }
+                tokens.push(AtlasKeyToken { attribute: attr, value: val });
             }
         }
     }
 
-    PackedAtlas {
-        total_width,
-        total_height,
-        regions,
-        buffer,
+    Ok(AtlasLink {
+        x,
+        y,
+        width,
+        height,
+        tokens,
+        variant: "generic".to_string(),
+        header_u16: 0,
+        header_u32: version,
+    })
+}
+
+pub fn build_atlas_link(x: u32, y: u32, width: u32, height: u32, tokens: &[AtlasKeyToken]) -> Vec<u8> {
+    let mut val = Vec::new();
+    val.extend_from_slice(b"INLK");
+    let _ = val.write_u32::<LittleEndian>(0); // version
+    let _ = val.write_u32::<LittleEndian>(x);
+    let _ = val.write_u32::<LittleEndian>(y);
+    let _ = val.write_u32::<LittleEndian>(width);
+    let _ = val.write_u32::<LittleEndian>(height);
+    let _ = val.write_u16::<LittleEndian>(0);
+
+    for t in tokens {
+        let _ = val.write_u16::<LittleEndian>(t.attribute);
+        let _ = val.write_u16::<LittleEndian>(t.value);
     }
+
+    build_tlv(1010, &val)
+}
+
+pub fn parse_atlas_name_list(raw: &[u8]) -> Result<AtlasNameList, &'static str> {
+    if raw.len() < 4 {
+        return Err("Atlas name list truncated");
+    }
+    let count = u32::from_le_bytes(raw[0..4].try_into().unwrap()) as usize;
+    let mut cursor = 4;
+    let mut names = Vec::new();
+
+    for _ in 0..count {
+        if cursor + 4 > raw.len() {
+            break;
+        }
+        let len = u32::from_le_bytes(raw[cursor..cursor + 4].try_into().unwrap()) as usize;
+        cursor += 4;
+        if cursor + len > raw.len() {
+            break;
+        }
+        let name_bytes = &raw[cursor..cursor + len];
+        cursor += len;
+        let name = String::from_utf8_lossy(name_bytes.strip_suffix(b"\0").unwrap_or(name_bytes)).to_string();
+        names.push(name);
+    }
+
+    Ok(AtlasNameList { names })
+}
+
+pub fn parse_atlas_trim(raw: &[u8]) -> Result<AtlasTrim, &'static str> {
+    if raw.len() < 24 {
+        return Err("Atlas trim payload truncated");
+    }
+
+    Ok(AtlasTrim {
+        original_width: u32::from_le_bytes(raw[0..4].try_into().unwrap()),
+        original_height: u32::from_le_bytes(raw[4..8].try_into().unwrap()),
+        origin_x: u32::from_le_bytes(raw[8..12].try_into().unwrap()),
+        origin_y: u32::from_le_bytes(raw[12..16].try_into().unwrap()),
+        trimmed_width: u32::from_le_bytes(raw[16..20].try_into().unwrap()),
+        trimmed_height: u32::from_le_bytes(raw[20..24].try_into().unwrap()),
+    })
 }
