@@ -139,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         development_region=ns.development_region,
         compress_pngs=ns.compress_pngs,
         enable_on_demand_resources=ns.enable_on_demand_resources == "yes",
+        optimize=ns.optimize,
     ))
     if any(d.message == "Distill failed for unknown reasons." for d in result.diagnostics):
         import datetime

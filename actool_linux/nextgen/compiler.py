@@ -201,11 +201,9 @@ def _partial_info(catalogs: Iterable[Catalog], options: CompileOptions) -> dict[
 
 
 def compile_catalogs(inputs: list[Path], options: CompileOptions) -> CompileResult:
-    # NextGen Inject: Check for advanced optimizations
-    if getattr(options, "optimize", None) == "smart":
-        pass # TODO: Route to smart_cbck
-    elif getattr(options, "optimize", None) == "astc":
-        pass # TODO: Route to astc_optimizer
+    # Propagate optimization mode to carwriter module
+    from . import carwriter as _cw
+    _cw._OPTIMIZE_MODE = getattr(options, "optimize", None)
     catalogs = [load_catalog(path) for path in inputs]
     diagnostics = [item for catalog in catalogs for item in catalog.diagnostics]
     outputs: list[Path] = []

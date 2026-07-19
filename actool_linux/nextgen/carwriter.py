@@ -8,6 +8,10 @@ import zlib
 from .bomwriter import BOMWriter
 from . import lzfse_compat
 from . import dmp2mini
+
+# Module-level optimization mode, set by compiler.compile_catalogs()
+# before any rendition generation. None = default Apple-compatible encoding.
+_OPTIMIZE_MODE: str | None = None
 from .coreui import CoreUIProfile, resolve_profile
 from .paletteimg import build_palette_img_wrapper
 from .solidstack import (
@@ -1265,8 +1269,18 @@ def _png_premultiplied_bgra(data: bytes) -> tuple[int, int, bytes, bool]:
 
 
 def _csi_png_cbck(data: bytes, filename: str, *, scale: int = 1) -> bytes:
-    """Encode CoreUI chunked-bitmap (CBCK) with independent LZFSE streams."""
+    """Encode CoreUI chunked-bitmap (CBCK) with independent LZFSE streams.
+
+    When _OPTIMIZE_MODE == 'smart', uses SmartCBCKEncoder for AI-driven
+    chunk optimization (alpha cleaning, strategy selection).
+    Output is always Apple-compatible MLEC mode=3, codec=4.
+    """
     width, height, pixels, _opaque = _png_premultiplied_bgra(data)
+
+    if _OPTIMIZE_MODE == "smart":
+        from .smart_cbck import smart_encode_png_cbck
+        return smart_encode_png_cbck(pixels, width, height, filename, scale=scale)
+
     row_bytes = width * 4
     # Xcode's 1024px AppIcon oracle uses 341-row chunks (0x155000 raw
     # bytes), followed by a one-row tail. 0x155555 is the inferred cap.
