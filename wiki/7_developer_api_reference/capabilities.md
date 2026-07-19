@@ -1,1 +1,9 @@
-# Module: `capabilities`\n\n## Overview\nMachine-readable implementation and Apple-verification boundary.\n\n## Public Functions\n### `capability_report()`\n\n
+# 📖 Rust API Reference: 
+
+- **Source File**: 
+- **Domain Layer**: 
+
+## Public Functions
+
+#### 
+

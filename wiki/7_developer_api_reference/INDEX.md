@@ -1,27 +1,82 @@
-# 💻 Developer API Reference (Stable Core)\n\nこのセクションは `Apple-actool-py` のコアコンパイラ（`actool_linux.stable`）を構成する**全ファイルの完全なリファレンス**です。各モジュールのクラス、関数、内部ロジックの詳細を解説します。\n\n- [appicons](appicons.md): Deterministic compatibility AppIcon sidecar manifests and source ranking....\n- [atlas](atlas.md): Packed CoreUI atlas metadata and deterministic shelf packer....\n- [atlas_geometry](atlas_geometry.md): Improved atlas packing geometry for better Apple compatibility.
+# 💻 Apple Toolsets — Developer API Reference (Pure Rust)
 
-This module pro...\n- [bom](bom.md): \n- [bomwriter](bomwriter.md): \n- [capabilities](capabilities.md): Machine-readable implementation and Apple-verification boundary....\n- [car](car.md): \n- [carinfo](carinfo.md): \n- [carwriter](carwriter.md): \n- [cbck](cbck.md): \n- [cbck_complete](cbck_complete.md): Complete CBCK (Chunked Bitmap Compression) implementation.
+Exhaustive, auto-generated technical API specification extracted from the 100% Pure Rust  codebase.
 
-This module provides...\n- [cli](cli.md): \n- [compiler](compiler.md): \n- [coreui](coreui.md): CoreUI dialect profiles and version-dependent constants.
-
-Every CoreUI-version-s...\n- [csi](csi.md): \n- [diagnostics](diagnostics.md): Apple-style actool result plist and human-readable text serialization....\n- [dmp2mini](dmp2mini.md): dmp2 "mini" grammars observed in Apple-produced cars (small deepmap comp).
-
-Appl...\n- [facet_hash_lookup](facet_hash_lookup.md): Lookup table-based facet hash16 implementation.
-
-Since the final mixing function...\n- [iconstack](iconstack.md): \n- [imagestack](imagestack.md): Clean-room writer for CoreUI layered image stack aggregates.
-
-Reproduces the obs...\n- [legacy_coreui_features](legacy_coreui_features.md): Legacy CoreUI features and version-specific functionality.
-
-This module provides...\n- [lzfse_compat](lzfse_compat.md): Single LZFSE entry point for the clean-room writer.
-
-Every encoder/decoder in ``...\n- [lzfse_optimized](lzfse_optimized.md): Optimized LZFSE compression for better Apple compatibility.
-
-This module provide...\n- [model](model.md): \n- [multi_database](multi_database.md): Multiple BOM database support for legacy CoreUI compatibility.
-
-This module prov...\n- [packed](packed.md): CoreUI packed-asset (ZZZZPackedAsset / LINK) writer.
-
-Observed Apple behavior (X...\n- [paletteimg](paletteimg.md): \n- [pdfcar](pdfcar.md): \n- [repack](repack.md): \n- [solidstack](solidstack.md): \n- [texture](texture.md): \n- [texture_gradient_stack](texture_gradient_stack.md): Complete implementation of texture references, named gradients, and icon stacks....\n- [thinning](thinning.md): Deterministic CoreUI rendition thinning.
-
-The selector operates on the clean-roo...\n- [tree](tree.md): \n- [zero_code_db](zero_code_db.md): Zero-code database support for CoreUI 850+.
-
-This module provides support for ze...\n
+- **[appicons](appicons.md)** () — Structs: 1, Enums: 0, Functions: 3
+- **[arresource](arresource.md)** () — Structs: 2, Enums: 0, Functions: 3
+- **[atlas](atlas.md)** () — Structs: 4, Enums: 0, Functions: 15
+- **[atlas_geometry](atlas_geometry.md)** () — Structs: 0, Enums: 0, Functions: 1
+- **[audio](audio.md)** () — Structs: 1, Enums: 1, Functions: 3
+- **[iconstack](iconstack.md)** () — Structs: 5, Enums: 0, Functions: 14
+- **[imagestack](imagestack.md)** () — Structs: 1, Enums: 0, Functions: 15
+- **[media](media.md)** () — Structs: 0, Enums: 1, Functions: 3
+- **[model3d](model3d.md)** () — Structs: 1, Enums: 0, Functions: 3
+- **[packed](packed.md)** () — Structs: 1, Enums: 0, Functions: 19
+- **[pdfcar](pdfcar.md)** () — Structs: 0, Enums: 0, Functions: 2
+- **[solidstack](solidstack.md)** () — Structs: 4, Enums: 1, Functions: 9
+- **[texture](texture.md)** () — Structs: 2, Enums: 1, Functions: 4
+- **[texture_gradient_stack](texture_gradient_stack.md)** () — Structs: 3, Enums: 0, Functions: 19
+- **[thinning](thinning.md)** () — Structs: 1, Enums: 0, Functions: 4
+- **[car_info](car_info.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[car_repack](car_repack.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[pdf_car](pdf_car.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[ai_quantizer](ai_quantizer.md)** () — Structs: 1, Enums: 0, Functions: 5
+- **[alpha_compression](alpha_compression.md)** () — Structs: 1, Enums: 0, Functions: 9
+- **[astc_compression](astc_compression.md)** () — Structs: 1, Enums: 1, Functions: 6
+- **[astc_native](astc_native.md)** () — Structs: 0, Enums: 1, Functions: 2
+- **[astc_optimized](astc_optimized.md)** () — Structs: 0, Enums: 0, Functions: 7
+- **[astc_optimizer](astc_optimizer.md)** () — Structs: 0, Enums: 0, Functions: 3
+- **[cbck](cbck.md)** () — Structs: 2, Enums: 0, Functions: 2
+- **[cbck_complete](cbck_complete.md)** () — Structs: 2, Enums: 0, Functions: 11
+- **[dmp2mini](dmp2mini.md)** () — Structs: 0, Enums: 0, Functions: 8
+- **[hybrid_compression](hybrid_compression.md)** () — Structs: 1, Enums: 0, Functions: 11
+- **[lpc_lzfse](lpc_lzfse.md)** () — Structs: 1, Enums: 0, Functions: 9
+- **[lzfse](lzfse.md)** () — Structs: 0, Enums: 0, Functions: 2
+- **[lzfse_compat](lzfse_compat.md)** () — Structs: 0, Enums: 0, Functions: 4
+- **[lzfse_optimized](lzfse_optimized.md)** () — Structs: 1, Enums: 0, Functions: 12
+- **[nexus_compression](nexus_compression.md)** () — Structs: 1, Enums: 0, Functions: 11
+- **[omega_compression](omega_compression.md)** () — Structs: 1, Enums: 0, Functions: 10
+- **[omega_plus](omega_plus.md)** () — Structs: 0, Enums: 0, Functions: 13
+- **[omni_compression](omni_compression.md)** () — Structs: 1, Enums: 0, Functions: 15
+- **[omniv2_compression](omniv2_compression.md)** () — Structs: 1, Enums: 0, Functions: 11
+- **[paletteimg](paletteimg.md)** () — Structs: 2, Enums: 1, Functions: 5
+- **[planar_delta_lzfse](planar_delta_lzfse.md)** () — Structs: 0, Enums: 0, Functions: 9
+- **[semantic_fusion](semantic_fusion.md)** () — Structs: 1, Enums: 0, Functions: 6
+- **[smart_cbck](smart_cbck.md)** () — Structs: 1, Enums: 0, Functions: 7
+- **[tet_complete](tet_complete.md)** () — Structs: 1, Enums: 0, Functions: 16
+- **[tet_compression](tet_compression.md)** () — Structs: 0, Enums: 0, Functions: 13
+- **[tet_full](tet_full.md)** () — Structs: 0, Enums: 0, Functions: 26
+- **[tet_ultimate](tet_ultimate.md)** () — Structs: 0, Enums: 0, Functions: 52
+- **[tet_variants](tet_variants.md)** () — Structs: 0, Enums: 0, Functions: 18
+- **[ultimate_compression](ultimate_compression.md)** () — Structs: 1, Enums: 1, Functions: 10
+- **[ultrahd](ultrahd.md)** () — Structs: 0, Enums: 1, Functions: 2
+- **[bom](bom.md)** () — Structs: 3, Enums: 1, Functions: 8
+- **[bomwriter](bomwriter.md)** () — Structs: 2, Enums: 0, Functions: 5
+- **[car](car.md)** () — Structs: 7, Enums: 0, Functions: 8
+- **[carinfo](carinfo.md)** () — Structs: 0, Enums: 0, Functions: 4
+- **[carwriter](carwriter.md)** () — Structs: 2, Enums: 0, Functions: 23
+- **[coreui](coreui.md)** () — Structs: 1, Enums: 0, Functions: 5
+- **[csi](csi.md)** () — Structs: 2, Enums: 0, Functions: 2
+- **[facet_hash_lookup](facet_hash_lookup.md)** () — Structs: 1, Enums: 0, Functions: 6
+- **[multi_database](multi_database.md)** () — Structs: 1, Enums: 0, Functions: 8
+- **[tree](tree.md)** () — Structs: 2, Enums: 0, Functions: 2
+- **[zero_code_db](zero_code_db.md)** () — Structs: 6, Enums: 0, Functions: 25
+- **[lib](lib.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[main](main.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[autosafe](autosafe.md)** () — Structs: 1, Enums: 3, Functions: 3
+- **[ciede2000](ciede2000.md)** () — Structs: 0, Enums: 0, Functions: 2
+- **[ergonomics](ergonomics.md)** () — Structs: 1, Enums: 0, Functions: 1
+- **[psychoacoustics](psychoacoustics.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[quality_metrics](quality_metrics.md)** () — Structs: 0, Enums: 0, Functions: 8
+- **[capabilities](capabilities.md)** () — Structs: 0, Enums: 0, Functions: 1
+- **[catalog](catalog.md)** () — Structs: 5, Enums: 0, Functions: 1
+- **[cli](cli.md)** () — Structs: 0, Enums: 0, Functions: 3
+- **[compiler](compiler.md)** () — Structs: 2, Enums: 0, Functions: 6
+- **[diagnostics](diagnostics.md)** () — Structs: 1, Enums: 1, Functions: 5
+- **[editor](editor.md)** () — Structs: 1, Enums: 0, Functions: 3
+- **[legacy_coreui_features](legacy_coreui_features.md)** () — Structs: 1, Enums: 0, Functions: 21
+- **[model](model.md)** () — Structs: 3, Enums: 0, Functions: 2
+- **[mount](mount.md)** () — Structs: 0, Enums: 0, Functions: 0
+- **[nonimage_optimizer](nonimage_optimizer.md)** () — Structs: 1, Enums: 0, Functions: 4
+- **[repack](repack.md)** () — Structs: 0, Enums: 0, Functions: 1
+- **[repair](repair.md)** () — Structs: 1, Enums: 0, Functions: 1

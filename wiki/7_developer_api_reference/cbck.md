@@ -1,1 +1,19 @@
-# Module: `cbck`\n\n## Classes\n### `CBCKChunk`\n\n### `CBCKPayload`\n**Methods:**\n- `decompress()`\n\n## Public Functions\n### `parse_cbck()`\nParse a CoreUI MLEC mode-3, codec-4 chunked bitmap payload.\n\n
+# 📖 Rust API Reference: 
+
+- **Source File**: 
+- **Domain Layer**: 
+
+## Structs
+
+### 
+
+
+### 
+
+
+## Public Functions
+
+#### 
+
+#### 
+

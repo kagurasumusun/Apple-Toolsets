@@ -4,6 +4,12 @@
 
 ---
 
+## 🖼 4-Gate Auto-Safe Quality Barriers & Perceptual Protection Diagram
+
+![4-Gate Auto-Safe Quality Barriers & Perceptual Protection](../images/autosafe_4gate_protection.png)
+
+---
+
 ## 1. Perceptual Vision Ergonomics & ISO/CIE 11664-6 CIEDE2000
 
 色覚認知モデルとして、従来の Simple CIE76（$\Delta E^*_{ab}$）や PSNR 単体による評価では、人間の目が青色領域や低彩度領域の色の変化に非常に過敏であるという視覚特性（Human Visual System: HVS）を正しく評価できなかった。
@@ -57,7 +63,7 @@
 $$\text{SNR}_{\text{dB}} = 10 \log_{10} \left( \frac{\sum s[n]^2}{\sum (s[n] - p[n])^2} \right)$$
 
 - **`HUMAN_PERCEPTUAL_AUDIO_SNR_THRESHOLD_DB = 80.0 dB`**
-- 信信号対雑音比 $\ge 80\text{ dB}$ を維持することで、極めて静かな環境下のあらゆる年齢層の聴取者においても量子化ノイズやポップノイズが感知されない品質を保証する。
+- 信号対雑音比 $\ge 80\text{ dB}$ を維持することで、極めて静かな環境下のあらゆる年齢層の聴取者においても量子化ノイズやポップノイズが感知されない品質を保証する。
 
 ---
 
@@ -122,4 +128,4 @@ $$N_z = \sqrt{1.0 - N_x^2 - N_y^2}$$
 
 ---
 
-*Verified with zero compiler warnings and 100% exact mathematical roundtrip tests in actool_rs.*
+*Verified with zero compiler warnings and 100% exact mathematical roundtrip tests in apple-toolsets.*

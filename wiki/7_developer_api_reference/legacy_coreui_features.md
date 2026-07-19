@@ -1,4 +1,54 @@
-# Module: `legacy_coreui_features`\n\n## Overview\nLegacy CoreUI features and version-specific functionality.
+# 📖 Rust API Reference: 
 
-This module provides support for CoreUI version-specific features,
-target-specific functionality, and legacy compatibility modes.\n\n## Classes\n### `CoreUIVersionFeatures`\nFeatures specific to different CoreUI versions.\n\n**Methods:**\n- `get_features()`\n- `is_feature_supported()`\n- `get_max_image_size()`\n- `get_supported_compressions()`\n\n### `TargetSpecificFeatures`\nFeatures specific to different target platforms.\n\n**Methods:**\n- `get_features()`\n- `get_supported_scales()`\n- `get_max_atlas_size()`\n\n### `LegacyCompatibilityMode`\nCompatibility mode for legacy CoreUI versions.\n\n**Methods:**\n- `__init__()`\n- `validate_image_size()`\n- `validate_compression()`\n- `validate_facet_name()`\n- `validate_scale()`\n- `validate_all()`\n- `get_recommended_compression()`\n- `get_recommended_atlas_size()`\n\n## Public Functions\n### `get_version_specific_key_format()`\nGet the key format attributes for a specific CoreUI version.\n\n### `get_version_specific_header_format()`\nGet header format parameters for a specific CoreUI version.\n\n### `create_legacy_compatible_car()`\nCreate a legacy compatibility mode for CAR generation.\n\n
+- **Source File**: 
+- **Domain Layer**: 
+
+## Structs
+
+### 
+
+
+## Public Functions
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+

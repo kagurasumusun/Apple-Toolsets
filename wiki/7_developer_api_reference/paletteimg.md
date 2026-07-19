@@ -1,1 +1,30 @@
-# Module: `paletteimg`\n\n## Classes\n### `ThemePixelRendition`\n\n### `QuantizedImageData`\n\n### `PaletteImageError`\n\n## Public Functions\n### `parse_theme_pixel_rendition()`\n\n### `decode_quantized_image_payload()`\n\n### `encode_quantized_image_payload()`\n\n### `build_palette_img_wrapper()`\n\n
+# 📖 Rust API Reference: 
+
+- **Source File**: 
+- **Domain Layer**: 
+
+## Structs
+
+### 
+
+
+### 
+
+
+## Enums
+
+### 
+
+
+## Public Functions
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+

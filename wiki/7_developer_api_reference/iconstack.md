@@ -1,1 +1,52 @@
-# Module: `iconstack`\n\n## Classes\n### `IconStackError`\n\n### `IconStackRootStyleEntry`\n**Methods:**\n- `inferred_kind_name()`\n- `inferred_role_for_referenced_part()`\n\n### `IconStackRootStyleList`\n\n### `IconStackAuxEntry`\n\n### `IconStackAuxList`\n\n### `IconStackGroupStyleReference`\n**Methods:**\n- `inferred_kind_name()`\n- `inferred_name_kind()`\n\n### `NamedGradientStop`\n\n### `NamedGradientPayload`\n\n## Public Functions\n### `build_iconstack_root_style_list()`\n\n### `parse_iconstack_root_style_list()`\n\n### `build_iconstack_aux_list()`\n\n### `parse_iconstack_aux_list()`\n\n### `build_iconstack_group_style_reference()`\n\n### `parse_iconstack_group_style_reference()`\n\n### `build_named_gradient_payload()`\n\n### `parse_named_gradient_payload()`\n\n
+# 📖 Rust API Reference: 
+
+- **Source File**: 
+- **Domain Layer**: 
+
+## Structs
+
+### 
+
+
+### 
+
+
+### 
+
+
+### 
+
+
+### 
+
+
+## Public Functions
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+
+#### 
+

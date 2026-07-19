@@ -1,1 +1,22 @@
-# Module: `model`\n\n## Classes\n### `Diagnostic`\n**Methods:**\n- `render()`\n\n### `Asset`\n\n### `Catalog`\n\n## Public Functions\n### `load_catalog()`\n\n
+# 📖 Rust API Reference: 
+
+- **Source File**: 
+- **Domain Layer**: 
+
+## Structs
+
+### 
+
+
+### 
+
+
+### 
+
+
+## Public Functions
+
+#### 
+
+#### 
+
