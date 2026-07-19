@@ -301,7 +301,8 @@ def hybrid_compress_for_cbck(bgra: np.ndarray, width: int, height: int,
     carwriter._csi_png_cbck()のドロップイン代替として使用可能。
     """
     compressor = HybridCompressor(clean_alpha=True)
-    payload = compressor.compress_image(bgra.reshape(height, width, 4))
+    bgra_arr = np.frombuffer(bgra, dtype=np.uint8).reshape(height, width, 4) if isinstance(bgra, bytes) else bgra.reshape(height, width, 4)
+    payload = compressor.compress_image(bgra_arr)
 
     # ISTCヘッダー + TLVを構築
     tlvs = b"".join((

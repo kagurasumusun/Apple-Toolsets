@@ -275,7 +275,8 @@ class UltimateCompressor:
 def ultimate_compress(bgra: np.ndarray, width: int, height: int, filename: str, *, scale: int = 1) -> bytes:
     """Ultimate compression → full CSI rendition."""
     compressor = UltimateCompressor(clean_alpha=True)
-    payload = compressor.compress_image(bgra.reshape(height, width, 4))
+    bgra_arr = np.frombuffer(bgra, dtype=np.uint8).reshape(height, width, 4) if isinstance(bgra, bytes) else bgra.reshape(height, width, 4)
+    payload = compressor.compress_image(bgra_arr)
 
     # ISTC header + TLVs
     tlvs = b"".join((
