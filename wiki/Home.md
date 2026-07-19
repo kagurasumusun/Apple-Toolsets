@@ -29,7 +29,7 @@ This knowledge base provides an exhaustive, byte-level specification of Apple Co
 
 ### 4. Developer Tools, CAREditor & Non-Image Optimizers
 - **[🛠 04: CLI Tools, CAREditor API, Virtual Mounting & Non-Image Engine](6_algorithmic_research/04_TOOLS_AND_CLI.md)**:
-  `actool-rs` / `actool-linux` CLI interfaces, `CAREditor` interactive CAR modification API, virtual directory mounting & syncing (`mount.rs`), corrupted CAR auto-repair engine (`repair.rs`), Lottie JSON float truncation, PCM audio tail silence trimming (-90dB) with 1D sample delta prediction, and 3D OBJ mesh vertex float quantization.
+  `actool-rs` / `actool-linux` CLI interfaces, `CAREditor` interactive CAR modification API, virtual directory mounting & syncing (`mount.rs`), corrupted CAR auto-repair engine (`repair.rs`), deterministic heuristic strategy selection (no external AI weight dependencies), Lottie JSON float truncation, PCM audio tail silence trimming (-90dB) with 1D sample delta prediction, and 3D OBJ mesh vertex float quantization.
 
 ### 5. Algorithmic Hash Analysis
 - **[🧩 05: Facet Hash16 Anatomy & The 100% Accuracy Lookup Table](6_algorithmic_research/05_FACET_HASH16_ANATOMY.md)**:
