@@ -1,5 +1,6 @@
 /target
 /actool/target
+/wiki/book_html
 .venv
 __pycache__
 *.pyc
