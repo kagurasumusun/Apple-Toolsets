@@ -1273,6 +1273,7 @@ def _csi_png_cbck(data: bytes, filename: str, *, scale: int = 1) -> bytes:
 
     When _OPTIMIZE_MODE == 'smart', uses SmartCBCKEncoder for AI-driven
     chunk optimization (alpha cleaning, strategy selection).
+    When _OPTIMIZE_MODE == 'hybrid', uses HybridCompressor (LPC+Planar-Delta fusion).
     Output is always Apple-compatible MLEC mode=3, codec=4.
     """
     width, height, pixels, _opaque = _png_premultiplied_bgra(data)
@@ -1280,6 +1281,10 @@ def _csi_png_cbck(data: bytes, filename: str, *, scale: int = 1) -> bytes:
     if _OPTIMIZE_MODE == "smart":
         from .smart_cbck import smart_encode_png_cbck
         return smart_encode_png_cbck(pixels, width, height, filename, scale=scale)
+
+    if _OPTIMIZE_MODE == "hybrid":
+        from ..research.hybrid_compression import hybrid_compress_for_cbck
+        return hybrid_compress_for_cbck(pixels, width, height, filename, scale=scale)
 
     row_bytes = width * 4
     # Xcode's 1024px AppIcon oracle uses 341-row chunks (0x155000 raw
