@@ -31,7 +31,7 @@ impl ASTCClassCompressor {
             return ASTCBlockSize::Block8x8;
         }
 
-        let complexity = crate::astc_optimized::analyze_block_complexity(block_bgra);
+        let (complexity, _var, _trans) = crate::astc_optimized::analyze_block_complexity(block_bgra);
 
         if complexity > 15.0 {
             ASTCBlockSize::Block4x4
