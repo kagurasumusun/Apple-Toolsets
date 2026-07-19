@@ -111,57 +111,52 @@ pub fn make_adaptive_csi(
     optimize_mode: Option<&str>,
 ) -> Vec<u8> {
     let total_pixels = (width * height) as usize;
-    if total_pixels == 0 || bgra.len() < total_pixels * 4 {
-        return build_csi_png(bgra, width, height, filename, scale, false);
-    }
-
-    let tier = classify_resolution_tier(width, height);
-
-    // 1. Check if source is a uniform single color
-    let first_px = &bgra[0..4];
-    let is_uniform = bgra.chunks_exact(4).all(|px| px == first_px);
-
     let row_bytes = width * 4;
-    let is_oversized = (row_bytes * height) > 0x155555;
 
-    // 2. Select format payload based on Apple's actool adaptive decision rules
-    let payload = if tier != UltraHDTier::Standard {
-        // Automatically invoke Ultra-HD 2D Tiled Grid CBCK pipeline for 4K / 8K / 16K images
-        encode_ultrahd_tiled_cbck(bgra, width, height, 512, true)
-    } else if let Some(mode) = optimize_mode {
-        match mode {
-            "smart" => crate::smart_cbck::SmartCBCKEncoder::new(true).encode(bgra, width, height),
-            "hybrid" => crate::hybrid_compression::hybrid_compress_for_cbck(bgra, width, height),
-            "alpha" => crate::alpha_compression::alpha_compress(bgra, width, height),
-            "omni" => crate::omni_compression::omni_compress(bgra, width, height),
-            "omega" => crate::omega_compression::omega_compress(bgra, width, height),
-            _ => encode_cbck(bgra, width, height, 4, true),
-        }
-    } else if is_uniform {
-        if total_pixels <= 8 {
-            dmp2mini::v1_raw(width as u16, height as u16, bgra, 4)
-        } else if total_pixels <= 128 {
-            let mut px = [0u8; 4];
-            px.copy_from_slice(first_px);
-            dmp2mini::v3_mini_color(width as u16, height as u16, &px)
-        } else {
-            let comp = lzfse::compress(bgra);
-            let mut out = Vec::new();
-            out.extend_from_slice(b"dmp2");
-            out.extend_from_slice(&[2, 1, 10, 4]);
-            let _ = out.write_u16::<LittleEndian>(width as u16);
-            let _ = out.write_u16::<LittleEndian>(height as u16);
-            let _ = out.write_u32::<LittleEndian>(comp.len() as u32);
-            out.extend_from_slice(&comp);
-            out
-        }
-    } else if is_oversized {
-        encode_cbck(bgra, width, height, 4, true)
-    } else {
+    let payload = if total_pixels == 0 || bgra.len() < total_pixels * 4 {
         lzfse::compress(bgra)
+    } else {
+        let tier = classify_resolution_tier(width, height);
+        let first_px = &bgra[0..4];
+        let is_uniform = bgra.chunks_exact(4).all(|px| px == first_px);
+        let is_oversized = (row_bytes * height) > 0x155555;
+
+        if tier != UltraHDTier::Standard {
+            encode_ultrahd_tiled_cbck(bgra, width, height, 512, true)
+        } else if let Some(mode) = optimize_mode {
+            match mode {
+                "smart" => crate::smart_cbck::SmartCBCKEncoder::new(true).encode(bgra, width, height),
+                "hybrid" => crate::hybrid_compression::hybrid_compress_for_cbck(bgra, width, height),
+                "alpha" => crate::alpha_compression::alpha_compress(bgra, width, height),
+                "omni" => crate::omni_compression::omni_compress(bgra, width, height),
+                "omega" => crate::omega_compression::omega_compress(bgra, width, height),
+                _ => encode_cbck(bgra, width, height, 4, true),
+            }
+        } else if is_uniform {
+            if total_pixels <= 8 {
+                dmp2mini::v1_raw(width as u16, height as u16, bgra, 4)
+            } else if total_pixels <= 128 {
+                let mut px = [0u8; 4];
+                px.copy_from_slice(first_px);
+                dmp2mini::v3_mini_color(width as u16, height as u16, &px)
+            } else {
+                let comp = lzfse::compress(bgra);
+                let mut out = Vec::new();
+                out.extend_from_slice(b"dmp2");
+                out.extend_from_slice(&[2, 1, 10, 4]);
+                let _ = out.write_u16::<LittleEndian>(width as u16);
+                let _ = out.write_u16::<LittleEndian>(height as u16);
+                let _ = out.write_u32::<LittleEndian>(comp.len() as u32);
+                out.extend_from_slice(&comp);
+                out
+            }
+        } else if is_oversized {
+            encode_cbck(bgra, width, height, 4, true)
+        } else {
+            lzfse::compress(bgra)
+        }
     };
 
-    // 3. Build ISTC header and TLVs
     let mut tlvs = Vec::new();
 
     let mut val1001 = Vec::new();
@@ -213,8 +208,7 @@ pub fn make_adaptive_csi(
     let _ = (&mut header[168..172]).write_u32::<LittleEndian>(tlvs.len() as u32);
     let _ = (&mut header[172..176]).write_u32::<LittleEndian>(payload.len() as u32);
 
-    let mut out = Vec::new();
-    out.extend_from_slice(&header);
+    let mut out = header;
     out.extend_from_slice(&tlvs);
     out.extend_from_slice(&payload);
 

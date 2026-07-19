@@ -349,3 +349,66 @@ fn test_human_ergonomics_and_ciede2000_jnd() {
     assert!(audio_safe);
     assert!(snr_db >= 80.0);
 }
+
+#[test]
+fn test_repair_corrupted_car_archive() {
+    use actool_rs::repair::repair_corrupted_car;
+
+    // Create a valid CSI rendition and prepended corrupted garbage magic
+    let bgra = vec![255u8; 16 * 16 * 4];
+    let csi_valid = actool_rs::csi::build_csi_png(&bgra, 16, 16, "IconCorrupted", 1, true);
+
+    let mut corrupted_bytes = b"CORRUPTED_MAGIC_HEADER_GARBAGE_BYTES_123456789".to_vec();
+    corrupted_bytes.extend_from_slice(&csi_valid);
+
+    let (repaired, report) = repair_corrupted_car(&corrupted_bytes).expect("Repair failed");
+    assert!(report.magic_repaired);
+    assert!(report.recovered_renditions >= 1);
+    assert!(!repaired.is_empty());
+
+    // Parse repaired buffer to confirm valid BOMStore and CARFile
+    let store = BOMStore::from_bytes(repaired).expect("Repaired BOM parse failed");
+    assert!(store.variables.contains_key("CARHEADER"));
+}
+
+#[test]
+fn test_car_editor_and_virtual_storage_mount() {
+    use actool_rs::editor::CAREditor;
+    use actool_rs::mount::{mount_car_to_directory, sync_directory_to_car};
+
+    let dir = tempdir().unwrap();
+    let initial_car_path = dir.path().join("InitialAssets.car");
+
+    // Build initial Assets.car using CARWriter
+    let mut writer = CARWriter::new("iphoneos");
+    let bgra = vec![200u8; 16 * 16 * 4];
+    writer.add_png_image("HomeIcon", &bgra, 16, 16, 1, 0, 1);
+    fs::write(&initial_car_path, writer.build()).unwrap();
+
+    // 1. Load in CAREditor, add new asset, replace asset, remove asset
+    let mut editor = CAREditor::load(&initial_car_path).expect("Load editor failed");
+    let new_bgra = vec![100u8; 32 * 32 * 4];
+    editor.add_or_replace_image("ProfileIcon", &new_bgra, 32, 32);
+    assert!(editor.renditions.contains_key("ProfileIcon"));
+
+    let edited_car_path = dir.path().join("EditedAssets.car");
+    editor.save(&edited_car_path).expect("Save edited CAR failed");
+    assert!(edited_car_path.is_file());
+
+    // 2. Mount CAR as virtual storage directory
+    let mount_dir = dir.path().join("mounted_storage");
+    let count = mount_car_to_directory(&edited_car_path, &mount_dir).expect("Mount failed");
+    assert!(count >= 1);
+    assert!(mount_dir.join("mount_manifest.json").is_file());
+
+    // 3. Edit files inside mounted directory and sync back to new CAR
+    let new_png_path = mount_dir.join("NewAddFromStorage.png");
+    fs::write(&new_png_path, vec![128u8; 16 * 16 * 4]).unwrap();
+
+    let synced_car_path = dir.path().join("SyncedAssets.car");
+    sync_directory_to_car(&mount_dir, &synced_car_path).expect("Sync from mount failed");
+    assert!(synced_car_path.is_file());
+
+    let final_store = BOMStore::from_path(&synced_car_path).expect("Final store read failed");
+    assert!(final_store.variables.contains_key("CARHEADER"));
+}

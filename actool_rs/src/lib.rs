@@ -71,3 +71,6 @@ pub mod audio;
 pub mod ciede2000;
 pub mod ergonomics;
 pub mod psychoacoustics;
+pub mod editor;
+pub mod mount;
+pub mod repair;
