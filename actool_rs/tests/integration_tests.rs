@@ -412,3 +412,47 @@ fn test_car_editor_and_virtual_storage_mount() {
     let final_store = BOMStore::from_path(&synced_car_path).expect("Final store read failed");
     assert!(final_store.variables.contains_key("CARHEADER"));
 }
+
+#[test]
+fn test_non_image_advanced_optimizations() {
+    use actool_rs::nonimage_optimizer::{
+        optimize_3d_mesh_geometry, optimize_json_lottie, optimize_non_image_asset,
+        optimize_pcm_audio_advanced,
+    };
+
+    // 1. JSON / Lottie Motion Curve Optimization
+    let lottie_json = br#"{
+        "v": "5.7.4",
+        "fr": 60,
+        "ip": 0.000000000,
+        "op": 180.123456789,
+        "w": 512,
+        "h": 512
+    }"#;
+    let res_json = optimize_json_lottie(lottie_json);
+    assert!(res_json.optimized_bytes < res_json.original_bytes);
+    assert_eq!(res_json.asset_category, "JSON/Lottie");
+
+    // 2. PCM Audio Silence Trimming & Delta LPC Encoding
+    let mut pcm = vec![1000i16.to_le_bytes()[0], 1000i16.to_le_bytes()[1]];
+    for _ in 0..500 {
+        pcm.push(500i16.to_le_bytes()[0]);
+        pcm.push(500i16.to_le_bytes()[1]);
+    }
+    // Append 200 bytes of silence (0) at the end
+    pcm.extend_from_slice(&[0u8; 200]);
+
+    let res_audio = optimize_pcm_audio_advanced(&pcm);
+    assert_eq!(res_audio.asset_category, "Audio");
+    assert!(res_audio.optimized_bytes < res_audio.original_bytes);
+
+    // 3. 3D Mesh OBJ Geometry Vertex Quantization
+    let mesh_obj = b"v 1.23456789 2.34567890 3.45678901\nv -0.98765432 -1.87654321 0.00000000\n";
+    let res_mesh = optimize_3d_mesh_geometry(mesh_obj);
+    assert_eq!(res_mesh.asset_category, "3D Mesh");
+    assert!(res_mesh.optimized_bytes < res_mesh.original_bytes);
+
+    // 4. Universal Non-Image Router
+    let res_auto = optimize_non_image_asset("animation.json", lottie_json);
+    assert_eq!(res_auto.asset_category, "JSON/Lottie");
+}

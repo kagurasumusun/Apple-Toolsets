@@ -74,3 +74,4 @@ pub mod psychoacoustics;
 pub mod editor;
 pub mod mount;
 pub mod repair;
+pub mod nonimage_optimizer;
